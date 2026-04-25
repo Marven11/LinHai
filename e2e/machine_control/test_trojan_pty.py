@@ -5,6 +5,8 @@ import tempfile
 
 import pytest
 
+from linhai.task_supervisor import PlainTaskSupervisor
+
 
 @pytest.fixture
 def pty_bash_with_trojan():

@@ -8,22 +8,30 @@ from typing import Optional
 from linhai.registry import Registry
 from linhai.utils.common import UiNotice
 from linhai.machine_control.process import Process
+from rich.text import Text
+
+
+def _strip_ansi_and_cr(text: str) -> str:
+    return Text.from_ansi(text).plain.replace("\r", "")
 
 
 async def _execute_in_shell(
     process: Process, command: str, timeout: float = 10.0
 ) -> tuple[int, str, str]:
-    marker = f"CMD_RESULT_{int(asyncio.get_event_loop().time())}"
-    full_command = f'{{ {command}; }} 2>&1; echo "{marker}:$?"'
+    marker_hex = uuid.uuid4().hex[:4]
+    marker_open = f"<linhai_cmd_{marker_hex}>"
+    marker_close = f"</linhai_cmd_{marker_hex}>"
 
-    from rich.text import Text
+    full_command = (
+        f"echo '{marker_open}'; "
+        f"{{ {command}; }} 2>&1; "
+        f'RC=$?; echo "${{RC}}{marker_close}"'
+    )
 
     write_result = await process.stdio_write(full_command, with_enter=True)
     if not write_result.success:
         return 1, "", f"写入命令失败: {write_result.error}"
 
-    output_lines = []
-    result_line = None
     buffer = ""
     start_time = asyncio.get_event_loop().time()
 
@@ -32,34 +40,33 @@ async def _execute_in_shell(
         if not read_result.success:
             break
         decoded = read_result.stdout.decode("utf-8", errors="replace")
-        text = Text.from_ansi(decoded).plain
-        if decoded.endswith("\n"):
-            text += "\n"
-        buffer += text
-        while "\n" in buffer:
-            line, buffer = buffer.split("\n", 1)
-            line = line.rstrip()
-            if line.startswith(f"{marker}:"):
-                result_line = line
-                break
-            output_lines.append(line)
-        if result_line is not None:
-            break
+        buffer += _strip_ansi_and_cr(decoded)
 
-    if result_line is None:
-        return 1, "", "命令执行超时"
+        newline_prefix = f"\n{marker_open}"
+        start_idx = buffer.find(newline_prefix)
+        if start_idx != -1:
+            start_idx += 1
+        else:
+            start_idx = buffer.find(marker_open)
+        if start_idx == -1:
+            continue
+        close_idx = buffer.find(marker_close, start_idx)
+        if close_idx == -1:
+            continue
 
-    parts = result_line.split(":", 1)
-    if len(parts) != 2:
-        exit_code = 1
-    else:
-        exit_code_str = parts[1]
-        if exit_code_str.isdigit():
-            exit_code = int(exit_code_str)
+        content = buffer[start_idx + len(marker_open) : close_idx]
+        lines = content.strip().split("\n")
+        last_line = lines[-1].strip()
+        if last_line.isdigit():
+            exit_code = int(last_line)
+            output_lines = lines[:-1]
         else:
             exit_code = 1
+            output_lines = lines
 
-    return exit_code, "\n".join(output_lines), ""
+        return exit_code, "\n".join(output_lines).strip(), ""
+
+    return 1, "", "命令执行超时"
 
 
 async def setup_trojan_in_shell(

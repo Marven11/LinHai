@@ -119,6 +119,8 @@ class TrojanTransport:
             self._fail_pending_futures()
             return
         response = json.loads(data)
+        if "method" in response:
+            return
         response_id = response.get("id")
         if response_id is not None:
             future = self._pending_futures.pop(response_id, None)

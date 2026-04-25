@@ -98,23 +98,24 @@ class TestSetupTrojanInShell(unittest.TestCase):
     @unittest.skipIf(shutil.which("bash") is None, "no bash")
     def test_setup_success(self):
         async def test():
+            marker_open = "<linhai_cmd_aaaa>"
+            marker_close = "</linhai_cmd_aaaa>"
             read_responses = [
                 ProcessReadResult(
                     pid="1",
                     success=True,
-                    stdout=b"Python 3.14.2\nCMD_RESULT_0:0\n",
+                    stdout=(
+                        f"echo '{marker_open}'; python3 -V 2>&1; RC=$?; echo \"${{RC}}{marker_close}\"\n"
+                        f"{marker_open}\nPython 3.14.2\n0{marker_close}\n"
+                    ).encode(),
                     stderr=b"",
                 ),
                 ProcessReadResult(
                     pid="1",
                     success=True,
-                    stdout=b"/tmp/trojan.py\nCMD_RESULT_0:0\n",
-                    stderr=b"",
-                ),
-                ProcessReadResult(
-                    pid="1",
-                    success=True,
-                    stdout=b"CMD_RESULT_0:0\n",
+                    stdout=(
+                        f"{marker_open}\n/tmp/trojan.py\n0{marker_close}\n"
+                    ).encode(),
                     stderr=b"",
                 ),
             ]
@@ -123,11 +124,11 @@ class TestSetupTrojanInShell(unittest.TestCase):
             with (
                 patch("pathlib.Path.exists", return_value=True),
                 patch("pathlib.Path.read_text", return_value="# trojan content"),
-                patch("asyncio.get_event_loop") as mock_loop,
+                patch(
+                    "linhai.machine_control.trojan.shell_transport.uuid.uuid4"
+                ) as mock_uuid,
             ):
-                mock_loop_instance = Mock()
-                mock_loop_instance.time = Mock(return_value=0)
-                mock_loop.return_value = mock_loop_instance
+                mock_uuid.return_value.hex = "aaaa"
                 result = await setup_trojan_in_shell(mock_process, self.registry)
                 self.assertIsNotNone(result)
                 self.assertIsInstance(result, tuple)
@@ -139,11 +140,15 @@ class TestSetupTrojanInShell(unittest.TestCase):
     @unittest.skipIf(shutil.which("bash") is None, "no bash")
     def test_python_version_check_failure(self):
         async def test():
+            marker_open = "<linhai_cmd_aaaa>"
+            marker_close = "</linhai_cmd_aaaa>"
             read_responses = [
                 ProcessReadResult(
                     pid="1",
                     success=True,
-                    stdout=b"Python 2.7.18\nCMD_RESULT_0:0\n",
+                    stdout=(
+                        f"{marker_open}\nPython 2.7.18\n0{marker_close}\n"
+                    ).encode(),
                     stderr=b"",
                 ),
             ]
@@ -152,11 +157,11 @@ class TestSetupTrojanInShell(unittest.TestCase):
             with (
                 patch("pathlib.Path.exists", return_value=True),
                 patch("pathlib.Path.read_text", return_value="# trojan content"),
-                patch("asyncio.get_event_loop") as mock_loop,
+                patch(
+                    "linhai.machine_control.trojan.shell_transport.uuid.uuid4"
+                ) as mock_uuid,
             ):
-                mock_loop_instance = Mock()
-                mock_loop_instance.time = Mock(return_value=0)
-                mock_loop.return_value = mock_loop_instance
+                mock_uuid.return_value.hex = "aaaa"
                 result = await setup_trojan_in_shell(mock_process, self.registry)
                 self.assertIsNone(result)
 
