@@ -33,6 +33,7 @@ from .file import (
     write_file,
     replace_file_content,
     list_files,
+    list_files_glob,
     read_file_with_sed,
 )
 from .process import LocalProcess, LocalPtyProcess
@@ -290,7 +291,11 @@ class MasterHostControl:
             replace_file_content, str(resolved), old, new, replace_times
         )
 
-    async def list_files(self, dirpath: str) -> ToolResultSuccess | ToolResultFailed:
+    async def list_files(
+        self, dirpath: str, glob: bool = False
+    ) -> ToolResultSuccess | ToolResultFailed:
+        if glob:
+            return await asyncio.to_thread(list_files_glob, self._cwd, dirpath)
         resolved = self._resolve_path(dirpath)
         return await asyncio.to_thread(list_files, str(resolved))
 

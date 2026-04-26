@@ -233,7 +233,11 @@ class EtherGhostMachineControl(HostControl):
             return ToolResultSuccess(content="文件内容已替换")
         return ToolResultFailed(content="替换文件内容失败")
 
-    async def list_files(self, dirpath: str) -> ToolResultSuccess | ToolResultFailed:
+    async def list_files(
+        self, dirpath: str, glob: bool = False
+    ) -> ToolResultSuccess | ToolResultFailed:
+        if glob:
+            raise RuntimeError("list_files的glob选项仅支持master_host")
         if self.session is None:
             return ToolResultFailed(content="Session未初始化")
 

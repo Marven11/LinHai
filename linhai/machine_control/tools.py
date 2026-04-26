@@ -854,19 +854,30 @@ def register_machine_control_tools(machine_control: "MachineControl") -> ToolSet
             "dirpath": ToolArgInfo(
                 desc=t(
                     {
-                        "zh_CN": "文件夹路径，使用./表示当前目录",
-                        "en": "Directory path, use ./ for current directory",
+                        "zh_CN": "文件夹路径，使用./表示当前目录。glob为true时支持*和**，如*/*.py",
+                        "en": "Directory path, use ./ for current directory. When glob=true supports * and **, e.g. */*.py",
                     }
                 ),
                 type="str",
-            )
+            ),
+            "glob": ToolArgInfo(
+                desc=t(
+                    {
+                        "zh_CN": "基于pathlib.glob匹配文件，尊重gitignore。仅master_host支持",
+                        "en": "Match files using pathlib.glob, respecting gitignore. Only master_host supported",
+                    }
+                ),
+                type="bool",
+            ),
         },
         required_args=["dirpath"],
         conflict_with=None,
     )
-    async def list_files_tool(dirpath: str) -> ToolResultSuccess | ToolResultFailed:
+    async def list_files_tool(
+        dirpath: str, glob: bool = False
+    ) -> ToolResultSuccess | ToolResultFailed:
         host_control = machine_control.machines[machine_control.target_machine]
-        return await host_control.list_files(dirpath)
+        return await host_control.list_files(dirpath, glob)
 
     @toolset.register_tool(
         name="get_absolute_path",

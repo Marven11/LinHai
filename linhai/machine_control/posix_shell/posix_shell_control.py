@@ -255,7 +255,11 @@ class PosixShellControl:
             params["replace_times"] = replace_times
         return await self.call_tool("replace_file_content", params)
 
-    async def list_files(self, dirpath: str) -> ToolResultSuccess | ToolResultFailed:
+    async def list_files(
+        self, dirpath: str, glob: bool = False
+    ) -> ToolResultSuccess | ToolResultFailed:
+        if glob:
+            raise RuntimeError("list_files的glob选项仅支持master_host")
         return await self.call_tool("list_files", {"dirpath": dirpath})
 
     async def get_absolute_path(

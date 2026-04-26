@@ -11,6 +11,7 @@ from linhai.machine_control.master_host.file import (
     write_file,
     replace_file_content,
     list_files,
+    list_files_glob,
     get_absolute_path,
     find_most_similar_in_files,
 )
@@ -214,3 +215,71 @@ if __name__ == "__main__":
         )
 
         self.assertIn("无效的replace_times参数值", result.content)
+
+
+class TestListFilesGlob(unittest.TestCase):
+    """list_files_glob功能测试"""
+
+    def setUp(self):
+        self.temp_dir = tempfile.mkdtemp()
+        base = Path(self.temp_dir)
+        (base / "a.py").write_text("a")
+        (base / "b.py").write_text("b")
+        (base / "c.txt").write_text("c")
+        (base / "src").mkdir()
+        (base / "src" / "d.py").write_text("d")
+        (base / "src" / "e.py").write_text("e")
+        (base / "src" / "f.txt").write_text("f")
+        (base / "src" / "sub").mkdir()
+        (base / "src" / "sub" / "g.py").write_text("g")
+
+    def tearDown(self):
+        if os.path.exists(self.temp_dir):
+            shutil.rmtree(self.temp_dir)
+
+    def test_glob_relative_pattern_py(self):
+        result = list_files_glob(self.temp_dir, "**/*.py")
+        self.assertIn("a.py", result.content)
+        self.assertIn("b.py", result.content)
+        self.assertIn("d.py", result.content)
+        self.assertIn("e.py", result.content)
+        self.assertIn("g.py", result.content)
+        self.assertNotIn("c.txt", result.content)
+        self.assertNotIn("f.txt", result.content)
+
+    def test_glob_relative_pattern_single_star(self):
+        result = list_files_glob(self.temp_dir, "*.py")
+        self.assertIn("a.py", result.content)
+        self.assertIn("b.py", result.content)
+        self.assertNotIn("d.py", result.content)
+
+    def test_glob_pattern_with_prefix(self):
+        result = list_files_glob(self.temp_dir, "src/**/*.py")
+        self.assertNotIn("a.py", result.content)
+        self.assertIn("d.py", result.content)
+        self.assertIn("e.py", result.content)
+        self.assertIn("g.py", result.content)
+
+    def test_glob_absolute_pattern_rejected(self):
+        result = list_files_glob(self.temp_dir, "/tmp/**/*.py")
+        self.assertIn("不支持绝对路径", result.content)
+
+    def test_glob_no_match(self):
+        result = list_files_glob(self.temp_dir, "*.xyz")
+        self.assertIn("总用量 0", result.content)
+
+    def test_glob_gitignore(self):
+        base = Path(self.temp_dir)
+        (base / ".gitignore").write_text("*.txt\n")
+        result = list_files_glob(self.temp_dir, "**/*")
+        self.assertIn("a.py", result.content)
+        self.assertNotIn("c.txt", result.content)
+        self.assertNotIn("f.txt", result.content)
+
+    def test_glob_invalid_base(self):
+        result = list_files_glob("/nonexistent/path", "*.py")
+        self.assertIn("不存在或不是文件夹", result.content)
+
+    def test_glob_cluster_output(self):
+        result = list_files_glob(self.temp_dir, "src/*.py")
+        self.assertIn("{d.py,e.py}", result.content)

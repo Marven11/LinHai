@@ -3,11 +3,12 @@
 from pathlib import Path
 from typing import Callable
 import difflib
-import json
+import itertools
 import stat
 import subprocess
 import time
 
+import pathspec
 
 from linhai.agent.messages import FileContentMessage
 from linhai.tool.base import (
@@ -320,6 +321,50 @@ def list_files(dirpath: str) -> ToolResultSuccess | ToolResultFailed:
 {items_str}""")
     except OSError as exc:
         return ToolResultFailed(content=f"列出文件时发生错误: {exc!r}")
+
+
+GLOB_FILE_LIMIT = 5000
+
+
+def _load_gitignore_spec(base: Path) -> pathspec.PathSpec | None:
+    gitignore_path = base / ".gitignore"
+    if not gitignore_path.is_file():
+        return None
+    gitignore_text = gitignore_path.read_text(encoding="utf-8")
+    return pathspec.PathSpec.from_lines("gitignore", gitignore_text.splitlines())
+
+
+def list_files_glob(cwd: str, pattern: str) -> ToolResultSuccess | ToolResultFailed:
+    if pattern.startswith("/"):
+        return ToolResultFailed(content="glob模式不支持绝对路径")
+    base = Path(cwd)
+    if not base.is_dir():
+        return ToolResultFailed(content=f"当前目录{cwd!r}不存在或不是文件夹")
+    spec = _load_gitignore_spec(base)
+    files: list[Path] = []
+    for file in base.glob(pattern):
+        if not file.is_file():
+            continue
+        if ".git" in file.parts:
+            continue
+        if spec is not None:
+            rel = file.relative_to(base)
+            if spec.match_file(str(rel)):
+                continue
+        files.append(file)
+        if len(files) >= GLOB_FILE_LIMIT:
+            break
+    files.sort(key=lambda f: (len(f.relative_to(base).parts), f.parts))
+    truncated = len(files) >= GLOB_FILE_LIMIT
+    lines: list[str] = []
+    for parent, group in itertools.groupby(files, lambda f: f.parent.as_posix()):
+        names = ",".join(f.name for f in group)
+        lines.append(f"{parent}/{{{names}}}")
+    header = f"glob base: {base.as_posix()}, pattern: {pattern}"
+    if truncated:
+        header += f" (Showing top {GLOB_FILE_LIMIT} files)"
+    total = len(files)
+    return ToolResultSuccess(content=f"{header}\n总用量 {total}\n" + "\n".join(lines))
 
 
 def get_absolute_path(path: str) -> ToolResultSuccess | ToolResultFailed:
