@@ -464,6 +464,79 @@ class TestProcessTabExitCleanup(unittest.TestCase):
         asyncio.run(_run())
 
 
+class TestProcessTabMarkupEscaping(unittest.TestCase):
+    def setUp(self):
+        from unittest.mock import patch
+
+        self.locale_patch = patch(
+            "linhai.utils.i18n.locale.getlocale", return_value=("en_US", "UTF-8")
+        )
+        self.locale_patch.start()
+        super().setUp()
+
+    def tearDown(self):
+        self.locale_patch.stop()
+        super().tearDown()
+
+    def test_argv_with_square_brackets_no_crash(self):
+        registry, lifecycle = _make_registry()
+        app = _make_app(registry)
+
+        async def _run():
+            async with app.run_test() as pilot:
+                process_tab = pilot.app.query_one(ProcessTabWidget)
+
+                proc = _FakeProcess("800")
+                info = ProcessCreateInfo(
+                    process=proc,
+                    argv=[
+                        "bash",
+                        "-c",
+                        "PATH=/nix/store/bin:$PATH cargo flamegraph --bin encode_bench --output flamegraph.svg 2>&1",
+                    ],
+                    machine_id="master_host",
+                    initial_returncode=None,
+                )
+                await lifecycle.after_process_create.trigger(info)
+                await pilot.pause()
+
+                rows = process_tab.query(ProcessRowWidget)
+                self.assertEqual(len(rows), 1)
+
+                argv_static = rows[0].query_one(".argv", Static)
+                rendered = str(argv_static.render())
+                self.assertIn("flamegraph", rendered)
+
+        asyncio.run(_run())
+
+    def test_argv_with_markup_like_content_no_crash(self):
+        registry, lifecycle = _make_registry()
+        app = _make_app(registry)
+
+        async def _run():
+            async with app.run_test() as pilot:
+                process_tab = pilot.app.query_one(ProcessTabWidget)
+
+                proc = _FakeProcess("801")
+                info = ProcessCreateInfo(
+                    process=proc,
+                    argv=["echo", "[bold]text[/bold]", "[link]url[/link]"],
+                    machine_id="master_host",
+                    initial_returncode=None,
+                )
+                await lifecycle.after_process_create.trigger(info)
+                await pilot.pause()
+
+                rows = process_tab.query(ProcessRowWidget)
+                self.assertEqual(len(rows), 1)
+
+                argv_static = rows[0].query_one(".argv", Static)
+                rendered = str(argv_static.render())
+                self.assertIn("[bold]", rendered)
+
+        asyncio.run(_run())
+
+
 class TestProcessTabI18n(unittest.TestCase):
     """测试process_tab.py中的国际化功能。"""
 
