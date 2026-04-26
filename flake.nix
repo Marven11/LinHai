@@ -90,6 +90,7 @@
             pillow
             tomli-w
             feedparser
+            pathspec
             python-telegram-bot'
             quickjs-ng'
           ];
