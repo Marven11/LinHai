@@ -1,3 +1,4 @@
+import os
 from .message_checkers import Plugin
 
 
@@ -26,3 +27,24 @@ class MachineControlIntroductionPlugin(Plugin):
 
     def register(self, lifecycle):
         lifecycle.before_message_generation.register(self.before_message_generation)
+
+
+class CurrentDirectoryPlugin(Plugin):
+
+    def __init__(self, registry):
+        super().__init__(registry)
+        self._has_added = False
+
+    async def _before_agent_loop(self, agent):
+        if self._has_added:
+            return
+        self._has_added = True
+        from linhai.agent.messages import RuntimeMessage
+
+        cwd = os.getcwd()
+        await agent.message_processor.add_new_message(
+            RuntimeMessage(f"当前目录为{cwd}")
+        )
+
+    def register(self, lifecycle):
+        lifecycle.before_agent_loop.register(self._before_agent_loop)

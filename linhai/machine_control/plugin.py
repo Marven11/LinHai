@@ -27,6 +27,8 @@ class MachineControlPlugin:
 
     async def before_message_generation(self):
         """在消息生成前更新notification_message。"""
+        if len(self.machine_control.machines) <= 1:
+            return
         agent = self.registry.get_member_typechecked("agent", Agent)
         agent.message_processor.update_notification_message(
             RuntimeMessage(

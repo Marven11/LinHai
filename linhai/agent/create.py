@@ -344,10 +344,11 @@ async def create_agent_from_context(
             context["registry"], context["allowed_commands"]
         ).register(agent.lifecycle)
 
-    from linhai.plugin import MachineControlIntroductionPlugin
+    from linhai.plugin import MachineControlIntroductionPlugin, CurrentDirectoryPlugin
     from linhai.rss import RssPlugin
 
     MachineControlIntroductionPlugin(context["registry"]).register(agent.lifecycle)
+    CurrentDirectoryPlugin(context["registry"]).register(agent.lifecycle)
 
     if context["rss"]:
         RssPlugin(

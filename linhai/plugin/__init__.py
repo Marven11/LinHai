@@ -48,7 +48,10 @@ from .sudo_bash_hint import SudoBashHintPlugin
 
 from .afk_plugin import AfkPlugin
 from .claw import ClawHeartbeatPlugin
-from .system_message_leaning import MachineControlIntroductionPlugin
+from .system_message_leaning import (
+    MachineControlIntroductionPlugin,
+    CurrentDirectoryPlugin,
+)
 from .planning import TodolistCheckerPlugin, PlanningHeadingCheckPlugin
 from .reminder import ReminderPlugin, ReminderWriteGuardPlugin
 from .python_chore import PythonCommentCheckerPlugin
@@ -96,6 +99,7 @@ __all__ = [
     "ClawHeartbeatPlugin",
     "VolcanoDeepseekFixPlugin",
     "MachineControlIntroductionPlugin",
+    "CurrentDirectoryPlugin",
     "TodolistCheckerPlugin",
     "PlanningHeadingCheckPlugin",
     "ReminderPlugin",
