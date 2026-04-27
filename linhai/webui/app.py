@@ -54,7 +54,7 @@ def create_app(api_token: str) -> FastAPI:
     async def authenticate(request: AuthRequest):
         if request.api_key == token:
             response = JSONResponse({"status": "ok"})
-            response.set_cookie("api_token", token)
+            response.set_cookie("api_token", token, samesite="none", secure=True)
             return response
         raise HTTPException(status_code=403, detail="Invalid API key")
 
