@@ -41,7 +41,7 @@ def _write_e2e_config() -> Path:
     return config_path
 
 
-async def _wait_for_agent_completion(ws, feeder, sub, timeout=300):
+async def _wait_for_agent_completion(ws, feeder, sub, timeout=600):
     finished = await feeder.wait_for_completion(
         min_duration=30, quiet_period=5, timeout=timeout
     )

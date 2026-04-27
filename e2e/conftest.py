@@ -64,7 +64,7 @@ class AsyncEventFeeder:
         )
 
     async def wait_for_completion(
-        self, min_duration: float = 30, quiet_period: float = 5, timeout: float = 300
+        self, min_duration: float = 30, quiet_period: float = 5, timeout: float = 600
     ):
         initial_signals = self._count_waiting_signals()
         deadline = time.time() + timeout

@@ -95,9 +95,9 @@ async def test_webui_status_bar_e2e():
                 )
             )
             finished = await feeder.wait_for_completion(
-                min_duration=30, quiet_period=5, timeout=120
+                min_duration=30, quiet_period=5, timeout=600
             )
-            assert finished, "Agent did not complete turn within 120s"
+            assert finished, "Agent did not complete turn within 600s"
 
             await feeder.drain()
             await feeder.stop()

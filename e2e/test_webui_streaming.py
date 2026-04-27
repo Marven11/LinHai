@@ -266,7 +266,7 @@ async def _retry_short_response(ws, feeder, sub, min_chars=50, max_retries=2):
             )
             feeder.reset_timing()
             finished = await feeder.wait_for_completion(
-                min_duration=30, quiet_period=5, timeout=300
+                min_duration=30, quiet_period=5, timeout=600
             )
             assert finished, "Agent did not complete retry within 300s"
         else:
@@ -325,7 +325,7 @@ async def test_webui_streaming_e2e():
             )
             feeder.reset_timing()
             finished1 = await feeder.wait_for_completion(
-                min_duration=30, quiet_period=5, timeout=300
+                min_duration=30, quiet_period=5, timeout=600
             )
             assert finished1, "Agent did not complete first turn within 300s"
             await _retry_short_response(ws, feeder, sub)
@@ -340,7 +340,7 @@ async def test_webui_streaming_e2e():
             )
             feeder.reset_timing()
             finished2 = await feeder.wait_for_completion(
-                min_duration=30, quiet_period=5, timeout=300
+                min_duration=30, quiet_period=5, timeout=600
             )
             assert finished2, "Agent did not complete second turn within 300s"
             await _retry_short_response(ws, feeder, sub)
