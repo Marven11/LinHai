@@ -3,7 +3,6 @@ from __future__ import annotations
 import asyncio
 import os
 import select
-import time
 from typing import Awaitable, Callable
 
 from linhai.machine_control.process import (
@@ -47,6 +46,38 @@ class LocalProcess:
         self._process = process
         self._on_exit = on_exit
         self._exited = False
+        self._stdout_buffer = b""
+        self._stderr_buffer = b""
+        self._reader_task: asyncio.Task[None] | None = None
+        self._start_reader()
+
+    def _start_reader(self) -> None:
+        if self._process.stdout is not None or self._process.stderr is not None:
+            self._reader_task = asyncio.ensure_future(self._background_reader())
+
+    async def _background_reader(self) -> None:
+        while True:
+            stdout_chunk, stderr_chunk = await asyncio.gather(
+                _read_stream_chunk(self._process.stdout, 0.5, 65536),
+                _read_stream_chunk(self._process.stderr, 0.5, 65536),
+            )
+            has_data = False
+            if stdout_chunk:
+                self._stdout_buffer += stdout_chunk
+                has_data = True
+            if stderr_chunk:
+                self._stderr_buffer += stderr_chunk
+                has_data = True
+            if self._process.returncode is not None and not has_data:
+                stdout_final, stderr_final = await asyncio.gather(
+                    _read_stream_chunk(self._process.stdout, 0.1, 65536),
+                    _read_stream_chunk(self._process.stderr, 0.1, 65536),
+                )
+                if stdout_final:
+                    self._stdout_buffer += stdout_final
+                if stderr_final:
+                    self._stderr_buffer += stderr_final
+                break
 
     @property
     def pid(self) -> str:
@@ -55,6 +86,15 @@ class LocalProcess:
     @property
     def returncode(self) -> int | None:
         return self._process.returncode
+
+    async def drain_buffers(self) -> tuple[bytes, bytes]:
+        if self._reader_task and not self._reader_task.done():
+            await asyncio.wait({self._reader_task}, timeout=2.0)
+        stdout = self._stdout_buffer
+        stderr = self._stderr_buffer
+        self._stdout_buffer = b""
+        self._stderr_buffer = b""
+        return stdout, stderr
 
     async def stdio_write(self, content: str, with_enter: bool) -> ProcessWriteResult:
         pid = self.pid
@@ -70,7 +110,11 @@ class LocalProcess:
 
     async def stdio_read(self, wait_seconds: float) -> ProcessReadResult:
         pid = self.pid
-        stdout_data, stderr_data = await self._read_nonblocking(wait_seconds)
+        await asyncio.sleep(wait_seconds)
+        stdout_data = self._stdout_buffer
+        stderr_data = self._stderr_buffer
+        self._stdout_buffer = b""
+        self._stderr_buffer = b""
         exit_note = None
         if self._process.returncode is not None:
             exit_note = f"注意：当前程序{pid}已经退出\n"
@@ -82,49 +126,40 @@ class LocalProcess:
             exit_note=exit_note,
         )
 
-    async def _read_nonblocking(
-        self, wait_seconds: float, max_read_size: int = 32768
-    ) -> tuple[bytes, bytes]:
-        stdout_data = b""
-        stderr_data = b""
-        start = time.perf_counter()
-        while time.perf_counter() - start < wait_seconds:
-            remaining = wait_seconds - (time.perf_counter() - start)
-            if remaining <= 0:
-                break
-            interval = min(0.5, remaining)
-            if self._process.stdout and len(stdout_data) < max_read_size:
-                chunk = await _read_stream_chunk(
-                    self._process.stdout,
-                    interval,
-                    min(4096, max_read_size - len(stdout_data)),
-                )
-                stdout_data += chunk
-            if self._process.stderr and len(stderr_data) < max_read_size:
-                chunk = await _read_stream_chunk(
-                    self._process.stderr,
-                    interval,
-                    min(4096, max_read_size - len(stderr_data)),
-                )
-                stderr_data += chunk
-        return stdout_data, stderr_data
-
     async def wait(self, timeout: float) -> ProcessWaitResult:
         pid = self.pid
         if timeout > 3600:
             return ProcessWaitResult(
                 pid=pid, success=False, error="超时时间不能超过3600秒"
             )
+        if self._process.returncode is not None:
+            if self._reader_task and not self._reader_task.done():
+                await asyncio.wait({self._reader_task}, timeout=2.0)
+            stdout_data = self._stdout_buffer.decode("utf-8", errors="replace")
+            stderr_data = self._stderr_buffer.decode("utf-8", errors="replace")
+            self._stdout_buffer = b""
+            self._stderr_buffer = b""
+            if self._on_exit and not self._exited:
+                self._exited = True
+                await self._on_exit(pid)
+            return ProcessWaitResult(
+                pid=pid,
+                success=True,
+                returncode=self._process.returncode,
+                stdout=stdout_data,
+                stderr=stderr_data,
+            )
         exited = await _wait_process_exit(self._process, timeout)
         if not exited:
             return ProcessWaitResult(
                 pid=pid, success=False, error=f"等待进程 {pid} 超时"
             )
-        stdout_data, stderr_data = b"", b""
-        if self._process.stdout:
-            stdout_data = await self._process.stdout.read()
-        if self._process.stderr:
-            stderr_data = await self._process.stderr.read()
+        if self._reader_task and not self._reader_task.done():
+            await asyncio.wait({self._reader_task}, timeout=2.0)
+        stdout_data = self._stdout_buffer.decode("utf-8", errors="replace")
+        stderr_data = self._stderr_buffer.decode("utf-8", errors="replace")
+        self._stdout_buffer = b""
+        self._stderr_buffer = b""
         if self._on_exit and not self._exited:
             self._exited = True
             await self._on_exit(pid)
@@ -132,8 +167,8 @@ class LocalProcess:
             pid=pid,
             success=True,
             returncode=self._process.returncode,
-            stdout=stdout_data.decode("utf-8", errors="replace"),
-            stderr=stderr_data.decode("utf-8", errors="replace"),
+            stdout=stdout_data,
+            stderr=stderr_data,
         )
 
     async def kill(self, graceful: bool = True) -> ProcessKillResult:
@@ -149,10 +184,8 @@ class LocalProcess:
             await _wait_process_exit(self._process, 5.0)
         if self._process.stdin is not None and not self._process.stdin.is_closing():
             self._process.stdin.close()
-        if self._process.stdout is not None:
-            await _read_stream_chunk(self._process.stdout, 0.1, 65536)
-        if self._process.stderr is not None:
-            await _read_stream_chunk(self._process.stderr, 0.1, 65536)
+        if self._reader_task and not self._reader_task.done():
+            await asyncio.wait({self._reader_task}, timeout=2.0)
         if self._on_exit and not self._exited:
             self._exited = True
             await self._on_exit(pid)
@@ -172,6 +205,31 @@ class LocalPtyProcess:
         self._slave_fd = slave_fd
         self._on_exit = on_exit
         self._exited = False
+        self._stdout_buffer = b""
+        self._reader_task: asyncio.Task[None] | None = None
+        self._start_reader()
+
+    def _start_reader(self) -> None:
+        self._reader_task = asyncio.ensure_future(self._background_reader())
+
+    async def _background_reader(self) -> None:
+        while True:
+            readable, _, _ = select.select([self._master_fd], [], [], 0.5)
+            if not readable:
+                if self._process.returncode is not None:
+                    readable, _, _ = select.select([self._master_fd], [], [], 0.1)
+                    if readable:
+                        chunk = os.read(self._master_fd, 65536)
+                        if chunk:
+                            self._stdout_buffer += chunk
+                    break
+                await asyncio.sleep(0.1)
+                continue
+            chunk = os.read(self._master_fd, 4096)
+            if not chunk:
+                break
+            self._stdout_buffer += chunk
+            await asyncio.sleep(0)
 
     @property
     def pid(self) -> str:
@@ -180,6 +238,13 @@ class LocalPtyProcess:
     @property
     def returncode(self) -> int | None:
         return self._process.returncode
+
+    async def drain_buffers(self) -> tuple[bytes, bytes]:
+        if self._reader_task and not self._reader_task.done():
+            await asyncio.wait({self._reader_task}, timeout=2.0)
+        stdout = self._stdout_buffer
+        self._stdout_buffer = b""
+        return stdout, b""
 
     async def stdio_write(self, content: str, with_enter: bool) -> ProcessWriteResult:
         pid = self.pid
@@ -190,30 +255,16 @@ class LocalPtyProcess:
 
     async def stdio_read(self, wait_seconds: float) -> ProcessReadResult:
         pid = self.pid
-        data = b""
-        deadline = time.monotonic() + wait_seconds
-        while time.monotonic() < deadline:
-            remaining = deadline - time.monotonic()
-            if remaining <= 0:
-                break
-            readable, _, _ = select.select(
-                [self._master_fd], [], [], min(0.1, remaining)
-            )
-            if not readable:
-                continue
-            chunk = os.read(self._master_fd, 4096)
-            if not chunk:
-                break
-            data += chunk
-            if len(data) >= 32768:
-                break
+        await asyncio.sleep(wait_seconds)
+        stdout_data = self._stdout_buffer
+        self._stdout_buffer = b""
         exit_note = None
         if self._process.returncode is not None:
             exit_note = f"注意：当前程序{pid}已经退出\n"
         return ProcessReadResult(
             pid=pid,
             success=True,
-            stdout=data,
+            stdout=stdout_data,
             stderr=b"",
             exit_note=exit_note,
         )
@@ -224,23 +275,30 @@ class LocalPtyProcess:
             return ProcessWaitResult(
                 pid=pid, success=False, error="超时时间不能超过3600秒"
             )
+        if self._process.returncode is not None:
+            if self._reader_task and not self._reader_task.done():
+                await asyncio.wait({self._reader_task}, timeout=2.0)
+            stdout_data = self._stdout_buffer.decode("utf-8", errors="replace")
+            self._stdout_buffer = b""
+            if self._on_exit and not self._exited:
+                self._exited = True
+                await self._on_exit(pid)
+            return ProcessWaitResult(
+                pid=pid,
+                success=True,
+                returncode=self._process.returncode,
+                stdout=stdout_data,
+                stderr="",
+            )
         exited = await _wait_process_exit(self._process, timeout)
         if not exited:
             return ProcessWaitResult(
                 pid=pid, success=False, error=f"等待进程 {pid} 超时"
             )
-        stdout_data = b""
-        deadline = time.monotonic() + 2.0
-        while time.monotonic() < deadline:
-            readable, _, _ = select.select([self._master_fd], [], [], 0.1)
-            if not readable:
-                if self._process.returncode is not None:
-                    break
-                continue
-            chunk = os.read(self._master_fd, 65536)
-            if not chunk:
-                break
-            stdout_data += chunk
+        if self._reader_task and not self._reader_task.done():
+            await asyncio.wait({self._reader_task}, timeout=2.0)
+        stdout_data = self._stdout_buffer.decode("utf-8", errors="replace")
+        self._stdout_buffer = b""
         if self._on_exit and not self._exited:
             self._exited = True
             await self._on_exit(pid)
@@ -248,7 +306,7 @@ class LocalPtyProcess:
             pid=pid,
             success=True,
             returncode=self._process.returncode,
-            stdout=stdout_data.decode("utf-8", errors="replace"),
+            stdout=stdout_data,
             stderr="",
         )
 
@@ -271,6 +329,8 @@ class LocalPtyProcess:
         else:
             self._process.kill()
             await _wait_process_exit(self._process, 5.0)
+        if self._reader_task and not self._reader_task.done():
+            await asyncio.wait({self._reader_task}, timeout=2.0)
         if self._on_exit and not self._exited:
             self._exited = True
             await self._on_exit(pid)

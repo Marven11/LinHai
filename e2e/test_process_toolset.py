@@ -142,8 +142,8 @@ async def test_tool_process_kill():
 
     await asyncio.sleep(0.5)
     wait_result = await ts.call_tool("process_wait", {"pid": pid, "timeout": 2.0})
-    err = _tool_fail(wait_result)
-    assert "进程不存在" in err
+    wait_content = _tool_ok(wait_result)
+    assert "<<returncode>>-9<<returncode>>" in wait_content
 
 
 async def test_tool_nonexistent_process():

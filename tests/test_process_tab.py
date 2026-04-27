@@ -14,6 +14,7 @@ from linhai.machine_control.process import (
     ProcessWaitResult,
 )
 from linhai.registry import Registry
+from linhai.sandbox import NoSandbox, ProcessSandboxProtocol
 from linhai.tui.app import TUIApp
 from linhai.tui.process_tab import ProcessRowWidget, ProcessTabWidget
 from textual.widgets import Static
@@ -96,6 +97,7 @@ def _make_registry() -> tuple[Registry, Lifecycle]:
     mock_tool_manager = Mock(spec=ToolManager)
     mock_tool_manager.register_toolset = Mock()
     registry.register_member("tool_manager", mock_tool_manager)
+    registry.register_member("process_sandbox", NoSandbox())
 
     return registry, lifecycle
 

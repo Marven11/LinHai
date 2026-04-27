@@ -143,13 +143,12 @@ class MasterHostControl:
                     if subprocess.returncode is not None:
                         break
                 if subprocess.returncode is not None:
-                    del self._processes[pid]
-                    read_result = await lp.stdio_read(wait_seconds=2.0)
+                    stdout_bytes, _ = await lp.drain_buffers()
                     return ProcessCreateResult(
                         pid=pid,
                         success=True,
                         returncode=subprocess.returncode,
-                        stdout=read_result.stdout.decode("utf-8", errors="replace"),
+                        stdout=stdout_bytes.decode("utf-8", errors="replace"),
                         stderr="",
                     )
                 return ProcessCreateResult(
@@ -181,14 +180,13 @@ class MasterHostControl:
                     break
 
             if subprocess.returncode is not None:
-                del self._processes[pid]
-                read_result = await lp.stdio_read(wait_seconds=2.0)
+                stdout_bytes, stderr_bytes = await lp.drain_buffers()
                 return ProcessCreateResult(
                     pid=pid,
                     success=True,
                     returncode=subprocess.returncode,
-                    stdout=read_result.stdout.decode("utf-8", errors="replace"),
-                    stderr=read_result.stderr.decode("utf-8", errors="replace"),
+                    stdout=stdout_bytes.decode("utf-8", errors="replace"),
+                    stderr=stderr_bytes.decode("utf-8", errors="replace"),
                 )
 
             return ProcessCreateResult(
@@ -207,7 +205,7 @@ class MasterHostControl:
         return list(self._processes.keys())
 
     async def _handle_process_exit(self, pid: str) -> None:
-        self._processes.pop(pid, None)
+        pass
 
     async def change_directory(
         self, directory: str
