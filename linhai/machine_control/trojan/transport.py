@@ -48,6 +48,7 @@ class TrojanTransport:
             if not result.stdout:
                 continue
             self._buffer += result.stdout
+            await asyncio.sleep(0.1)
 
     def start_reading(self) -> None:
         if not self._reader_started:
