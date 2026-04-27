@@ -11,6 +11,7 @@ import platform
 import asyncio
 import tempfile
 import shutil
+import termios
 import http.client
 import urllib.parse
 import ssl
@@ -712,6 +713,12 @@ def main():
     if not marker_hex:
         print("Usage: trojan.py <4-hex-marker>", file=sys.stderr)
         sys.exit(1)
+
+    if sys.stdin.isatty():
+        fd = sys.stdin.fileno()
+        settings = termios.tcgetattr(fd)
+        settings[3] = settings[3] & ~termios.ICANON & ~termios.ECHO
+        termios.tcsetattr(fd, termios.TCSANOW, settings)
 
     trojan = Trojan()
     trojan._set_marker(marker_hex)
