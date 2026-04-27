@@ -78,6 +78,7 @@ class LocalProcess:
                 if stderr_final:
                     self._stderr_buffer += stderr_final
                 break
+            await asyncio.sleep(0.1)
 
     @property
     def pid(self) -> str:
@@ -229,7 +230,7 @@ class LocalPtyProcess:
             if not chunk:
                 break
             self._stdout_buffer += chunk
-            await asyncio.sleep(0)
+            await asyncio.sleep(0.1)
 
     @property
     def pid(self) -> str:
