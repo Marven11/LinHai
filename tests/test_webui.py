@@ -720,3 +720,15 @@ class TestAuthMiddleware(unittest.TestCase):
             mock_get.return_value = mock_manager
             response = self.client.get("/api/agents")
             self.assertEqual(response.status_code, 200)
+
+    def test_query_param_auth(self):
+        with patch("linhai.webui.routes.get_manager") as mock_get:
+            mock_manager = MagicMock()
+            mock_manager.list_agents.return_value = []
+            mock_get.return_value = mock_manager
+            response = self.client.get(f"/api/agents?token={self.token}")
+            self.assertEqual(response.status_code, 200)
+
+    def test_query_param_wrong_token(self):
+        response = self.client.get("/api/agents?token=wrong")
+        self.assertEqual(response.status_code, 401)

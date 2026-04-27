@@ -38,7 +38,10 @@ def create_app(api_token: str) -> FastAPI:
     async def auth_middleware(request: Request, call_next):
         if request.url.path in _AUTH_WHITELIST_PATHS:
             return await call_next(request)
-        if request.cookies.get("api_token") == token:
+        if (
+            request.cookies.get("api_token") == token
+            or request.query_params.get("token") == token
+        ):
             return await call_next(request)
         return JSONResponse(
             status_code=401,
