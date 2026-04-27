@@ -59,7 +59,9 @@ class SudoStdioCheckerPlugin(Plugin):
 
         if not has_stdin_flag:
             return ToolResultFailed(
-                content="sudo命令必须使用-S标志以确保从标准输入读取密码喵~。请使用sudo -S或sudo --stdin。"
+                content="sudo命令必须使用-S标志以确保从标准输入读取密码。"
+                "建议使用sudo -S bash启动新bash并用connect_posix_shell_as_machine连接为机器，"
+                "以避免重复授权。"
             )
 
         return None

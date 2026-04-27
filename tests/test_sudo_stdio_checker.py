@@ -85,6 +85,7 @@ class TestSudoStdioCheckerPlugin(unittest.IsolatedAsyncioTestCase):
                 )
                 self.assertIsInstance(result, ToolResultFailed)
                 self.assertIn("sudo命令必须使用-S标志", result.content)
+                self.assertIn("connect_posix_shell_as_machine", result.content)
 
     async def test_before_tool_call_sudo_with_S_flag(self):
         """测试包含sudo且有-S标志时通过"""

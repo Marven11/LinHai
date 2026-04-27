@@ -34,28 +34,50 @@ class SudoBashHintPlugin(Plugin):
         if not argv or not isinstance(argv, list) or len(argv) == 0:
             return None
 
-        if argv[0] != "sudo":
+        hint = self._build_hint(argv)
+        if hint is None:
             return None
 
         if self._last_hint_time is not None:
             if time.time() - self._last_hint_time < self.TIME_WINDOW_SECONDS:
                 return None
 
-        has_bash_or_sh = any(
-            os.path.basename(arg) in ("bash", "sh")
-            for arg in argv[1:]
-            if not arg.startswith("-")
-        )
-        if has_bash_or_sh:
-            return None
-
         self._last_hint_time = time.time()
         agent = self.registry.get_member_typechecked("agent", Agent)
-        await agent.message_processor.add_new_message(
-            RuntimeMessage(
+        await agent.message_processor.add_new_message(RuntimeMessage(hint))
+        return None
+
+    @staticmethod
+    def _build_hint(argv: list) -> str | None:
+        first = argv[0]
+
+        if first == "sudo":
+            has_bash_or_sh = any(
+                os.path.basename(arg) in ("bash", "sh")
+                for arg in argv[1:]
+                if not arg.startswith("-")
+            )
+            if has_bash_or_sh:
+                return None
+            return (
                 "提示：检测到你使用sudo运行了非bash/sh命令。"
-                "优先考虑运行sudo bash并使用connect_posix_shell_as_machine工具连接posix shell为机器，"
+                "优先考虑运行sudo -S bash并使用connect_posix_shell_as_machine工具连接posix shell为机器，"
                 "以避免用非标准方式读写文件并避免转义带来的心智负担"
             )
-        )
+
+        if first == "su":
+            return (
+                "提示：检测到你使用su命令。"
+                "建议使用connect_posix_shell_as_machine工具将su启动的shell连接为机器，"
+                "以避免重复输入密码"
+            )
+
+        if first == "adb":
+            if "shell" not in argv[1:]:
+                return None
+            return (
+                "提示：检测到你使用adb shell命令。"
+                "建议使用connect_posix_shell_as_machine工具将adb shell连接为机器"
+            )
+
         return None
