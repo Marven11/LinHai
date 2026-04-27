@@ -462,6 +462,49 @@ class TestLlmManager(unittest.IsolatedAsyncioTestCase):
             await self.llm_manager.answer_stream(history)
         self.assertIn("unexpected error", str(context.exception))
 
+    async def test_answer_stream_resets_retry_count_on_success(self):
+        fail_count = [0]
+
+        async def mock_fail_then_ok(history):
+            fail_count[0] += 1
+            if fail_count[0] <= 3:
+                raise Exception("connection error")
+            return MockAnswer()
+
+        self.mock_llm1.answer_stream = AsyncMock(side_effect=mock_fail_then_ok)
+
+        llm_manager = LlmManager(
+            registry=self.mock_registry,
+            llms=[self.mock_llm1, self.mock_llm2],
+            default_llm_name="llm1",
+            llm_fallback_map={"llm1": None, "llm2": None},
+            llm_fallback_duration_map={"llm1": 120, "llm2": 120},
+        )
+
+        with patch("asyncio.sleep", AsyncMock()):
+            history = [MagicMock(spec=Message)]
+            answer = await llm_manager.answer_stream(history)
+
+        self.assertIsInstance(answer, MockAnswer)
+        self.assertEqual(fail_count[0], 4)
+        self.assertEqual(llm_manager.llm_stack[-1]["retry_count"], 0)
+
+        fail_count2 = [0]
+
+        async def mock_fail_once_then_ok(history):
+            fail_count2[0] += 1
+            if fail_count2[0] <= 1:
+                raise Exception("connection error")
+            return MockAnswer()
+
+        self.mock_llm1.answer_stream = AsyncMock(side_effect=mock_fail_once_then_ok)
+
+        with patch("asyncio.sleep", AsyncMock()):
+            answer = await llm_manager.answer_stream(history)
+
+        self.assertIsInstance(answer, MockAnswer)
+        self.assertEqual(fail_count2[0], 2)
+
 
 if __name__ == "__main__":
     unittest.main()

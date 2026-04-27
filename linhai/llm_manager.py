@@ -162,6 +162,7 @@ class LlmManager:
 
             try:
                 answer = await current_llm.answer_stream(history)
+                element["retry_count"] = 0
                 return answer
             except asyncio.TimeoutError as e:
                 element["retry_count"] += 1
