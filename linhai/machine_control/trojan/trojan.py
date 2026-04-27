@@ -53,13 +53,15 @@ class Trojan:
     async def ping(self):
         return {"message": "pong"}
 
-    async def process_create(self, argv, wait_second=1.0):
+    async def process_create(self, argv, wait_second=1.0, env=None):
+        subprocess_env = env
         process = await asyncio.create_subprocess_exec(
             *argv,
             stdin=asyncio.subprocess.PIPE,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
             cwd=self.current_dir,
+            env=subprocess_env,
             start_new_session=True,
         )
         pid = str(process.pid)

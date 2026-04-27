@@ -114,15 +114,20 @@ class PosixShellControl:
         )
 
     async def create_process(
-        self, argv: list[str], wait_second: Optional[float] = None, pty: bool = False
+        self,
+        argv: list[str],
+        wait_second: Optional[float] = None,
+        pty: bool = False,
+        env: Optional[Dict[str, str]] = None,
     ) -> ProcessCreateResult:
         if pty:
             raise RuntimeError("PosixShell不支持pty模式")
         if wait_second is None:
             wait_second = 1.0
-        result = await self.call_tool(
-            "process_create", {"argv": argv, "wait_second": wait_second}
-        )
+        args: Dict[str, object] = {"argv": argv, "wait_second": wait_second}
+        if env is not None:
+            args["env"] = env
+        result = await self.call_tool("process_create", args)
         if isinstance(result, ToolResultFailed):
             return ProcessCreateResult(pid="", success=False, error=result.content)
 

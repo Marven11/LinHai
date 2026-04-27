@@ -227,7 +227,11 @@ class BashHostControl:
         return ToolResultSuccess(content=f"从目录{old_cwd}切换到了{self._cwd}")
 
     async def create_process(
-        self, argv: list[str], wait_second: Optional[float] = None, pty: bool = False
+        self,
+        argv: list[str],
+        wait_second: Optional[float] = None,
+        pty: bool = False,
+        env: Optional[Dict[str, str]] = None,
     ) -> ProcessCreateResult:
         if pty:
             raise RuntimeError("BashHost不支持pty模式")
@@ -247,8 +251,15 @@ class BashHostControl:
                 pid="", success=False, error=f"创建进程目录失败: {stderr}"
             )
 
+        env_prefix = ""
+        if env is not None:
+            env_prefix = (
+                " ".join(f"{shlex.quote(k)}={shlex.quote(v)}" for k, v in env.items())
+                + " "
+            )
+
         start_cmd = (
-            f"(cd {shlex.quote(self._cwd)} && {cmd_str} < /dev/null"
+            f"(cd {shlex.quote(self._cwd)} && {env_prefix}{cmd_str} < /dev/null"
             f" > {stdout_path} 2> {stderr_path};"
             f" echo $? > {rc_path}) & "
             f"echo $!"

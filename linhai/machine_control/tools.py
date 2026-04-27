@@ -417,15 +417,27 @@ def register_machine_control_tools(machine_control: "MachineControl") -> ToolSet
                 ),
                 type="bool",
             ),
+            "env": ToolArgInfo(
+                desc=t(
+                    {
+                        "zh_CN": "环境变量字典，默认None表示继承当前环境变量",
+                        "en": "Environment variables dict, default None to inherit current environment",
+                    }
+                ),
+                type="Optional[Dict[str, str]]",
+            ),
         },
         required_args=["argv"],
         conflict_with=None,
     )
     async def process_create_tool(
-        argv: list[str], wait_second: Optional[float] = None, pty: bool = False
+        argv: list[str],
+        wait_second: Optional[float] = None,
+        pty: bool = False,
+        env: Optional[Dict[str, str]] = None,
     ) -> ToolResultSuccess | ToolResultFailed:
         host_control = machine_control.machines[machine_control.target_machine]
-        result = await host_control.create_process(argv, wait_second, pty=pty)
+        result = await host_control.create_process(argv, wait_second, pty=pty, env=env)
         if not result.success:
             return ToolResultFailed(content=result.error or "创建进程失败")
         if result.returncode is None:

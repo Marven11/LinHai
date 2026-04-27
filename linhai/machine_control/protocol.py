@@ -29,7 +29,11 @@ class HostControl(Protocol):
     ) -> ToolResultSuccess | ToolResultFailed: ...
 
     async def create_process(
-        self, argv: list[str], wait_second: Optional[float] = None, pty: bool = False
+        self,
+        argv: list[str],
+        wait_second: Optional[float] = None,
+        pty: bool = False,
+        env: Optional[Dict[str, str]] = None,
     ) -> ProcessCreateResult: ...
 
     def get_process(self, pid: str) -> Process | None: ...

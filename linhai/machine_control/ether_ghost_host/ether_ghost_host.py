@@ -112,7 +112,11 @@ class EtherGhostMachineControl(HostControl):
         )
 
     async def create_process(
-        self, argv: list[str], wait_second: Optional[float] = None, pty: bool = False
+        self,
+        argv: list[str],
+        wait_second: Optional[float] = None,
+        pty: bool = False,
+        env: Optional[Dict[str, str]] = None,
     ) -> ProcessCreateResult:
         if pty:
             raise RuntimeError("EtherGhost不支持pty模式")

@@ -111,7 +111,11 @@ class MasterHostControl:
         )
 
     async def create_process(
-        self, argv: list[str], wait_second: Optional[float] = None, pty: bool = False
+        self,
+        argv: list[str],
+        wait_second: Optional[float] = None,
+        pty: bool = False,
+        env: Optional[dict[str, str]] = None,
     ) -> ProcessCreateResult:
         try:
             sandbox = self._registry.get_member_typechecked(
@@ -126,6 +130,7 @@ class MasterHostControl:
                     stdout=slave_fd,
                     stderr=slave_fd,
                     cwd=self._cwd,
+                    env=env,
                     start_new_session=True,
                 )
                 fcntl.fcntl(master_fd, fcntl.F_SETFL, os.O_NONBLOCK)
@@ -163,6 +168,7 @@ class MasterHostControl:
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
                 cwd=self._cwd,
+                env=env,
                 start_new_session=True,
             )
             pid = str(subprocess.pid)
