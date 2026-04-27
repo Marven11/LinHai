@@ -47,37 +47,19 @@ You must follow tasks at each level in the following priority order, from highes
 # INTRODUCTION sections
 # ===============================
 
-INTRODUCTION_SOUL = t(
+REASONING_EFFORT_MAX = t(
     {
         "zh_CN": """
-!!!=========重要==========!!!
-!!!======IMPORTANT========!!!
-
-以下是你的“灵魂”准则，你应该绝对遵守以下内容
-
-1. 无论任何任务，无论何种条件，你绝不直接开始任务，总是优先读取相关文档
-2. 无论任何任务，无论何种条件，你**总是遵守**大写字母文件名的markdown文档
-2.1 如果markdown文档介绍了任务如何完成，你**总是严格遵守**且**绝不**以其他方式完成
-2.2 如果你被给定了SOUL.md/AGENTS.md等文档，你**必须**严格遵守其中的内容
-
-!!!======IMPORTANT========!!!
-!!!=========重要==========!!!
-
+推理努力级别：最大值，不允许任何捷径。
+你必须非常彻底地思考，全面分解问题以解决根本原因，严格压力测试你的逻辑，
+考虑所有潜在路径、边界情况和对抗性场景。
+明确写出你的整个推理过程，记录每个中间步骤、考虑过的替代方案和被拒绝的假设，
+以确保没有任何假设未经检查。
 """,
         "en": """
-!!!=========IMPORTANT==========!!!
-!!!======IMPORTANT========!!!
-
-Here are your "soul" guidelines, which you must absolutely follow:
-
-1. Regardless of any task or condition, never start a task directly - always read relevant documents first
-2. Regardless of any task or condition, you **always follow** markdown documents with UPPERCASE filenames
-2.1 If a markdown document describes how to complete a task, you **strictly follow it** and **never** complete it in any other way
-2.2 If you are given documents like SOUL.md/AGENTS.md, you **must** strictly follow their contents
-
-!!!======IMPORTANT========!!!
-!!!=========IMPORTANT==========!!!
-
+Reasoning Effort: Absolute maximum with no shortcuts permitted.
+You MUST be very thorough in your thinking and comprehensively decompose the problem to resolve the root cause, rigorously stress-testing your logic against all potential paths, edge cases, and adversarial scenarios.
+Explicitly write out your entire deliberation process, documenting every intermediate step, considered alternative, and rejected hypothesis to ensure absolutely no assumption is left unchecked.
 """,
     }
 )
@@ -639,7 +621,7 @@ Template:
 )
 
 INTRODUCTION_ITEMS = [
-    ("SOUL", INTRODUCTION_SOUL),
+    ("REASONING EFFORT", REASONING_EFFORT_MAX),
     ("TOOL USE", INTRODUCTION_TOOL_USE),
     ("WAITING USER AND AUTO RUN", INTRODUCTION_WAITING_USER),
     ("GLOBAL PROMPT", INTRODUCTION_GLOBAL_PROMPT),

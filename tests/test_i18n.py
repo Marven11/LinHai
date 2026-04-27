@@ -156,7 +156,7 @@ class TestPromptI18n(unittest.TestCase):
 
         constants = [
             prompt.OVERVIEW,
-            prompt.INTRODUCTION_SOUL,
+            prompt.REASONING_EFFORT_MAX,
             prompt.INTRODUCTION_TOOL_USE,
             prompt.INTRODUCTION_WAITING_USER,
             prompt.INTRODUCTION_GLOBAL_PROMPT,
