@@ -3,7 +3,7 @@ import unittest
 from linhai.utils.tokenizer import count_tokens, get_cl100k_base_tokenizer
 
 
-class TestFakeTokenizer(unittest.TestCase):
+class TestEstimatedTokenizer(unittest.TestCase):
     def test_count_tokens_empty(self):
         self.assertEqual(count_tokens(""), 0)
 
@@ -29,12 +29,15 @@ class TestFakeTokenizer(unittest.TestCase):
             decoded = tokenizer.decode(tokens)
             self.assertEqual(decoded, text, f"Roundtrip failed for: {text[:50]}")
 
-    def test_tiktoken_can_decode_fake_output(self):
+    def test_tiktoken_can_decode_estimated_output(self):
         try:
             import tiktoken
         except ImportError:
             self.skipTest("tiktoken not installed")
-        enc = tiktoken.get_encoding("cl100k_base")
+        try:
+            enc = tiktoken.get_encoding("cl100k_base")
+        except Exception:
+            self.skipTest("tiktoken encoding unavailable (network error)")
         tokenizer = get_cl100k_base_tokenizer()
         texts = [
             "hello world",
@@ -48,7 +51,7 @@ class TestFakeTokenizer(unittest.TestCase):
             self.assertEqual(
                 decoded,
                 text,
-                f"tiktoken failed to decode fake output for: {text[:50]}",
+                f"tiktoken failed to decode estimated output for: {text[:50]}",
             )
 
 

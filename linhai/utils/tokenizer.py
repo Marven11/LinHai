@@ -16,55 +16,72 @@ def _load_ranks() -> dict[bytes, int]:
     return ranks
 
 
+def _bpe_encode_brute(ranks: dict[bytes, int], piece: bytes) -> list[int]:
+    parts: list[bytes] = [bytes([b]) for b in piece]
+    while len(parts) > 1:
+        pairs = [
+            (ranks.get(parts[i] + parts[i + 1], _MAX_RANK), i)
+            for i in range(len(parts) - 1)
+        ]
+        min_rank, min_idx = min(pairs)
+        if min_rank == _MAX_RANK:
+            break
+        parts[min_idx : min_idx + 2] = [parts[min_idx] + parts[min_idx + 1]]
+    return [ranks[p] for p in parts]
+
+
 def _bpe_encode(ranks: dict[bytes, int], piece: bytes) -> list[int]:
     if not piece:
         return []
+    if len(piece) < 5:
+        return _bpe_encode_brute(ranks, piece)
     n = len(piece)
     token_length = [1] * (n + 1)
     token_length[n] = 0
     prev_token = list(range(-1, n))
 
-    def merge(i: int, j: int) -> None:
-        prev_token[j + token_length[j]] = i
+    def merge(i: int, j: int, handle_prev_token: bool) -> None:
+        if handle_prev_token:
+            prev_token[j + token_length[j]] = i
         token_length[i] += token_length[j]
 
-    while token_length[0] != n:
-        p1 = 0
-        p2 = p1 + token_length[p1]
-        p3 = p2 + token_length[p2]
-        b1 = piece[p1 : p1 + token_length[p1]]
-        b2 = piece[p2 : p2 + token_length[p2]]
-        b3 = piece[p3 : p3 + token_length[p3]]
-        if b1 + b2 in ranks and ranks[b1 + b2] <= ranks.get(b2 + b3, _MAX_RANK):
-            merge(p1, p2)
-        else:
-            break
-
     p = 0
-    done = False
-    while not done:
+    while True:
         p1 = p
         p2 = p1 + token_length[p1]
+        if p2 >= n:
+            break
         p3 = p2 + token_length[p2]
         p4 = p3 + token_length[p3]
-        b1 = piece[p1 : p1 + token_length[p1]]
-        b2 = piece[p2 : p2 + token_length[p2]]
-        b3 = piece[p3 : p3 + token_length[p3]]
-        b4 = piece[p4 : p4 + token_length[p4]]
-        if (
-            b2 + b3 in ranks
-            and ranks[b2 + b3] <= ranks.get(b1 + b2, _MAX_RANK)
-            and ranks[b2 + b3] <= ranks.get(b3 + b4, _MAX_RANK)
-        ):
-            merge(p2, p3)
+        w12 = ranks.get(piece[p1 : p1 + token_length[p1] + token_length[p2]], _MAX_RANK)
+        w23 = (
+            ranks.get(piece[p2 : p2 + token_length[p2] + token_length[p3]], _MAX_RANK)
+            if p3 < n
+            else _MAX_RANK
+        )
+        w34 = (
+            ranks.get(piece[p3 : p3 + token_length[p3] + token_length[p4]], _MAX_RANK)
+            if p3 < n
+            else _MAX_RANK
+        )
+
+        if p == 0 and w12 != _MAX_RANK and w12 <= w23:
+            merge(p1, p2, handle_prev_token=True)
+        elif p3 < n and w12 > w23 and w23 <= w34 and w23 != _MAX_RANK:
+            merge(p2, p3, handle_prev_token=True)
             if p > 0:
                 p = prev_token[p]
             if p > 0:
                 p = prev_token[p]
+        elif p4 + token_length[p4] == n:
+            if p4 < n and w34 < w23:
+                merge(p3, p4, handle_prev_token=False)
+                if p > 0:
+                    p = prev_token[p]
+            else:
+                break
         else:
             p = p2
-        if p4 + token_length[p4] == n:
-            done = True
 
     tokens: list[int] = []
     pos = 0
@@ -74,7 +91,7 @@ def _bpe_encode(ranks: dict[bytes, int], piece: bytes) -> list[int]:
     return tokens
 
 
-class FakeTokenizer:
+class EstimatedTokenizer:
     def __init__(self, ranks: dict[bytes, int]) -> None:
         self._ranks = ranks
         self._decoder = {v: k for k, v in ranks.items()}
@@ -88,13 +105,13 @@ class FakeTokenizer:
         )
 
 
-_tokenizer: FakeTokenizer | None = None
+_tokenizer: EstimatedTokenizer | None = None
 
 
-def get_cl100k_base_tokenizer() -> FakeTokenizer:
+def get_cl100k_base_tokenizer() -> EstimatedTokenizer:
     global _tokenizer
     if _tokenizer is None:
-        _tokenizer = FakeTokenizer(_load_ranks())
+        _tokenizer = EstimatedTokenizer(_load_ranks())
     return _tokenizer
 
 
