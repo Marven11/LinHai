@@ -36,6 +36,8 @@ def create_app(api_token: str) -> FastAPI:
 
     @app.middleware("http")
     async def auth_middleware(request: Request, call_next):
+        if request.method == "OPTIONS":
+            return await call_next(request)
         if request.url.path in _AUTH_WHITELIST_PATHS:
             return await call_next(request)
         if (
