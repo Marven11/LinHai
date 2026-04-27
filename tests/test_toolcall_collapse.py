@@ -23,6 +23,16 @@ class TestToolCallCollapse(unittest.TestCase):
         result = simplify_value(long_string)
         self.assertEqual(result, '"a very long string that should be tru..."')
 
+    def test_simplify_value_regex_not_path(self):
+        result = simplify_value("/unicode.*punct|punct.*unicode/p")
+        self.assertNotEqual(result, '".../p"')
+        self.assertIn("unicode", result)
+
+    def test_simplify_value_regex_with_dot_plus(self):
+        result = simplify_value("/route.+param/value")
+        self.assertNotEqual(result, '".../value"')
+        self.assertIn("route", result)
+
     def test_simplify_value_path(self):
         """测试路径参数简化"""
         result = simplify_value("/path/to/file.txt")

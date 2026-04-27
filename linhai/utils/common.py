@@ -89,10 +89,18 @@ def generate_id(prefix: str) -> str:
     return f"{prefix}_{bytes_part}"
 
 
+def _looks_like_regex(value: str) -> bool:
+    return bool(re.search(r"\.\*|\.\+|(?<!\\)\|", value))
+
+
 def simplify_value(value: str | int | float | bool | None | dict | list) -> str:
     json_repr = lambda x: json.dumps(x, ensure_ascii=False)
     if isinstance(value, str):
-        if re.match(r"^[/~]|^[a-zA-Z]:\\|^(\./|\.\./)", value) and len(value) >= 20:
+        if (
+            re.match(r"^[/~]|^[a-zA-Z]:\\|^(\./|\.\./)", value)
+            and len(value) >= 20
+            and not _looks_like_regex(value)
+        ):
             if re.search(r"[,+]", value) and "/" in value[1:]:
                 return (
                     json_repr(value[:37] + "...")
