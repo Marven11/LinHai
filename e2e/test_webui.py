@@ -28,7 +28,7 @@ async def client():
     async with AsyncClient(
         transport=ASGITransport(app=app), base_url="http://test"
     ) as ac:
-        ac.cookies.set("api_token", app.state.api_token)
+        ac.headers["Authorization"] = f"Bearer {app.state.api_token}"
         yield ac
 
 

@@ -40,10 +40,10 @@ def create_app(api_token: str) -> FastAPI:
             return await call_next(request)
         if request.url.path in _AUTH_WHITELIST_PATHS:
             return await call_next(request)
+        auth_header = request.headers.get("authorization", "")
         if (
-            request.cookies.get("api_token") == token
-            or request.query_params.get("token") == token
-        ):
+            auth_header.startswith("Bearer ") and auth_header[7:] == token
+        ) or request.query_params.get("token") == token:
             return await call_next(request)
         return JSONResponse(
             status_code=401,
@@ -53,9 +53,7 @@ def create_app(api_token: str) -> FastAPI:
     @app.post("/api/auth")
     async def authenticate(request: AuthRequest):
         if request.api_key == token:
-            response = JSONResponse({"status": "ok"})
-            response.set_cookie("api_token", token, samesite="none", secure=True)
-            return response
+            return JSONResponse({"status": "ok", "token": token})
         raise HTTPException(status_code=403, detail="Invalid API key")
 
     app.include_router(agents_router)

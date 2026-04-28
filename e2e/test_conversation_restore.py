@@ -78,7 +78,7 @@ async def test_conversation_save_and_restore():
     secret_number = str(random.randint(1000000, 9999999))
 
     async with AsyncClient(base_url=f"http://127.0.0.1:{port}") as client:
-        client.cookies.set("api_token", token)
+        client.headers["Authorization"] = f"Bearer {token}"
         for _ in range(50):
             try:
                 resp = await client.get("/api/agents")
@@ -94,8 +94,7 @@ async def test_conversation_save_and_restore():
 
         sub = JsonSubscriber()
         async with websockets.connect(
-            f"ws://127.0.0.1:{port}/api/agents/{agent_id}/ws",
-            additional_headers={"Cookie": f"api_token={token}"},
+            f"ws://127.0.0.1:{port}/api/agents/{agent_id}/ws?token={token}",
         ) as ws:
             data = json.loads(await ws.recv())
             assert "event" in data
@@ -161,8 +160,7 @@ async def test_conversation_save_and_restore():
 
         sub2 = JsonSubscriber()
         async with websockets.connect(
-            f"ws://127.0.0.1:{port}/api/agents/{agent_id_2}/ws",
-            additional_headers={"Cookie": f"api_token={token}"},
+            f"ws://127.0.0.1:{port}/api/agents/{agent_id_2}/ws?token={token}",
         ) as ws2:
             data = json.loads(await ws2.recv())
             assert "event" in data

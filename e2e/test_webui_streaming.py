@@ -48,9 +48,11 @@ def test_websocket_agent_not_found():
     try:
         app = create_app(api_token="e2e-test-token")
         client = TestClient(app)
-        client.cookies.set("api_token", app.state.api_token)
+        client.headers["Authorization"] = f"Bearer {app.state.api_token}"
         try:
-            with client.websocket_connect("/api/agents/nonexistent/ws"):
+            with client.websocket_connect(
+                f"/api/agents/nonexistent/ws?token={app.state.api_token}"
+            ):
                 pass
             assert False, "Expected websocket close"
         except Exception:
@@ -64,14 +66,16 @@ def test_websocket_initial_state():
     try:
         app = create_app(api_token="e2e-test-token")
         client = TestClient(app)
-        client.cookies.set("api_token", app.state.api_token)
+        client.headers["Authorization"] = f"Bearer {app.state.api_token}"
 
         response = client.post("/api/agents", json={"message": ["Say hello"]})
         assert response.status_code == 200
         agent_id = response.json()["id"]
 
         sub = JsonSubscriber()
-        with client.websocket_connect(f"/api/agents/{agent_id}/ws") as ws:
+        with client.websocket_connect(
+            f"/api/agents/{agent_id}/ws?token={app.state.api_token}"
+        ) as ws:
             data = ws.receive_json(mode="text")
             assert "event" in data
             sub.update_data(data)
@@ -91,14 +95,16 @@ def test_websocket_user_message():
     try:
         app = create_app(api_token="e2e-test-token")
         client = TestClient(app)
-        client.cookies.set("api_token", app.state.api_token)
+        client.headers["Authorization"] = f"Bearer {app.state.api_token}"
 
         response = client.post("/api/agents", json={"message": []})
         assert response.status_code == 200
         agent_id = response.json()["id"]
 
         sub = JsonSubscriber()
-        with client.websocket_connect(f"/api/agents/{agent_id}/ws") as ws:
+        with client.websocket_connect(
+            f"/api/agents/{agent_id}/ws?token={app.state.api_token}"
+        ) as ws:
             data = ws.receive_json(mode="text")
             assert "event" in data
             sub.update_data(data)
@@ -127,14 +133,16 @@ def test_websocket_reset_recovery():
     try:
         app = create_app(api_token="e2e-test-token")
         client = TestClient(app)
-        client.cookies.set("api_token", app.state.api_token)
+        client.headers["Authorization"] = f"Bearer {app.state.api_token}"
 
         response = client.post("/api/agents", json={"message": []})
         assert response.status_code == 200
         agent_id = response.json()["id"]
 
         sub = JsonSubscriber()
-        with client.websocket_connect(f"/api/agents/{agent_id}/ws") as ws:
+        with client.websocket_connect(
+            f"/api/agents/{agent_id}/ws?token={app.state.api_token}"
+        ) as ws:
             data = ws.receive_json(mode="text")
             assert "event" in data
             sub.update_data(data)
@@ -175,14 +183,16 @@ def test_websocket_multi_turn():
     try:
         app = create_app(api_token="e2e-test-token")
         client = TestClient(app)
-        client.cookies.set("api_token", app.state.api_token)
+        client.headers["Authorization"] = f"Bearer {app.state.api_token}"
 
         response = client.post("/api/agents", json={"message": []})
         assert response.status_code == 200
         agent_id = response.json()["id"]
 
         sub = JsonSubscriber()
-        with client.websocket_connect(f"/api/agents/{agent_id}/ws") as ws:
+        with client.websocket_connect(
+            f"/api/agents/{agent_id}/ws?token={app.state.api_token}"
+        ) as ws:
             data = ws.receive_json(mode="text")
             assert "event" in data
             sub.update_data(data)
@@ -291,7 +301,7 @@ async def test_webui_streaming_e2e():
     )
     server_thread.start()
     async with AsyncClient(base_url=f"http://127.0.0.1:{port}") as client:
-        client.cookies.set("api_token", token)
+        client.headers["Authorization"] = f"Bearer {token}"
         for _ in range(50):
             try:
                 resp = await client.get("/api/agents")
@@ -305,8 +315,7 @@ async def test_webui_streaming_e2e():
         agent_id = resp.json()["id"]
         sub = JsonSubscriber()
         async with websockets.connect(
-            f"ws://127.0.0.1:{port}/api/agents/{agent_id}/ws",
-            additional_headers={"Cookie": f"api_token={token}"},
+            f"ws://127.0.0.1:{port}/api/agents/{agent_id}/ws?token={token}",
         ) as ws:
             data = json.loads(await ws.recv())
             assert "event" in data

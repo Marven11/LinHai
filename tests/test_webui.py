@@ -543,7 +543,7 @@ class TestCreateAgentPathValidation(unittest.IsolatedAsyncioTestCase):
         app = create_app(api_token="test-token")
         self.token = app.state.api_token
         self.client = TestClient(app)
-        self.client.cookies.set("api_token", self.token)
+        self.client.headers["Authorization"] = f"Bearer {self.token}"
 
     def tearDown(self):
         from linhai.webui import routes
@@ -703,7 +703,7 @@ class TestAuthMiddleware(unittest.TestCase):
             json={"api_key": self.token},
         )
         self.assertEqual(response.status_code, 200)
-        self.assertIn("api_token", response.cookies)
+        self.assertEqual(response.json()["token"], self.token)
 
     def test_auth_wrong_key(self):
         response = self.client.post(
@@ -713,7 +713,7 @@ class TestAuthMiddleware(unittest.TestCase):
         self.assertEqual(response.status_code, 403)
 
     def test_authenticated_request(self):
-        self.client.cookies.set("api_token", self.token)
+        self.client.headers["Authorization"] = f"Bearer {self.token}"
         with patch("linhai.webui.routes.get_manager") as mock_get:
             mock_manager = MagicMock()
             mock_manager.list_agents.return_value = []
