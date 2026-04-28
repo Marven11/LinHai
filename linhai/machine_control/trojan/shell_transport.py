@@ -5,6 +5,7 @@ import uuid
 from pathlib import Path
 from typing import Optional
 
+from linhai.machine_control.master_host.process import LocalPtyProcess
 from linhai.registry import Registry
 from linhai.utils.common import UiNotice
 from linhai.machine_control.process import Process
@@ -13,6 +14,18 @@ from rich.text import Text
 
 def _strip_ansi_and_cr(text: str) -> str:
     return Text.from_ansi(text).plain.replace("\r", "")
+
+
+def _is_pty_process(process: Process) -> bool:
+    return isinstance(process, LocalPtyProcess)
+
+
+async def _disable_pty_echo(process: Process) -> None:
+    if not _is_pty_process(process):
+        return
+    await process.stdio_write("stty -echo", with_enter=True)
+    await asyncio.sleep(0.3)
+    await process.stdio_read(0.5)
 
 
 async def _execute_in_shell(
@@ -69,6 +82,35 @@ async def _execute_in_shell(
     return 1, "", "命令执行超时"
 
 
+async def _upload_trojan_chunked(
+    process: Process, encoded_content: str
+) -> tuple[int, str, str]:
+    exit_code, output, error = await _execute_in_shell(
+        process, "B64_PATH=$(mktemp --suffix=.b64) && echo $B64_PATH"
+    )
+    if exit_code != 0:
+        return exit_code, output, error
+    b64_path = output.strip()
+
+    chunk_size = 1024
+    for i in range(0, len(encoded_content), chunk_size):
+        chunk = encoded_content[i : i + chunk_size]
+        exit_code, output, error = await _execute_in_shell(
+            process, f"echo '{chunk}' >> \"{b64_path}\""
+        )
+        if exit_code != 0:
+            return exit_code, output, error
+
+    exit_code, output, error = await _execute_in_shell(
+        process,
+        f"REMOTE_TEMP_PATH=$(mktemp --suffix=.py) && "
+        f'base64 -d "{b64_path}" | gzip -d > "$REMOTE_TEMP_PATH" && '
+        f'rm "{b64_path}" && '
+        f'echo "$REMOTE_TEMP_PATH"',
+    )
+    return exit_code, output, error
+
+
 async def setup_trojan_in_shell(
     process: Process, registry: Registry
 ) -> Optional[tuple[str, str]]:
@@ -76,6 +118,8 @@ async def setup_trojan_in_shell(
         "ui_log",
         UiNotice(level="INFO", content="开始连接远程机器"),
     )
+
+    await _disable_pty_echo(process)
 
     trojan_file_path = Path(__file__).parent / "trojan.py"
     if not trojan_file_path.exists():
@@ -110,13 +154,18 @@ async def setup_trojan_in_shell(
     compressed = gzip.compress(trojan_content.encode())
     encoded_content = base64.b64encode(compressed).decode()
 
-    command = f"""
-    REMOTE_TEMP_PATH=$(mktemp --suffix=.py) && \
-    echo '{encoded_content}' | base64 -d | gzip -d > "$REMOTE_TEMP_PATH" && \
-    echo "$REMOTE_TEMP_PATH"
-    """
+    if _is_pty_process(process):
+        exit_code, output, error = await _upload_trojan_chunked(
+            process, encoded_content
+        )
+    else:
+        command = (
+            "REMOTE_TEMP_PATH=$(mktemp --suffix=.py) && "
+            f"echo '{encoded_content}' | base64 -d | gzip -d > \"$REMOTE_TEMP_PATH\" && "
+            'echo "$REMOTE_TEMP_PATH"'
+        )
+        exit_code, output, error = await _execute_in_shell(process, command)
 
-    exit_code, output, error = await _execute_in_shell(process, command.strip())
     if exit_code != 0:
         error_msg = error or "创建远程临时文件失败"
         await registry.send_if_exists(

@@ -251,7 +251,15 @@ class LocalPtyProcess:
         pid = self.pid
         if with_enter:
             content = content + "\n"
-        os.write(self._master_fd, content.encode("utf-8"))
+        data = content.encode("utf-8")
+        offset = 0
+        while offset < len(data):
+            _, writable, _ = select.select([], [self._master_fd], [], 0)
+            if not writable:
+                await asyncio.sleep(0.01)
+                continue
+            written = os.write(self._master_fd, data[offset:])
+            offset += written
         return ProcessWriteResult(pid=pid, success=True, message="写入成功")
 
     async def stdio_read(self, wait_seconds: float) -> ProcessReadResult:
