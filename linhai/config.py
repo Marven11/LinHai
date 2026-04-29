@@ -62,6 +62,10 @@ class LLMConfig(BaseModel):
         gt=0,
         description="回退持续时间（秒），当LLM遇到429错误时切换到备用LLM的禁用时间",
     )
+    custom_toolcall_format: bool = Field(
+        default=True,
+        description="是否使用自定义的json toolcall代码块格式，False表示使用OpenAI原生tool calling",
+    )
 
     @field_validator("name")
     def validate_name(cls, v):  # pylint: disable=no-self-argument

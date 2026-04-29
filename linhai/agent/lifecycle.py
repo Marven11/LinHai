@@ -11,6 +11,7 @@ from linhai.base import Answer, Message
 
 if TYPE_CHECKING:
     from linhai.agent.messages import RuntimeMessage
+    from linhai.base import LanguageModel
 from linhai.tool.base import ToolResultSuccess, ToolResultFailed
 from linhai.agent.callback_slot import (
     BroadcastSlot,
@@ -124,6 +125,11 @@ OnLlmErrorCallback: TypeAlias = Callable[
     Awaitable[None],
 ]
 
+AfterSelectingLlmCallback: TypeAlias = Callable[
+    ["LanguageModel"],
+    Awaitable[None],
+]
+
 
 def _is_tool_result(value: ToolResultSuccess | ToolResultFailed | dict) -> bool:
     return isinstance(value, (ToolResultSuccess, ToolResultFailed))
@@ -159,6 +165,7 @@ class Lifecycle:
         self.after_parsed_user_message = ShortCircuitSlot()
         self.after_process_create = BroadcastSlot()
         self.on_llm_error = BroadcastSlot()
+        self.after_selecting_llm = BroadcastSlot()
         self.after_conversation_restore = BroadcastSlot()
 
     def serialize(self) -> dict:

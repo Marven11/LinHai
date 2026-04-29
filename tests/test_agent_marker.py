@@ -96,6 +96,8 @@ class TestAgentMarkerValidation(unittest.IsolatedAsyncioTestCase):
         self.lifecycle_mock = MagicMock()
         self.lifecycle_mock.after_toolcall.trigger = AsyncMock(return_value=None)
         self.lifecycle_mock.before_tool_call.trigger = AsyncMock(return_value=None)
+        self.lifecycle_mock.after_selecting_llm.trigger = AsyncMock()
+        self.lifecycle_mock.on_llm_error.trigger = AsyncMock()
 
         async def trigger_before_add_new_message_coroutine(msg):
             return None

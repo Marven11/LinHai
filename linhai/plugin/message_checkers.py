@@ -43,6 +43,8 @@ class WaitingUserPlugin(Plugin):
     async def after_message_generation(self, parsed_answer, full_response, tool_calls):
         """检查等待用户标记的位置和工具调用冲突。"""
         agent = self.registry.get_member_typechecked("agent", Agent)
+        if not agent.get_current_model().get_custom_toolcall_format():
+            return
         has_waiting_marker = WAITING_USER_MARKER in full_response
 
         if tool_calls and has_waiting_marker:
@@ -298,6 +300,9 @@ class JsonCodeBlockPlugin(Plugin):
         """检查是否有json代码块包含有效的工具调用。"""
         agent = self.registry.get_member_typechecked("agent", Agent)
 
+        if not agent.get_current_model().get_custom_toolcall_format():
+            return
+
         json_tool_calls, json_errors = extract_tool_calls_with_errors(
             full_response, language="json"
         )
@@ -339,6 +344,9 @@ class KimiK25ToolCallPlugin(Plugin):
         current_content: str,
     ) -> bool:
         """在token生成后检查是否需要打断agent。"""
+        if not agent.get_current_model().get_custom_toolcall_format():
+            return False
+
         if self._last_error_format_time is None:
             return False
 
@@ -363,6 +371,10 @@ class KimiK25ToolCallPlugin(Plugin):
         _tool_calls: list[dict],
     ):
         if not full_response:
+            return
+
+        agent = self.registry.get_member_typechecked("agent", Agent)
+        if not agent.get_current_model().get_custom_toolcall_format():
             return
 
         has_kimi_marker = "<|tool_call_begin|>" in full_response
@@ -433,6 +445,9 @@ class MinimaxToolCallPlugin(Plugin):
         _answer: Answer,
         current_content: str,
     ) -> bool:
+        if not agent.get_current_model().get_custom_toolcall_format():
+            return False
+
         if self._last_error_format_time is None:
             return False
 
@@ -457,6 +472,10 @@ class MinimaxToolCallPlugin(Plugin):
         _tool_calls: list[dict],
     ):
         if not full_response:
+            return
+
+        agent = self.registry.get_member_typechecked("agent", Agent)
+        if not agent.get_current_model().get_custom_toolcall_format():
             return
 
         has_minimax_marker = "<minimax:tool_call>" in full_response
@@ -546,6 +565,9 @@ class RuntimeImitationPlugin(Plugin):
     ):
         """检查deepseek等是否在模仿runtime输出并阻断。"""
 
+        if not agent.get_current_model().get_custom_toolcall_format():
+            return False
+
         if matches := re.search(r"^\s*<<([a-z_]+)>>", current_content, re.MULTILINE):
             if matches.group(1) == "agent":
                 await agent.agent_llm.interrupt(
@@ -586,6 +608,9 @@ class GlmToolCallPlugin(Plugin):
         model = agent.get_current_model()
 
         if model.get_compatibility() != "glm":
+            return
+
+        if not model.get_custom_toolcall_format():
             return
 
         if full_response.lstrip().startswith("<tool_call>"):

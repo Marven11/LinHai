@@ -50,6 +50,13 @@ class PromptFastAgentPlugin(Plugin):
     async def before_message_generation(self):
         """在消息生成前更新通知，显示当前模型的工具限制。"""
         agent = self.registry.get_member_typechecked("agent", Agent)
+
+        if not agent.get_current_model().get_custom_toolcall_format():
+            agent.message_processor.update_notification_message(
+                None, source="prompt_fast_agent", sort_value=100
+            )
+            return
+
         max_toolcall = self._get_max_toolcall_for_current_model(agent)
 
         if max_toolcall is None:
@@ -83,6 +90,9 @@ class PromptFastAgentPlugin(Plugin):
     ):
         max_toolcall = self._get_max_toolcall_for_current_model(agent)
         if max_toolcall is None:
+            return False
+
+        if not agent.get_current_model().get_custom_toolcall_format():
             return False
 
         if current_content.count("\n```json toolcall") > max_toolcall:
@@ -130,6 +140,9 @@ class SlowStartPlugin(Plugin):
         self, agent: "Agent", answer: Answer, current_content: str
     ) -> bool:
         """在消息生成过程中检查是否错误输出了工具调用内容。"""
+        if not agent.get_current_model().get_custom_toolcall_format():
+            return False
+
         if not self.enabled:
             return False
 
@@ -147,6 +160,8 @@ class SlowStartPlugin(Plugin):
     async def after_message_generation(
         self, parsed_answer, _full_response: str, tool_calls: list[dict]
     ):
+        if not self.enabled:
+            return
         if len(tool_calls) < 8:
             self.enabled = False
 
@@ -178,7 +193,11 @@ class WeirdTokenPlugin(Plugin):
                 )
                 answer.truncate()
                 return False
-            if model.get_compatibility() == "minimax" and line == "<tool_call>":
+            if (
+                model.get_compatibility() == "minimax"
+                and model.get_custom_toolcall_format()
+                and line == "<tool_call>"
+            ):
                 await agent.agent_llm.interrupt(
                     "检测到错误工具调用标记：输出了错误的工具调用: <tool_call>\n你应该使用json toolcall代码块调用工具！",
                     "检测到错误工具调用格式",
@@ -203,6 +222,12 @@ class SingleToolCallReminderPlugin(Plugin):
     ):
         """检查是否连续多次只调用了一个工具。"""
         agent = self.registry.get_member_typechecked("agent", Agent)
+
+        if not agent.get_current_model().get_custom_toolcall_format():
+            agent.message_processor.update_notification_message(
+                None, source="single_tool_call_reminder", sort_value=0
+            )
+            return
 
         if len(tool_calls) == 1:
             self.single_tool_call_count += 1
@@ -258,6 +283,9 @@ class ToolCallInReasoningPlugin(Plugin):
     ):
         """检查推理内容中是否包含工具调用，且实际输出中没有调用工具。"""
         agent = self.registry.get_member_typechecked("agent", Agent)
+
+        if not agent.get_current_model().get_custom_toolcall_format():
+            return
 
         reasoning_content = parsed_answer._answer.get_reasoning_message()
         if not reasoning_content:

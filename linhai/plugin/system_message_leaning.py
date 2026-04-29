@@ -48,3 +48,41 @@ class CurrentDirectoryPlugin(Plugin):
 
     def register(self, lifecycle):
         lifecycle.before_agent_loop.register(self._before_agent_loop)
+
+
+class CustomToolcallFormatPlugin(Plugin):
+
+    async def after_selecting_llm(self, llm):
+        from linhai.base import SystemMessage
+
+        system_message = self.registry.get_member_typechecked(
+            "system_message", SystemMessage
+        )
+
+        has_tool_use = any(
+            t == "TOOL USE" for t, _ in system_message.introduction_items
+        )
+        has_waiting_user = any(
+            t == "WAITING USER AND AUTO RUN"
+            for t, _ in system_message.introduction_items
+        )
+
+        if llm.get_custom_toolcall_format():
+            if not has_tool_use:
+                from linhai.prompt import INTRODUCTION_TOOL_USE
+
+                system_message.add_introduction("TOOL USE", INTRODUCTION_TOOL_USE)
+            if not has_waiting_user:
+                from linhai.prompt import INTRODUCTION_WAITING_USER
+
+                system_message.add_introduction(
+                    "WAITING USER AND AUTO RUN", INTRODUCTION_WAITING_USER
+                )
+        else:
+            if has_tool_use:
+                system_message.remove_introduction("TOOL USE")
+            if has_waiting_user:
+                system_message.remove_introduction("WAITING USER AND AUTO RUN")
+
+    def register(self, lifecycle):
+        lifecycle.after_selecting_llm.register(self.after_selecting_llm)

@@ -3,10 +3,15 @@ from __future__ import annotations
 from typing import Sequence, TypedDict
 import asyncio
 from datetime import datetime, timedelta
+from typing import TYPE_CHECKING
+
 from linhai.base import Message, LanguageModel, Answer
 from linhai.llm import OpenAIError
 from linhai.registry import Registry
 from linhai.utils.common import UiNotice
+
+if TYPE_CHECKING:
+    from linhai.agent.lifecycle import Lifecycle
 
 
 class LlmStackElement(TypedDict):
@@ -126,6 +131,9 @@ class LlmManager:
         self.llm_stack = [
             LlmStackElement(llm_name=name, disabled_until=None, retry_count=0)
         ]
+        current_llm = self.llms[self.llm_names.index(name)]
+        await self._trigger_after_selecting_llm(current_llm)
+
         await self.registry.send_if_exists(
             "ui_log",
             UiNotice(level="INFO", content=f"\u5df2\u5207\u6362\u5230LLM: {name}"),
@@ -149,6 +157,13 @@ class LlmManager:
             lifecycle = self.registry.get_member_typechecked("lifecycle", Lifecycle)
             await lifecycle.on_llm_error.trigger(llm_name, error, retry_count)
 
+    async def _trigger_after_selecting_llm(self, llm: LanguageModel) -> None:
+        from linhai.agent.lifecycle import Lifecycle
+
+        if self.registry.has_member("lifecycle"):
+            lifecycle = self.registry.get_member_typechecked("lifecycle", Lifecycle)
+            await lifecycle.after_selecting_llm.trigger(llm)
+
     async def answer_stream(self, history: Sequence[Message]) -> Answer:
         if not history:
             raise ValueError("history is empty")
@@ -159,6 +174,7 @@ class LlmManager:
             element = self.llm_stack[-1]
             llm_name = element["llm_name"]
             current_llm = self.llms[self.llm_names.index(llm_name)]
+            await self._trigger_after_selecting_llm(current_llm)
 
             try:
                 answer = await current_llm.answer_stream(history)

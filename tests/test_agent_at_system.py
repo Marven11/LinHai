@@ -38,6 +38,7 @@ class TestAgentAtSystem(unittest.IsolatedAsyncioTestCase):
         self.lifecycle_mock.after_parsed_user_message.trigger = AsyncMock(
             side_effect=trigger_after_parsed_user_message_side_effect
         )
+        self.lifecycle_mock.after_selecting_llm.trigger = AsyncMock()
 
         def get_member_typechecked_side_effect(name, cls):
             if name == "tui_app":

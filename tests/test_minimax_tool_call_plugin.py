@@ -17,6 +17,11 @@ class TestMinimaxToolCallPlugin(unittest.IsolatedAsyncioTestCase):
         self.registry = MagicMock(spec=Registry)
         self.plugin = MinimaxToolCallPlugin(self.registry)
         self.agent = AsyncMock()
+        self.agent.get_current_model = MagicMock(
+            return_value=MagicMock(
+                get_custom_toolcall_format=MagicMock(return_value=True)
+            )
+        )
         self.answer = MagicMock(spec=Answer)
 
     def test_init(self):

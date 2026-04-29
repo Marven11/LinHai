@@ -51,6 +51,7 @@ from .claw import ClawHeartbeatPlugin
 from .system_message_leaning import (
     MachineControlIntroductionPlugin,
     CurrentDirectoryPlugin,
+    CustomToolcallFormatPlugin,
 )
 from .planning import TodolistCheckerPlugin, PlanningHeadingCheckPlugin
 from .reminder import ReminderPlugin, ReminderWriteGuardPlugin
@@ -112,4 +113,5 @@ __all__ = [
     "PythonCommentCheckerPlugin",
     "CatgirlTonePlugin",
     "SudoBashHintPlugin",
+    "CustomToolcallFormatPlugin",
 ]

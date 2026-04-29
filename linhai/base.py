@@ -468,6 +468,10 @@ class LanguageModel(Protocol):
         """获取兼容性标识（如deepseek/glm/minimax/kimi/None）。"""
         raise NotImplementedError()
 
+    def get_custom_toolcall_format(self) -> bool:
+        """获取是否使用自定义json toolcall代码块格式。"""
+        raise NotImplementedError()
+
     async def reconnect(self) -> None:
         """重置底层客户端连接。"""
         raise NotImplementedError()
