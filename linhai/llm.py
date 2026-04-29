@@ -13,6 +13,7 @@ from linhai.base import (
     AssistantMessage,
     ExplicitCacheInfo,
     Message,
+    OpenAiToolCallToken,
     extract_usage,
 )
 from linhai.utils.common import UiNotice
@@ -44,7 +45,7 @@ class OpenAiAnswer:
         self.estimated_cached_input_tokens = estimated_cached_input_tokens
         self.cached_input_tokens: int | None = None
         self.llm_instance = llm_instance
-        self.toyield: list[AnswerToken] = []
+        self.toyield: list[AnswerToken | OpenAiToolCallToken] = []
 
     def __aiter__(self):
         """返回异步迭代器。"""
@@ -129,7 +130,7 @@ class OpenAiAnswer:
             self.interrupted = True
             raise StopAsyncIteration from exc
 
-    async def __anext__(self) -> AnswerToken:
+    async def __anext__(self) -> AnswerToken | OpenAiToolCallToken:
         if not self.toyield:
             await self.update_toyield()
         if not self.toyield:

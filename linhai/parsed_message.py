@@ -2,7 +2,7 @@ from typing import Literal, TypedDict, Tuple, Union, TYPE_CHECKING
 import asyncio
 import json
 import re
-from .base import Answer, Message
+from .base import Answer, Message, OpenAiToolCallToken
 from .agent.lifecycle import Lifecycle
 from .markdown_parser import extract_tool_calls_with_errors
 from .utils.streamjson import StreamJsonParser, Value, ValuePiece
@@ -33,7 +33,18 @@ class ToolCallSegment(TypedDict):
     tool_name: str
 
 
-Segment = Union[NormalSegment, ReasoningSegment, ToolCallSegment]
+class OpenAiToolCallSegment(TypedDict):
+    segment_type: Literal["openai_toolcall"]
+    idx: int
+    id: str | None
+    raw: str
+    is_finished: bool
+    is_corrupted: bool
+    markdown_representation: str
+    tool_name: str
+
+
+Segment = Union[NormalSegment, ReasoningSegment, ToolCallSegment, OpenAiToolCallSegment]
 
 
 def _get_backtick_count(text: str) -> int:
@@ -133,6 +144,7 @@ class ParsedAnswer:
         self.token_parser = TokenParser()
         self.current_segment: Segment | None = None
         self._current_feeder: ToolCallFeeder | None = None
+        self._openai_toolcall_segments: dict[int, OpenAiToolCallSegment] = {}
 
     async def start_parsing(self):
         from linhai.task_supervisor import TaskSupervisor
@@ -179,6 +191,8 @@ class ParsedAnswer:
             if current["segment_type"] == "toolcall":
                 assert self._current_feeder is not None
                 self._current_feeder.feed(content)
+            elif current["segment_type"] == "openai_toolcall":
+                pass
             else:
                 current["content"] += content
             await self.lifecycle.after_segment_update.trigger(
@@ -196,6 +210,32 @@ class ParsedAnswer:
             await self.lifecycle.after_segment.trigger(self, self.current_segment)
             await self.segment_queue.put(self.current_segment)
 
+    async def _process_openai_toolcall_token(self, token: OpenAiToolCallToken) -> None:
+        idx = token["idx"]
+        segment = self._openai_toolcall_segments.get(idx)
+        if segment is None:
+            segment = OpenAiToolCallSegment(
+                segment_type="openai_toolcall",
+                idx=idx,
+                id=token["id"],
+                raw="",
+                is_finished=False,
+                is_corrupted=False,
+                markdown_representation="",
+                tool_name="",
+            )
+            self._openai_toolcall_segments[idx] = segment
+            await self.segment_queue.put(segment)
+            await self.lifecycle.after_segment.trigger(self, segment)
+        if token["id"] is not None:
+            segment["id"] = token["id"]
+        if token["name"] is not None:
+            segment["tool_name"] = token["name"]
+        if token["args"] is not None:
+            segment["raw"] += token["args"]
+            segment["markdown_representation"] = segment["raw"]
+        await self.lifecycle.after_segment_update.trigger(self, segment)
+
     async def _finish_current_segment(self):
         if self.current_segment is not None:
             self.current_segment["is_finished"] = True
@@ -211,6 +251,9 @@ class ParsedAnswer:
         async for token in self._answer:
             if self.interrupted:
                 break
+            if isinstance(token, dict):
+                await self._process_openai_toolcall_token(token)
+                continue
             reasoning_content = token.reasoning_content
             content_raw = reasoning_content or token.content
             if not content_raw:
@@ -228,6 +271,9 @@ class ParsedAnswer:
         for parsed_token in self.token_parser.clear():
             await self._process_token(parsed_token)
         await self._finish_current_segment()
+        for segment in self._openai_toolcall_segments.values():
+            segment["is_finished"] = True
+            await self.lifecycle.after_segment_finished.trigger(self, segment)
         await self.segment_queue.put(None)
         await self.lifecycle.after_parsing.trigger(self)
 

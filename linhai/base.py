@@ -7,6 +7,7 @@ from typing import (
     Sequence,
     Protocol,
     AsyncIterator,
+    TypedDict,
     runtime_checkable,
 )
 
@@ -341,6 +342,15 @@ class AnswerToken(BaseModel):
     content: str
 
 
+class OpenAiToolCallToken(TypedDict):
+    """OpenAI原生工具调用的token表示。"""
+
+    idx: int
+    id: str | None
+    name: str | None
+    args: str | None
+
+
 class AnswerTokenUsage(BaseModel):
     input_tokens: int
     output_tokens: int
@@ -403,7 +413,7 @@ def extract_usage(usage_dict: dict[str, Any]) -> AnswerTokenUsage | None:
 class Answer(Protocol):
     """LLM的一个回答"""
 
-    def __aiter__(self) -> AsyncIterator[AnswerToken]:
+    def __aiter__(self) -> AsyncIterator[AnswerToken | OpenAiToolCallToken]:
         """流式返回LLM的回答，iterator中的每个item是一个token"""
         raise NotImplementedError
 

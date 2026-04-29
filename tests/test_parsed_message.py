@@ -3,8 +3,13 @@
 import asyncio
 import unittest
 from unittest.mock import AsyncMock, MagicMock
-from linhai.parsed_message import ParsedAnswer, Segment, ToolCallSegment
-from linhai.base import Answer
+from linhai.parsed_message import (
+    ParsedAnswer,
+    Segment,
+    ToolCallSegment,
+    OpenAiToolCallSegment,
+)
+from linhai.base import Answer, AnswerToken, OpenAiToolCallToken
 from linhai.agent.lifecycle import Lifecycle
 from linhai.registry import Registry
 from linhai.task_supervisor import PlainTaskSupervisor
@@ -28,13 +33,19 @@ class MockAnswer(Answer):
         return token
 
     def get_message(self):
-        content = "".join(tok.content for tok in self.tokens)
+        content = "".join(
+            tok.content for tok in self.tokens if isinstance(tok, AnswerToken)
+        )
         from linhai.base import AssistantMessage
 
         return AssistantMessage(message=content)
 
     def get_current_content(self):
-        return "".join(tok.content for tok in self.tokens[: len(self.tokens)])
+        return "".join(
+            tok.content
+            for tok in self.tokens[: len(self.tokens)]
+            if isinstance(tok, AnswerToken)
+        )
 
     def interrupt(self):
         pass
@@ -376,6 +387,117 @@ class TestParsedAnswer(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(len(tool_calls), 0)
         self.assertEqual(len(errors), 1)
         self.assertIn("JSON格式无效", errors[0])
+
+    async def _make_parsed(
+        self, tokens, *, token_parser_side_effect=None, token_parser_clear=None
+    ):
+        lifecycle = MagicMock()
+        lifecycle.before_parsing.trigger = AsyncMock()
+        lifecycle.after_segment.trigger = AsyncMock()
+        lifecycle.after_segment_update.trigger = AsyncMock()
+        lifecycle.after_token_generation.trigger = AsyncMock(return_value=False)
+        lifecycle.after_parsing.trigger = AsyncMock()
+        lifecycle.after_segment_finished.trigger = AsyncMock()
+        registry = Registry()
+        registry.register_member("task_supervisor", PlainTaskSupervisor())
+        agent = MagicMock()
+        answer = MockAnswer(tokens)
+        parsed = ParsedAnswer(answer, lifecycle, agent, registry=registry)
+        if token_parser_side_effect is not None:
+            parsed.token_parser = MagicMock()
+            parsed.token_parser.receive_token = MagicMock(
+                side_effect=token_parser_side_effect
+            )
+            parsed.token_parser.clear = MagicMock(
+                return_value=(
+                    token_parser_clear if token_parser_clear is not None else []
+                )
+            )
+        segments = []
+
+        async def mock_put(segment):
+            segments.append(segment)
+
+        parsed.segment_queue.put = AsyncMock(side_effect=mock_put)
+        return parsed, segments, lifecycle
+
+    async def test_openai_toolcall_single(self):
+        tokens = [
+            OpenAiToolCallToken(idx=0, id="call_1", name="get_weather", args=None),
+            OpenAiToolCallToken(idx=0, id=None, name=None, args='{"loc'),
+            OpenAiToolCallToken(idx=0, id=None, name=None, args='ation": "SF"}'),
+        ]
+        parsed, segments, lifecycle = await self._make_parsed(tokens)
+        await parsed.start_parsing()
+        await parsed.wait_parsing()
+        openai_segments = [
+            s
+            for s in segments
+            if isinstance(s, dict) and s.get("segment_type") == "openai_toolcall"
+        ]
+        self.assertEqual(len(openai_segments), 1)
+        seg = openai_segments[0]
+        self.assertEqual(seg["idx"], 0)
+        self.assertEqual(seg["id"], "call_1")
+        self.assertEqual(seg["tool_name"], "get_weather")
+        self.assertEqual(seg["raw"], '{"location": "SF"}')
+        self.assertTrue(seg["is_finished"])
+
+    async def test_openai_toolcall_multiple(self):
+        tokens = [
+            OpenAiToolCallToken(idx=0, id="call_a", name="tool_a", args=None),
+            OpenAiToolCallToken(idx=1, id="call_b", name="tool_b", args=None),
+            OpenAiToolCallToken(idx=0, id=None, name=None, args="arg0"),
+            OpenAiToolCallToken(idx=1, id=None, name=None, args="arg1"),
+        ]
+        parsed, segments, lifecycle = await self._make_parsed(tokens)
+        await parsed.start_parsing()
+        await parsed.wait_parsing()
+        openai_segments = [
+            s
+            for s in segments
+            if isinstance(s, dict) and s.get("segment_type") == "openai_toolcall"
+        ]
+        self.assertEqual(len(openai_segments), 2)
+        seg0 = next(s for s in openai_segments if s["idx"] == 0)
+        seg1 = next(s for s in openai_segments if s["idx"] == 1)
+        self.assertEqual(seg0["tool_name"], "tool_a")
+        self.assertEqual(seg0["raw"], "arg0")
+        self.assertEqual(seg1["tool_name"], "tool_b")
+        self.assertEqual(seg1["raw"], "arg1")
+        self.assertTrue(seg0["is_finished"])
+        self.assertTrue(seg1["is_finished"])
+
+    async def test_openai_toolcall_mixed_with_text(self):
+        from linhai.base import AnswerToken
+
+        tokens = [
+            AnswerToken(reasoning_content=None, content="Hello"),
+            OpenAiToolCallToken(idx=0, id="call_1", name="search", args="{}"),
+            AnswerToken(reasoning_content=None, content="Done"),
+        ]
+        parsed, segments, lifecycle = await self._make_parsed(
+            tokens,
+            token_parser_side_effect=[
+                [{"token_type": "normal", "content": "Hello"}],
+                [{"token_type": "normal", "content": "Done"}],
+            ],
+        )
+        await parsed.start_parsing()
+        await parsed.wait_parsing()
+        openai_segments = [
+            s
+            for s in segments
+            if isinstance(s, dict) and s.get("segment_type") == "openai_toolcall"
+        ]
+        normal_segments = [
+            s
+            for s in segments
+            if isinstance(s, dict) and s.get("segment_type") == "normal"
+        ]
+        self.assertEqual(len(openai_segments), 1)
+        self.assertEqual(len(normal_segments), 1)
+        self.assertEqual(normal_segments[0]["content"], "HelloDone")
 
 
 if __name__ == "__main__":
