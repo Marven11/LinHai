@@ -249,8 +249,8 @@ class TestParsedAnswer(unittest.IsolatedAsyncioTestCase):
         # Also verify that trigger_after_parsing was called
         lifecycle.after_parsing.trigger.assert_called_once_with(parsed)
 
-    def test_get_toolcalls_normal(self):
-        """Test get_toolcalls with valid tool calls."""
+    def test_extract_tool_calls_with_errors_normal(self):
+        """Test extract_tool_calls_with_errors with valid tool calls."""
         lifecycle = MagicMock()
         agent = MagicMock()
 
@@ -267,15 +267,15 @@ class TestParsedAnswer(unittest.IsolatedAsyncioTestCase):
         answer = MockAnswer(tokens)
         parsed = ParsedAnswer(answer, lifecycle, agent, registry=MagicMock())
 
-        tool_calls, errors = parsed.get_toolcalls()
+        tool_calls, errors = parsed.extract_tool_calls_with_errors()
 
         self.assertEqual(len(tool_calls), 1)
         self.assertEqual(tool_calls[0]["name"], "test_tool")
         self.assertEqual(tool_calls[0]["arguments"], {"arg1": "value1"})
         self.assertEqual(len(errors), 0)
 
-    def test_get_toolcalls_multiple(self):
-        """Test get_toolcalls with multiple tool calls."""
+    def test_extract_tool_calls_with_errors_multiple(self):
+        """Test extract_tool_calls_with_errors with multiple tool calls."""
         lifecycle = MagicMock()
         agent = MagicMock()
 
@@ -296,15 +296,15 @@ class TestParsedAnswer(unittest.IsolatedAsyncioTestCase):
         answer = MockAnswer(tokens)
         parsed = ParsedAnswer(answer, lifecycle, agent, registry=MagicMock())
 
-        tool_calls, errors = parsed.get_toolcalls()
+        tool_calls, errors = parsed.extract_tool_calls_with_errors()
 
         self.assertEqual(len(tool_calls), 2)
         self.assertEqual(tool_calls[0]["name"], "tool1")
         self.assertEqual(tool_calls[1]["name"], "tool2")
         self.assertEqual(len(errors), 0)
 
-    def test_get_toolcalls_with_errors(self):
-        """Test get_toolcalls with invalid tool calls."""
+    def test_extract_tool_calls_with_errors_with_errors(self):
+        """Test extract_tool_calls_with_errors with invalid tool calls."""
         lifecycle = MagicMock()
         agent = MagicMock()
 
@@ -325,7 +325,7 @@ class TestParsedAnswer(unittest.IsolatedAsyncioTestCase):
         answer = MockAnswer(tokens)
         parsed = ParsedAnswer(answer, lifecycle, agent, registry=MagicMock())
 
-        tool_calls, errors = parsed.get_toolcalls()
+        tool_calls, errors = parsed.extract_tool_calls_with_errors()
 
         # Should have one valid tool call
         self.assertEqual(len(tool_calls), 1)
@@ -334,8 +334,8 @@ class TestParsedAnswer(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(len(errors), 1)
         self.assertIn("缺少必需的'name'字段", errors[0])
 
-    def test_get_toolcalls_empty(self):
-        """Test get_toolcalls with empty content."""
+    def test_extract_tool_calls_with_errors_empty(self):
+        """Test extract_tool_calls_with_errors with empty content."""
         lifecycle = MagicMock()
         agent = MagicMock()
 
@@ -349,13 +349,13 @@ class TestParsedAnswer(unittest.IsolatedAsyncioTestCase):
         answer = MockAnswer(tokens)
         parsed = ParsedAnswer(answer, lifecycle, agent, registry=MagicMock())
 
-        tool_calls, errors = parsed.get_toolcalls()
+        tool_calls, errors = parsed.extract_tool_calls_with_errors()
 
         self.assertEqual(len(tool_calls), 0)
         self.assertEqual(len(errors), 0)
 
-    def test_get_toolcalls_invalid_json(self):
-        """Test get_toolcalls with invalid JSON syntax."""
+    def test_extract_tool_calls_with_errors_invalid_json(self):
+        """Test extract_tool_calls_with_errors with invalid JSON syntax."""
         lifecycle = MagicMock()
         agent = MagicMock()
 
@@ -371,7 +371,7 @@ class TestParsedAnswer(unittest.IsolatedAsyncioTestCase):
         answer = MockAnswer(tokens)
         parsed = ParsedAnswer(answer, lifecycle, agent, registry=MagicMock())
 
-        tool_calls, errors = parsed.get_toolcalls()
+        tool_calls, errors = parsed.extract_tool_calls_with_errors()
 
         self.assertEqual(len(tool_calls), 0)
         self.assertEqual(len(errors), 1)

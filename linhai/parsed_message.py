@@ -2,7 +2,7 @@ from typing import Literal, TypedDict, Tuple, Union, TYPE_CHECKING
 import asyncio
 import json
 import re
-from .base import Answer
+from .base import Answer, Message
 from .agent.lifecycle import Lifecycle
 from .markdown_parser import extract_tool_calls_with_errors
 from .utils.streamjson import StreamJsonParser, Value, ValuePiece
@@ -244,7 +244,10 @@ class ParsedAnswer:
         self.interrupted = True
         self._answer.interrupt()
 
-    def get_toolcalls(self) -> Tuple[list[dict], list[str]]:
+    def get_message(self) -> Message:
+        return self._answer.get_message()
+
+    def extract_tool_calls_with_errors(self) -> Tuple[list[dict], list[str]]:
         full_response = self._answer.get_current_content()
         tool_calls, errors = extract_tool_calls_with_errors(full_response)
         return tool_calls, errors

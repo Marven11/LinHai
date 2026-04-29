@@ -16,7 +16,6 @@ from .lifecycle import Lifecycle
 from .message import AgentMessage
 from .orchestration import AgentContextOrchestration
 from .toolcall import AgentToolcall
-from linhai.markdown_parser import extract_tool_calls_with_errors
 from linhai.base import Message, LanguageModel, Answer, ToolCallMessage
 from linhai.llm import OpenAiAnswer
 from linhai.llm_manager import LlmManager
@@ -232,27 +231,15 @@ class Agent:
                 empty_user_msg = RuntimeMessage("继续")
                 await self.message_processor.add_new_message(empty_user_msg)
 
-        answer, parsed_answer, completed_normally = (
-            await self.agent_llm.call_and_wait_llm()
-        )
+        _, parsed_answer, completed_normally = await self.agent_llm.call_and_wait_llm()
         if not completed_normally:
             return parsed_answer
 
-        from linhai.base import AssistantMessage
+        message = parsed_answer.get_message()
+        full_response = message.get_content() or ""
+        await self.message_processor.add_new_message(message)
 
-        message = answer.get_message()
-        if not isinstance(message, AssistantMessage):
-            raise TypeError(f"Expected AssistantMessage, got {type(message).__name__}")
-        chat_message: AssistantMessage = message
-
-        from linhai.base import AssistantMessage
-
-        full_response = chat_message.message
-        await self.message_processor.add_new_message(chat_message)
-
-        await self.message_processor.process_queued_messages()
-
-        tool_calls, errors = extract_tool_calls_with_errors(full_response)
+        tool_calls, errors = parsed_answer.extract_tool_calls_with_errors()
 
         for error in errors:
             await self.message_processor.add_new_message(RuntimeMessage(error))
