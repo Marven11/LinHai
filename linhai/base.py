@@ -17,6 +17,7 @@ from pydantic import BaseModel
 
 from linhai.type_hints import (
     LanguageModelMessage,
+    OpenAiToolCall,
     UserMessage as UserMsgType,
     AssistantMessage as AsstMsgType,
 )
@@ -268,16 +269,16 @@ class AssistantMessage:
         self.message = message
         self.reasoning_message = reasoning_message
         self.name = name
+        self.tool_calls: list[OpenAiToolCall] | None = None
 
     def to_llm_message(self) -> LanguageModelMessage:
         """转换为LLM消息格式。"""
+        result: AsstMsgType = AsstMsgType(role="assistant", content=self.get_content())
         if self.reasoning_message:
-            return AsstMsgType(
-                role="assistant",
-                content=self.get_content(),
-                reasoning_content=self.reasoning_message,
-            )
-        return AsstMsgType(role="assistant", content=self.get_content())
+            result["reasoning_content"] = self.reasoning_message
+        if self.tool_calls:
+            result["tool_calls"] = self.tool_calls
+        return result
 
     def get_content(self) -> str:
         """获取消息的文本内容。"""
@@ -285,24 +286,28 @@ class AssistantMessage:
 
     def __repr__(self) -> str:
         """返回消息的字符串表示。"""
-        return f"AssistantMessage(message={self.message!r}, reasoning_message={self.reasoning_message!r}, name={self.name!r})"
+        return f"AssistantMessage(message={self.message!r}, reasoning_message={self.reasoning_message!r}, name={self.name!r}, tool_calls={self.tool_calls!r})"
 
     def to_json(self) -> str:
-        data = {
+        data: dict[str, Any] = {
             "role": "assistant",
             "message": self.message,
             "reasoning_message": self.reasoning_message,
         }
+        if self.tool_calls:
+            data["tool_calls"] = self.tool_calls
         return json.dumps(data)
 
     @classmethod
     def from_json(cls, json_str: str, registry: "linhai.registry.Registry"):
         data = json.loads(json_str)
-        return cls(
+        msg = cls(
             message=data["message"],
             reasoning_message=data.get("reasoning_message"),
             name=data.get("name"),
         )
+        msg.tool_calls = data.get("tool_calls")
+        return msg
 
 
 class ToolCallMessage:
@@ -435,6 +440,10 @@ class Answer(Protocol):
 
     def get_token_usage(self) -> AnswerTokenUsage | None:
         """获取token使用情况"""
+        raise NotImplementedError
+
+    def get_openai_toolcalls(self) -> list[OpenAiToolCall] | None:
+        """获取OpenAI原生工具调用列表"""
         raise NotImplementedError
 
 

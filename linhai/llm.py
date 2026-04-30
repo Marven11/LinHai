@@ -16,6 +16,7 @@ from linhai.base import (
     OpenAiToolCallToken,
     extract_usage,
 )
+from linhai.type_hints import FunctionCall, OpenAiToolCall
 from linhai.utils.common import UiNotice
 import linhai
 
@@ -46,6 +47,7 @@ class OpenAiAnswer:
         self.cached_input_tokens: int | None = None
         self.llm_instance = llm_instance
         self.toyield: list[AnswerToken | OpenAiToolCallToken] = []
+        self._openai_toolcall_parts: dict[int, dict[str, str | None]] = {}
 
     def __aiter__(self):
         """返回异步迭代器。"""
@@ -121,6 +123,34 @@ class OpenAiAnswer:
                 content=content,
             )
             self.toyield.append(token)
+
+            tool_calls = delta.tool_calls
+            if tool_calls:
+                for tc in tool_calls:
+                    idx = tc.index
+                    if idx not in self._openai_toolcall_parts:
+                        self._openai_toolcall_parts[idx] = {
+                            "id": None,
+                            "name": None,
+                            "args": "",
+                        }
+                    tc_id = tc.id
+                    tc_name = tc.function.name
+                    tc_args = tc.function.arguments
+                    if tc_id is not None:
+                        self._openai_toolcall_parts[idx]["id"] = tc_id
+                    if tc_name is not None:
+                        self._openai_toolcall_parts[idx]["name"] = tc_name
+                    if tc_args is not None:
+                        self._openai_toolcall_parts[idx]["args"] += tc_args
+                    self.toyield.append(
+                        OpenAiToolCallToken(
+                            idx=idx,
+                            id=tc_id,
+                            name=tc_name,
+                            args=tc_args,
+                        )
+                    )
         except StopAsyncIteration:
             raise
         except asyncio.CancelledError as exc:
@@ -139,9 +169,12 @@ class OpenAiAnswer:
 
     def get_message(self) -> Message:
         """获取完整的消息对象。"""
-        return AssistantMessage(
-            message=self.content, reasoning_message=self.reasoning_content
+        msg = AssistantMessage(
+            message=self.content,
+            reasoning_message=self.reasoning_content,
         )
+        msg.tool_calls = self.get_openai_toolcalls()
+        return msg
 
     def get_reasoning_message(self) -> str | None:
         """获取推理消息（如果存在）。"""
@@ -176,6 +209,26 @@ class OpenAiAnswer:
             cached_input_tokens=self.cached_input_tokens,
             estimated_cached_input_tokens=self.estimated_cached_input_tokens,
         )
+
+    def get_openai_toolcalls(self) -> list[OpenAiToolCall] | None:
+        if not self._openai_toolcall_parts:
+            return None
+        result: list[OpenAiToolCall] = []
+        for idx in sorted(self._openai_toolcall_parts):
+            part = self._openai_toolcall_parts[idx]
+            if part["id"] is None or part["name"] is None:
+                continue
+            result.append(
+                OpenAiToolCall(
+                    id=part["id"],
+                    function=FunctionCall(
+                        name=part["name"],
+                        arguments=part["args"] or "",
+                    ),
+                    type="function",
+                )
+            )
+        return result or None
 
 
 class MinimaxAnswer:
@@ -224,6 +277,22 @@ class MinimaxAnswer:
                     self.cached_input_tokens = usage_result.cached_input_tokens
         self.toyield: list[AnswerToken] = []
 
+        self._openai_toolcalls: list[OpenAiToolCall] | None = None
+        tool_calls = message.tool_calls
+        if tool_calls:
+            self._openai_toolcalls = []
+            for tc in tool_calls:
+                self._openai_toolcalls.append(
+                    OpenAiToolCall(
+                        id=tc.id,
+                        function=FunctionCall(
+                            name=tc.function.name,
+                            arguments=tc.function.arguments,
+                        ),
+                        type="function",
+                    )
+                )
+
         # 如果llm_instance存在，更新previous_input_tokens
         if self.llm_instance is not None and self.input_tokens > 0:
             self.llm_instance.previous_input_tokens = self.input_tokens
@@ -257,9 +326,12 @@ class MinimaxAnswer:
 
     def get_message(self) -> Message:
         """获取完整的消息对象。"""
-        return AssistantMessage(
-            message=self.content, reasoning_message=self.reasoning_content
+        msg = AssistantMessage(
+            message=self.content,
+            reasoning_message=self.reasoning_content,
         )
+        msg.tool_calls = self.get_openai_toolcalls()
+        return msg
 
     def get_reasoning_message(self) -> str | None:
         """获取推理消息（如果存在）。"""
@@ -294,6 +366,9 @@ class MinimaxAnswer:
             cached_input_tokens=self.cached_input_tokens,
             estimated_cached_input_tokens=self.estimated_cached_input_tokens,
         )
+
+    def get_openai_toolcalls(self) -> list[OpenAiToolCall] | None:
+        return self._openai_toolcalls
 
 
 class OpenAi:

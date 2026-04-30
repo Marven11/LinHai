@@ -23,7 +23,15 @@ class ChatCompletionMessageToolCallParam(TypedDict):
     """Parameters for tool call in chat completion."""
 
     id: Required[str]
-    function: Required[dict]
+    function: Required[FunctionCall]
+    type: Required[Literal["function"]]
+
+
+class OpenAiToolCall(TypedDict):
+    """OpenAI原生工具调用，兼容ChatCompletionMessageFunctionToolCallParam。"""
+
+    id: Required[str]
+    function: Required[FunctionCall]
     type: Required[Literal["function"]]
 
 
