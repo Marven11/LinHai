@@ -43,8 +43,9 @@ class TestOnlyReasoningPlugin(unittest.IsolatedAsyncioTestCase):
         answer = MagicMock(spec=Answer)
         answer.get_reasoning_message.return_value = "这是推理内容"
         parsed_answer._answer = answer
+        parsed_answer.get_message.return_value.get_content.return_value = ""
 
-        result = await self.plugin.after_message_generation(parsed_answer, "", [])
+        result = await self.plugin.after_message_generation(parsed_answer, [])
 
         self.assertIsNone(result)
         self.mock_agent.get_current_model.assert_called_once()
@@ -76,10 +77,9 @@ class TestOnlyReasoningPlugin(unittest.IsolatedAsyncioTestCase):
         answer = MagicMock(spec=Answer)
         answer.get_reasoning_message.return_value = "这是推理内容"
         parsed_answer._answer = answer
+        parsed_answer.get_message.return_value.get_content.return_value = "这是实际输出"
 
-        result = await self.plugin.after_message_generation(
-            parsed_answer, "这是实际输出", []
-        )
+        result = await self.plugin.after_message_generation(parsed_answer, [])
 
         self.assertIsNone(result)
         self.mock_agent.get_current_model.assert_called_once()
@@ -98,8 +98,9 @@ class TestOnlyReasoningPlugin(unittest.IsolatedAsyncioTestCase):
         answer = MagicMock(spec=Answer)
         answer.get_reasoning_message.return_value = None
         parsed_answer._answer = answer
+        parsed_answer.get_message.return_value.get_content.return_value = ""
 
-        result = await self.plugin.after_message_generation(parsed_answer, "", [])
+        result = await self.plugin.after_message_generation(parsed_answer, [])
 
         self.assertIsNone(result)
         self.mock_agent.get_current_model.assert_called_once()
@@ -118,10 +119,9 @@ class TestOnlyReasoningPlugin(unittest.IsolatedAsyncioTestCase):
         answer = MagicMock(spec=Answer)
         answer.get_reasoning_message.return_value = None
         parsed_answer._answer = answer
+        parsed_answer.get_message.return_value.get_content.return_value = "这是实际输出"
 
-        result = await self.plugin.after_message_generation(
-            parsed_answer, "这是实际输出", []
-        )
+        result = await self.plugin.after_message_generation(parsed_answer, [])
 
         self.assertIsNone(result)
         self.mock_agent.get_current_model.assert_called_once()
@@ -140,10 +140,9 @@ class TestOnlyReasoningPlugin(unittest.IsolatedAsyncioTestCase):
         answer = MagicMock(spec=Answer)
         answer.get_reasoning_message.return_value = "这是推理内容"
         parsed_answer._answer = answer
+        parsed_answer.get_message.return_value.get_content.return_value = "   \n\t  "
 
-        result = await self.plugin.after_message_generation(
-            parsed_answer, "   \n\t  ", []
-        )
+        result = await self.plugin.after_message_generation(parsed_answer, [])
 
         self.assertIsNone(result)
         self.mock_agent.get_current_model.assert_called_once()
@@ -162,8 +161,9 @@ class TestOnlyReasoningPlugin(unittest.IsolatedAsyncioTestCase):
         answer = MagicMock(spec=Answer)
         answer.get_reasoning_message.return_value = "这是推理内容"
         parsed_answer._answer = answer
+        parsed_answer.get_message.return_value.get_content.return_value = ""
 
-        result = await self.plugin.after_message_generation(parsed_answer, "", [])
+        result = await self.plugin.after_message_generation(parsed_answer, [])
 
         self.assertIsNone(result)
         self.mock_agent.get_current_model.assert_called_once()
@@ -180,8 +180,9 @@ class TestOnlyReasoningPlugin(unittest.IsolatedAsyncioTestCase):
         answer = MagicMock(spec=Answer)
         answer.get_reasoning_message.return_value = "这是推理内容"
         parsed_answer._answer = answer
+        parsed_answer.get_message.return_value.get_content.return_value = ""
 
-        result = await self.plugin.after_message_generation(parsed_answer, "", [])
+        result = await self.plugin.after_message_generation(parsed_answer, [])
 
         self.assertIsNone(result)
         self.mock_agent.get_current_model.assert_called_once()
@@ -204,9 +205,10 @@ class TestOnlyReasoningPlugin(unittest.IsolatedAsyncioTestCase):
         tool_call_content = """```json toolcall
 {"name": "read_file", "arguments": {"filepath": "test.txt"}}
 ```"""
-        result = await self.plugin.after_message_generation(
-            parsed_answer, tool_call_content, []
+        parsed_answer.get_message.return_value.get_content.return_value = (
+            tool_call_content
         )
+        result = await self.plugin.after_message_generation(parsed_answer, [])
 
         self.assertIsNone(result)
         self.mock_agent.get_current_model.assert_called_once()

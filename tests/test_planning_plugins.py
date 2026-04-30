@@ -117,7 +117,6 @@ class TestPlanningStatusReminderPlugin(unittest.IsolatedAsyncioTestCase):
         """测试非写文件工具调用时计数器递增。"""
         result = await self.plugin.after_message_generation(
             parsed_answer=MagicMock(),
-            _full_response="Test response",
             tool_calls=[
                 {
                     "name": "read_file",
@@ -134,7 +133,6 @@ class TestPlanningStatusReminderPlugin(unittest.IsolatedAsyncioTestCase):
         """测试消息没有工具调用时计数器不递增。"""
         result = await self.plugin.after_message_generation(
             parsed_answer=MagicMock(),
-            _full_response="Test response",
             tool_calls=[],
         )
 
@@ -152,7 +150,6 @@ class TestPlanningStatusReminderPlugin(unittest.IsolatedAsyncioTestCase):
         ):
             result = await self.plugin.after_message_generation(
                 parsed_answer=MagicMock(),
-                _full_response="Test response",
                 tool_calls=[],
             )
 
@@ -177,7 +174,6 @@ class TestPlanningStatusReminderPlugin(unittest.IsolatedAsyncioTestCase):
         ):
             result = await self.plugin.after_message_generation(
                 parsed_answer=MagicMock(),
-                _full_response="Test response",
                 tool_calls=[],
             )
 
@@ -196,7 +192,6 @@ class TestPlanningStatusReminderPlugin(unittest.IsolatedAsyncioTestCase):
         ):
             result = await self.plugin.after_message_generation(
                 parsed_answer=MagicMock(),
-                _full_response="Test response",
                 tool_calls=[],
             )
 
@@ -210,7 +205,6 @@ class TestPlanningStatusReminderPlugin(unittest.IsolatedAsyncioTestCase):
 
         result = await self.plugin.after_message_generation(
             parsed_answer=MagicMock(),
-            _full_response="Test response",
             tool_calls=[
                 {
                     "name": "write_file",
@@ -232,7 +226,6 @@ class TestPlanningStatusReminderPlugin(unittest.IsolatedAsyncioTestCase):
 
         result = await self.plugin.after_message_generation(
             parsed_answer=MagicMock(),
-            _full_response="Test response",
             tool_calls=[
                 {
                     "name": "write_file",
@@ -254,7 +247,6 @@ class TestPlanningStatusReminderPlugin(unittest.IsolatedAsyncioTestCase):
 
         result = await self.plugin.after_message_generation(
             parsed_answer=MagicMock(),
-            _full_response="Test response",
             tool_calls=[
                 {"name": "read_file", "arguments": {"filepath": "test.txt"}},
             ],
@@ -271,7 +263,6 @@ class TestPlanningStatusReminderPlugin(unittest.IsolatedAsyncioTestCase):
         ) as mock_update_notifications:
             result = await self.plugin.after_message_generation(
                 parsed_answer=MagicMock(),
-                _full_response="Test response",
                 tool_calls=[
                     {"name": "read_file", "arguments": {"filepath": "test.txt"}},
                 ],
@@ -289,7 +280,6 @@ class TestPlanningStatusReminderPlugin(unittest.IsolatedAsyncioTestCase):
         ) as mock_update_notifications:
             result = await self.plugin.after_message_generation(
                 parsed_answer=MagicMock(),
-                _full_response="Test response",
                 tool_calls=[
                     {"name": "read_file", "arguments": {"filepath": "test.txt"}},
                 ],
@@ -305,7 +295,6 @@ class TestPlanningStatusReminderPlugin(unittest.IsolatedAsyncioTestCase):
 
         result = await self.plugin.after_message_generation(
             parsed_answer=MagicMock(),
-            _full_response="Test response",
             tool_calls=[
                 {"name": "read_file", "arguments": {"filepath": "test.txt"}},
                 {
@@ -329,7 +318,6 @@ class TestPlanningStatusReminderPlugin(unittest.IsolatedAsyncioTestCase):
 
         result = await self.plugin.after_message_generation(
             parsed_answer=MagicMock(),
-            _full_response="Test response",
             tool_calls=[
                 {
                     "name": "replace_file_content",
@@ -388,7 +376,6 @@ class TestUserInputRuntimeMessagePlugin(unittest.IsolatedAsyncioTestCase):
 
         await self.plugin.after_message_generation(
             parsed_answer=MagicMock(),
-            _full_response="Test response",
             _tool_calls=[],
         )
 
@@ -407,7 +394,6 @@ class TestUserInputRuntimeMessagePlugin(unittest.IsolatedAsyncioTestCase):
 
         await self.plugin.after_message_generation(
             parsed_answer=MagicMock(),
-            _full_response="Test response",
             _tool_calls=[],
         )
 
@@ -419,7 +405,6 @@ class TestUserInputRuntimeMessagePlugin(unittest.IsolatedAsyncioTestCase):
 
         await self.plugin.after_message_generation(
             parsed_answer=MagicMock(),
-            _full_response="Test response",
             _tool_calls=[],
         )
 
@@ -682,7 +667,6 @@ class TestPlanningHeadingCheckPlugin(unittest.IsolatedAsyncioTestCase):
 
         result = await self.plugin.after_message_generation(
             parsed_answer=MagicMock(),
-            _full_response="Test response",
             tool_calls=[
                 {
                     "name": "write_file",
@@ -697,7 +681,6 @@ class TestPlanningHeadingCheckPlugin(unittest.IsolatedAsyncioTestCase):
         """测试写入非planning文件时不执行操作。"""
         result = await self.plugin.after_message_generation(
             parsed_answer=MagicMock(),
-            _full_response="Test response",
             tool_calls=[
                 {
                     "name": "write_file",
@@ -712,7 +695,6 @@ class TestPlanningHeadingCheckPlugin(unittest.IsolatedAsyncioTestCase):
         """测试检测到一级标题时添加RuntimeMessage。"""
         result = await self.plugin.after_message_generation(
             parsed_answer=MagicMock(),
-            _full_response="Test response",
             tool_calls=[
                 {
                     "name": "write_file",
@@ -736,7 +718,6 @@ class TestPlanningHeadingCheckPlugin(unittest.IsolatedAsyncioTestCase):
         """测试没有一级标题时不添加RuntimeMessage。"""
         result = await self.plugin.after_message_generation(
             parsed_answer=MagicMock(),
-            _full_response="Test response",
             tool_calls=[
                 {
                     "name": "write_file",
@@ -754,7 +735,6 @@ class TestPlanningHeadingCheckPlugin(unittest.IsolatedAsyncioTestCase):
         """测试replace_file_content工具也会被检查。"""
         result = await self.plugin.after_message_generation(
             parsed_answer=MagicMock(),
-            _full_response="Test response",
             tool_calls=[
                 {
                     "name": "replace_file_content",

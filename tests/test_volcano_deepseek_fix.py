@@ -31,11 +31,11 @@ class TestVolcanoDeepseekFixPlugin(unittest.IsolatedAsyncioTestCase):
     async def test_is_volcano_deepseek_detection(self) -> None:
         """测试火山平台deepseek检测逻辑。"""
         full_response = '思考中...\n</think>```json toolcall\n{"name": "test", "arguments": {}}\n```'
+        parsed_answer = MagicMock(spec=Answer)
+        parsed_answer.get_message.return_value.get_content.return_value = full_response
 
         tool_calls = []
-        await self.plugin.after_message_generation(
-            MagicMock(spec=Answer), full_response, tool_calls
-        )
+        await self.plugin.after_message_generation(parsed_answer, tool_calls)
 
         self.registry.send_if_exists.assert_called_once()
         self.agent.message_processor.add_new_message.assert_called_once()
@@ -45,11 +45,11 @@ class TestVolcanoDeepseekFixPlugin(unittest.IsolatedAsyncioTestCase):
     async def test_clean_abnormal_marker(self) -> None:
         """测试提醒异常标记。"""
         full_response = '思考中...\n</think>```json toolcall\n{"name": "test", "arguments": {}}\n```'
+        parsed_answer = MagicMock(spec=Answer)
+        parsed_answer.get_message.return_value.get_content.return_value = full_response
 
         tool_calls = []
-        await self.plugin.after_message_generation(
-            MagicMock(spec=Answer), full_response, tool_calls
-        )
+        await self.plugin.after_message_generation(parsed_answer, tool_calls)
 
         self.registry.send_if_exists.assert_called_once()
         self.agent.message_processor.add_new_message.assert_called_once()
@@ -59,11 +59,11 @@ class TestVolcanoDeepseekFixPlugin(unittest.IsolatedAsyncioTestCase):
     async def test_multiple_abnormal_markers(self) -> None:
         """测试多个异常标记的提醒。"""
         full_response = '思考中...\n</think>```json toolcall\n{"name": "test1", "arguments": {}}\n```\n继续思考...\n</think>```json toolcall\n{"name": "test2", "arguments": {}}\n```'
+        parsed_answer = MagicMock(spec=Answer)
+        parsed_answer.get_message.return_value.get_content.return_value = full_response
 
         tool_calls = []
-        await self.plugin.after_message_generation(
-            MagicMock(spec=Answer), full_response, tool_calls
-        )
+        await self.plugin.after_message_generation(parsed_answer, tool_calls)
 
         self.registry.send_if_exists.assert_called_once()
         self.agent.message_processor.add_new_message.assert_called_once()
@@ -77,9 +77,9 @@ class TestVolcanoDeepseekFixPlugin(unittest.IsolatedAsyncioTestCase):
         )
 
         tool_calls = []
-        await self.plugin.after_message_generation(
-            MagicMock(spec=Answer), full_response, tool_calls
-        )
+        parsed_answer = MagicMock(spec=Answer)
+        parsed_answer.get_message.return_value.get_content.return_value = full_response
+        await self.plugin.after_message_generation(parsed_answer, tool_calls)
 
         self.registry.send_if_exists.assert_not_called()
 
@@ -88,12 +88,12 @@ class TestVolcanoDeepseekFixPlugin(unittest.IsolatedAsyncioTestCase):
     async def test_interrupt_on_parse_failure(self) -> None:
         """测试插件不再中断agent，而是发送警告消息。"""
         full_response = "思考中...\n</think>```json toolcall\ninvalid json\n```"
+        parsed_answer = MagicMock(spec=Answer)
+        parsed_answer.get_message.return_value.get_content.return_value = full_response
 
         tool_calls = []
         self.agent.agent_llm = AsyncMock()
-        await self.plugin.after_message_generation(
-            MagicMock(spec=Answer), full_response, tool_calls
-        )
+        await self.plugin.after_message_generation(parsed_answer, tool_calls)
 
         self.agent.agent_llm.interrupt.assert_not_called()
         self.agent.message_processor.add_new_message.assert_called_once()

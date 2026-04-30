@@ -104,7 +104,7 @@ class AgentMessage:
         lifecycle = self.registry.get_member_typechecked("lifecycle", Lifecycle)
         lifecycle.after_message_generation.register(self.after_message_generation)
 
-    async def after_message_generation(self, parsed_answer, full_response, tool_calls):
+    async def after_message_generation(self, parsed_answer, tool_calls):
         is_anchor_updated = self.is_anchor_updated
         self.is_anchor_updated = False
         token_usage = parsed_answer._answer.get_token_usage()

@@ -43,14 +43,14 @@ class TestWaitingUserReminderPlugin(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(call_args.kwargs["source"], "waiting_user_reminder")
             self.assertIsNotNone(call_args.args[0])
             self.agent.message_processor.update_notification_message.reset_mock()
-            await self.plugin.after_message_generation(None, f"msg {i}", [])
+            await self.plugin.after_message_generation(None, [])
 
     async def test_reminder_removed_after_threshold(self):
         self.registry.register_member("agent", self.agent)
 
         for i in range(10):
             await self.plugin.before_message_generation()
-            await self.plugin.after_message_generation(None, f"msg {i}", [])
+            await self.plugin.after_message_generation(None, [])
 
         self.agent.message_processor.update_notification_message.reset_mock()
         await self.plugin.before_message_generation()
@@ -75,7 +75,7 @@ class TestWaitingUserReminderPlugin(unittest.IsolatedAsyncioTestCase):
 
     async def test_counter_increments_each_message(self):
         for _ in range(15):
-            await self.plugin.after_message_generation(None, "msg", [])
+            await self.plugin.after_message_generation(None, [])
         self.assertEqual(self.plugin._message_count, 15)
 
     async def test_reminder_stays_removed(self):
@@ -83,7 +83,7 @@ class TestWaitingUserReminderPlugin(unittest.IsolatedAsyncioTestCase):
 
         for i in range(10):
             await self.plugin.before_message_generation()
-            await self.plugin.after_message_generation(None, f"msg {i}", [])
+            await self.plugin.after_message_generation(None, [])
 
         for _ in range(5):
             self.agent.message_processor.update_notification_message.reset_mock()

@@ -101,6 +101,7 @@ class TestSingleToolCallReminderPlugin(unittest.IsolatedAsyncioTestCase):
     async def test_after_message_generation_with_single_tool_call(self):
         """测试连续多次只调用一个工具的情况。"""
         full_response = "一些内容"
+        self.answer.get_message.return_value.get_content.return_value = full_response
         tool_calls = [{"name": "tool1", "arguments": {}}]
 
         self.agent.message_processor = MagicMock()
@@ -108,9 +109,7 @@ class TestSingleToolCallReminderPlugin(unittest.IsolatedAsyncioTestCase):
         self.agent.message_processor.update_notification_message = MagicMock()
 
         for _ in range(5):
-            await self.plugin.after_message_generation(
-                self.answer, full_response, tool_calls
-            )
+            await self.plugin.after_message_generation(self.answer, tool_calls)
 
         self.assertEqual(self.plugin.single_tool_call_count, 5)
         call_args_list = (
@@ -124,19 +123,19 @@ class TestSingleToolCallReminderPlugin(unittest.IsolatedAsyncioTestCase):
     async def test_after_message_generation_with_multiple_tool_calls(self):
         """测试调用多个工具时重置计数器。"""
         full_response = "一些内容"
+        self.answer.get_message.return_value.get_content.return_value = full_response
 
         self.agent.message_processor.update_notification_message = MagicMock()
 
         for _ in range(4):
             await self.plugin.after_message_generation(
-                self.answer, full_response, [{"name": "tool1", "arguments": {}}]
+                self.answer, [{"name": "tool1", "arguments": {}}]
             )
 
         self.assertEqual(self.plugin.single_tool_call_count, 4)
 
         await self.plugin.after_message_generation(
             self.answer,
-            full_response,
             [{"name": "tool1", "arguments": {}}, {"name": "tool2", "arguments": {}}],
         )
 
@@ -151,17 +150,18 @@ class TestSingleToolCallReminderPlugin(unittest.IsolatedAsyncioTestCase):
     async def test_after_message_generation_with_zero_tool_calls(self):
         """测试没有调用工具时重置计数器。"""
         full_response = "一些内容"
+        self.answer.get_message.return_value.get_content.return_value = full_response
 
         self.agent.message_processor.update_notification_message = MagicMock()
 
         for _ in range(3):
             await self.plugin.after_message_generation(
-                self.answer, full_response, [{"name": "tool1", "arguments": {}}]
+                self.answer, [{"name": "tool1", "arguments": {}}]
             )
 
         self.assertEqual(self.plugin.single_tool_call_count, 3)
 
-        await self.plugin.after_message_generation(self.answer, full_response, [])
+        await self.plugin.after_message_generation(self.answer, [])
 
         self.assertEqual(self.plugin.single_tool_call_count, 0)
 
@@ -648,9 +648,7 @@ class TestPreviousReasoningPlugin(unittest.IsolatedAsyncioTestCase):
         # 设置模拟消息
         self.agent.message_processor.get_messages.return_value = self.mock_messages
 
-        await self.plugin.after_message_generation(
-            self.answer, "full response", self.tool_calls
-        )
+        await self.plugin.after_message_generation(self.answer, self.tool_calls)
 
         # 验证update_notification_message被调用，并且传递了SpoofedReasoningMessage
         self.agent.message_processor.update_notification_message.assert_called_once()
@@ -689,9 +687,7 @@ class TestPreviousReasoningPlugin(unittest.IsolatedAsyncioTestCase):
             messages_without_reasoning
         )
 
-        await self.plugin.after_message_generation(
-            self.answer, "full response", self.tool_calls
-        )
+        await self.plugin.after_message_generation(self.answer, self.tool_calls)
 
         # 验证update_notification_message被调用，传递None
         self.agent.message_processor.update_notification_message.assert_called_once()
@@ -745,10 +741,9 @@ class TestKimiK25ToolCallPlugin(unittest.IsolatedAsyncioTestCase):
     async def test_after_message_generation_with_kimi_format_no_json_toolcall(self):
         """测试检测到kimi特殊格式但没有json toolcall时发送警告。"""
         full_response = '<|tool_calls_section_begin|><|tool_call_begin|>\n{"name": "tool1", "arguments": {}}'
+        self.answer.get_message.return_value.get_content.return_value = full_response
 
-        await self.plugin.after_message_generation(
-            self.answer, full_response, self.tool_calls
-        )
+        await self.plugin.after_message_generation(self.answer, self.tool_calls)
 
         self.agent.message_processor.add_new_message.assert_called_once()
         call_args = self.agent.message_processor.add_new_message.call_args[0]
@@ -759,10 +754,9 @@ class TestKimiK25ToolCallPlugin(unittest.IsolatedAsyncioTestCase):
     async def test_after_message_generation_with_kimi_format_with_json_toolcall(self):
         """测试检测到kimi特殊格式但已有json toolcall时不警告。"""
         full_response = '<|tool_calls_section_begin|><|tool_call_begin|>\n```json toolcall\n{"name": "tool1", "arguments": {}}\n```'
+        self.answer.get_message.return_value.get_content.return_value = full_response
 
-        await self.plugin.after_message_generation(
-            self.answer, full_response, self.tool_calls
-        )
+        await self.plugin.after_message_generation(self.answer, self.tool_calls)
 
         self.agent.message_processor.add_new_message.assert_not_called()
         self.registry.send_if_exists.assert_not_called()
@@ -770,10 +764,9 @@ class TestKimiK25ToolCallPlugin(unittest.IsolatedAsyncioTestCase):
     async def test_after_message_generation_without_kimi_format(self):
         """测试没有kimi特殊格式时不处理。"""
         full_response = "正常的工具调用"
+        self.answer.get_message.return_value.get_content.return_value = full_response
 
-        await self.plugin.after_message_generation(
-            self.answer, full_response, self.tool_calls
-        )
+        await self.plugin.after_message_generation(self.answer, self.tool_calls)
 
         self.agent.message_processor.add_new_message.assert_not_called()
         self.registry.send_if_exists.assert_not_called()
@@ -781,10 +774,9 @@ class TestKimiK25ToolCallPlugin(unittest.IsolatedAsyncioTestCase):
     async def test_after_message_generation_empty_response(self):
         """测试空响应时不处理。"""
         full_response = ""
+        self.answer.get_message.return_value.get_content.return_value = full_response
 
-        await self.plugin.after_message_generation(
-            self.answer, full_response, self.tool_calls
-        )
+        await self.plugin.after_message_generation(self.answer, self.tool_calls)
 
         self.agent.message_processor.add_new_message.assert_not_called()
         self.registry.send_if_exists.assert_not_called()
@@ -800,10 +792,9 @@ class TestKimiK25ToolCallPlugin(unittest.IsolatedAsyncioTestCase):
             '{"name": "tool2", "arguments": {}}\n'
             "```"
         )
+        self.answer.get_message.return_value.get_content.return_value = full_response
 
-        await self.plugin.after_message_generation(
-            self.answer, full_response, self.tool_calls
-        )
+        await self.plugin.after_message_generation(self.answer, self.tool_calls)
 
         self.assertEqual(self.agent.message_processor.add_new_message.call_count, 1)
         call_args = self.agent.message_processor.add_new_message.call_args[0]
@@ -823,10 +814,9 @@ class TestKimiK25ToolCallPlugin(unittest.IsolatedAsyncioTestCase):
             "```\n"
             '<|tool_calls_section_begin|><|tool_call_begin|>{"name": "tool2", "arguments": {}}<|tool_call_end|>'
         )
+        self.answer.get_message.return_value.get_content.return_value = full_response
 
-        await self.plugin.after_message_generation(
-            self.answer, full_response, self.tool_calls
-        )
+        await self.plugin.after_message_generation(self.answer, self.tool_calls)
 
         self.assertEqual(self.agent.message_processor.add_new_message.call_count, 1)
         call_args = self.agent.message_processor.add_new_message.call_args[0]
@@ -842,10 +832,9 @@ class TestKimiK25ToolCallPlugin(unittest.IsolatedAsyncioTestCase):
             "<|tool_calls_section_begin|><|tool_call_begin|>\n"
             '{"name": "tool1", "arguments": {}}<|tool_call_end|>'
         )
+        self.answer.get_message.return_value.get_content.return_value = full_response
 
-        await self.plugin.after_message_generation(
-            self.answer, full_response, self.tool_calls
-        )
+        await self.plugin.after_message_generation(self.answer, self.tool_calls)
 
         self.assertEqual(self.agent.message_processor.add_new_message.call_count, 2)
         call_args_list = self.agent.message_processor.add_new_message.call_args_list
@@ -893,10 +882,9 @@ class TestMinimaxToolCallPlugin(unittest.IsolatedAsyncioTestCase):
     async def test_after_message_generation_with_minimax_format_no_json_toolcall(self):
         """测试检测到minimax特殊格式但没有json toolcall时设置错误时间。"""
         full_response = '<minimax:tool_call>{"name": "tool1", "arguments": {}}'
+        self.answer.get_message.return_value.get_content.return_value = full_response
 
-        await self.plugin.after_message_generation(
-            self.answer, full_response, self.tool_calls
-        )
+        await self.plugin.after_message_generation(self.answer, self.tool_calls)
 
         # 验证设置了错误时间
         self.assertIsNotNone(self.plugin._last_error_format_time)
@@ -913,12 +901,10 @@ class TestMinimaxToolCallPlugin(unittest.IsolatedAsyncioTestCase):
         full_response = """<minimax:tool_call>```json toolcall
 {"name": "tool1", "arguments": {}}
 ```"""
+        self.answer.get_message.return_value.get_content.return_value = full_response
 
-        await self.plugin.after_message_generation(
-            self.answer, full_response, self.tool_calls
-        )
+        await self.plugin.after_message_generation(self.answer, self.tool_calls)
 
-        # 验证没有设置错误时间
         self.assertIsNone(self.plugin._last_error_format_time)
         self.agent.message_processor.add_new_message.assert_not_called()
         self.registry.send_if_exists.assert_not_called()
@@ -926,10 +912,9 @@ class TestMinimaxToolCallPlugin(unittest.IsolatedAsyncioTestCase):
     async def test_after_message_generation_without_minimax_format(self):
         """测试没有minimax特殊格式时不处理。"""
         full_response = "正常的工具调用"
+        self.answer.get_message.return_value.get_content.return_value = full_response
 
-        await self.plugin.after_message_generation(
-            self.answer, full_response, self.tool_calls
-        )
+        await self.plugin.after_message_generation(self.answer, self.tool_calls)
 
         self.assertIsNone(self.plugin._last_error_format_time)
         self.agent.message_processor.add_new_message.assert_not_called()

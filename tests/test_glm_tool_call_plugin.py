@@ -40,9 +40,7 @@ class TestGlmToolCallPlugin(unittest.IsolatedAsyncioTestCase):
         agent = MockAgent("deepseek")
         self.registry.get_member_typechecked = MagicMock(return_value=agent)
 
-        await self.plugin.after_message_generation(
-            self.answer, "<tool_call>some content</tool_call>", []
-        )
+        await self.plugin.after_message_generation(self.answer, [])
 
         agent.message_processor.add_new_message.assert_not_called()
         self.registry.send_if_exists.assert_not_called()
@@ -51,10 +49,11 @@ class TestGlmToolCallPlugin(unittest.IsolatedAsyncioTestCase):
         """Test after_message_generation does nothing for correct format."""
         agent = MockAgent("glm")
         self.registry.get_member_typechecked = MagicMock(return_value=agent)
-
-        await self.plugin.after_message_generation(
-            self.answer, '```json toolcall\n{"name": "test"}\n```', []
+        self.answer.get_message.return_value.get_content.return_value = (
+            '```json toolcall\n{"name": "test"}\n```'
         )
+
+        await self.plugin.after_message_generation(self.answer, [])
 
         agent.message_processor.add_new_message.assert_not_called()
         self.registry.send_if_exists.assert_not_called()
@@ -64,8 +63,9 @@ class TestGlmToolCallPlugin(unittest.IsolatedAsyncioTestCase):
         agent = MockAgent("glm")
         self.registry.get_member_typechecked = MagicMock(return_value=agent)
         error_response = '<tool_call>\n{"name": "test_tool"}\n</tool_call>'
+        self.answer.get_message.return_value.get_content.return_value = error_response
 
-        await self.plugin.after_message_generation(self.answer, error_response, [])
+        await self.plugin.after_message_generation(self.answer, [])
 
         agent.message_processor.add_new_message.assert_called_once()
         self.registry.send_if_exists.assert_called_once()
@@ -82,8 +82,9 @@ class TestGlmToolCallPlugin(unittest.IsolatedAsyncioTestCase):
         agent = MockAgent("glm")
         self.registry.get_member_typechecked = MagicMock(return_value=agent)
         error_response = '   <tool_call>\n{"name": "test_tool"}\n</tool_call>'
+        self.answer.get_message.return_value.get_content.return_value = error_response
 
-        await self.plugin.after_message_generation(self.answer, error_response, [])
+        await self.plugin.after_message_generation(self.answer, [])
 
         agent.message_processor.add_new_message.assert_called_once()
         self.registry.send_if_exists.assert_called_once()
@@ -93,8 +94,9 @@ class TestGlmToolCallPlugin(unittest.IsolatedAsyncioTestCase):
         agent = MockAgent("glm")
         self.registry.get_member_typechecked = MagicMock(return_value=agent)
         normal_response = "This is a normal response from GLM."
+        self.answer.get_message.return_value.get_content.return_value = normal_response
 
-        await self.plugin.after_message_generation(self.answer, normal_response, [])
+        await self.plugin.after_message_generation(self.answer, [])
 
         agent.message_processor.add_new_message.assert_not_called()
         self.registry.send_if_exists.assert_not_called()

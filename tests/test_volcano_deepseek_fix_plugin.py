@@ -43,10 +43,9 @@ class TestVolcanoDeepseekFixPlugin(unittest.IsolatedAsyncioTestCase):
         full_response = (
             '正常的工具调用\n```json toolcall\n{"name": "test", "arguments": {}}\n```'
         )
+        self.answer.get_message.return_value.get_content.return_value = full_response
 
-        await self.plugin.after_message_generation(
-            self.answer, full_response, self.tool_calls
-        )
+        await self.plugin.after_message_generation(self.answer, self.tool_calls)
 
         self.assertEqual(len(self.added_messages), 0)
         self.registry.send_if_exists.assert_not_called()
@@ -61,10 +60,9 @@ class TestVolcanoDeepseekFixPlugin(unittest.IsolatedAsyncioTestCase):
             "```\n"
             "更多内容"
         )
+        self.answer.get_message.return_value.get_content.return_value = full_response
 
-        await self.plugin.after_message_generation(
-            self.answer, full_response, self.tool_calls
-        )
+        await self.plugin.after_message_generation(self.answer, self.tool_calls)
 
         self.assertEqual(len(self.added_messages), 1)
         runtime_msg = self.added_messages[0]
@@ -94,10 +92,9 @@ class TestVolcanoDeepseekFixPlugin(unittest.IsolatedAsyncioTestCase):
             "```\n"
             "内容 2"
         )
+        self.answer.get_message.return_value.get_content.return_value = full_response
 
-        await self.plugin.after_message_generation(
-            self.answer, full_response, self.tool_calls
-        )
+        await self.plugin.after_message_generation(self.answer, self.tool_calls)
 
         self.assertEqual(len(self.added_messages), 1)
         runtime_msg = self.added_messages[0]
@@ -119,10 +116,9 @@ class TestVolcanoDeepseekFixPlugin(unittest.IsolatedAsyncioTestCase):
             '{"name": "test", "arguments": {}}\n'
             "```\n" + suffix
         )
+        self.answer.get_message.return_value.get_content.return_value = full_response
 
-        await self.plugin.after_message_generation(
-            self.answer, full_response, self.tool_calls
-        )
+        await self.plugin.after_message_generation(self.answer, self.tool_calls)
 
         self.assertEqual(len(self.added_messages), 1)
         runtime_msg = self.added_messages[0]
@@ -141,10 +137,9 @@ class TestVolcanoDeepseekFixPlugin(unittest.IsolatedAsyncioTestCase):
             '{"name": "test", "arguments": {}}\n'
             "```\n" + suffix
         )
+        self.answer.get_message.return_value.get_content.return_value = full_response
 
-        await self.plugin.after_message_generation(
-            self.answer, full_response, self.tool_calls
-        )
+        await self.plugin.after_message_generation(self.answer, self.tool_calls)
 
         self.assertEqual(len(self.added_messages), 1)
         runtime_msg = self.added_messages[0]

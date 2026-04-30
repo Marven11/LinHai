@@ -35,7 +35,7 @@ class TestLoadImageUrlWarningPlugin(unittest.IsolatedAsyncioTestCase):
         ]
 
         await self.plugin.after_message_generation(
-            parsed_answer=MagicMock(), _full_response="", tool_calls=tool_calls
+            parsed_answer=MagicMock(), tool_calls=tool_calls
         )
 
         self.mock_message_processor.add_new_message.assert_called_once()
@@ -55,7 +55,7 @@ class TestLoadImageUrlWarningPlugin(unittest.IsolatedAsyncioTestCase):
         ]
 
         await self.plugin.after_message_generation(
-            parsed_answer=MagicMock(), _full_response="", tool_calls=tool_calls
+            parsed_answer=MagicMock(), tool_calls=tool_calls
         )
 
         self.mock_message_processor.add_new_message.assert_called_once()
@@ -72,7 +72,7 @@ class TestLoadImageUrlWarningPlugin(unittest.IsolatedAsyncioTestCase):
         ]
 
         await self.plugin.after_message_generation(
-            parsed_answer=MagicMock(), _full_response="", tool_calls=tool_calls
+            parsed_answer=MagicMock(), tool_calls=tool_calls
         )
 
         self.mock_message_processor.add_new_message.assert_called_once()
@@ -87,7 +87,7 @@ class TestLoadImageUrlWarningPlugin(unittest.IsolatedAsyncioTestCase):
         ]
 
         await self.plugin.after_message_generation(
-            parsed_answer=MagicMock(), _full_response="", tool_calls=tool_calls
+            parsed_answer=MagicMock(), tool_calls=tool_calls
         )
 
         self.mock_message_processor.add_new_message.assert_not_called()
@@ -102,7 +102,7 @@ class TestLoadImageUrlWarningPlugin(unittest.IsolatedAsyncioTestCase):
         ]
 
         await self.plugin.after_message_generation(
-            parsed_answer=MagicMock(), _full_response="", tool_calls=tool_calls
+            parsed_answer=MagicMock(), tool_calls=tool_calls
         )
 
         self.mock_message_processor.add_new_message.assert_not_called()
@@ -121,7 +121,7 @@ class TestLoadImageUrlWarningPlugin(unittest.IsolatedAsyncioTestCase):
         ]
 
         await self.plugin.after_message_generation(
-            parsed_answer=MagicMock(), _full_response="", tool_calls=tool_calls
+            parsed_answer=MagicMock(), tool_calls=tool_calls
         )
 
         self.mock_message_processor.add_new_message.assert_not_called()

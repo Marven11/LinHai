@@ -48,7 +48,16 @@ class TestAfkParam(unittest.TestCase):
         ):
             result = asyncio.run(
                 plugin.after_message_generation(
-                    Mock(), "test response without marker", []
+                    Mock(
+                        get_message=Mock(
+                            return_value=Mock(
+                                get_content=Mock(
+                                    return_value="test response without marker"
+                                )
+                            )
+                        )
+                    ),
+                    [],
                 )
             )
 
@@ -84,7 +93,16 @@ class TestAfkParam(unittest.TestCase):
         ):
             result = asyncio.run(
                 plugin.after_message_generation(
-                    Mock(), "test response without marker", []
+                    Mock(
+                        get_message=Mock(
+                            return_value=Mock(
+                                get_content=Mock(
+                                    return_value="test response without marker"
+                                )
+                            )
+                        )
+                    ),
+                    [],
                 )
             )
 

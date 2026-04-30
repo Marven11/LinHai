@@ -236,7 +236,6 @@ class Agent:
             return parsed_answer
 
         message = parsed_answer.get_message()
-        full_response = message.get_content() or ""
         await self.message_processor.add_new_message(message)
 
         tool_calls, errors = parsed_answer.extract_tool_calls_with_errors()
@@ -258,9 +257,7 @@ class Agent:
                 )
                 await self.toolcall_processor.call_tool(tool_call, tool_index=i)
 
-        await self.lifecycle.after_message_generation.trigger(
-            parsed_answer, full_response, tool_calls
-        )
+        await self.lifecycle.after_message_generation.trigger(parsed_answer, tool_calls)
 
         if self.toolcall_processor.early_return:
             return await self.generate_response()

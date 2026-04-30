@@ -181,7 +181,7 @@ class TUIApp(App):
                 with TabPane("Planning", id="planning-tab"):
                     yield PlanningTabWidget(self.registry)
 
-    async def after_message_generation(self, parsed_answer, full_response, tool_calls):
+    async def after_message_generation(self, parsed_answer, tool_calls):
         token_usage = parsed_answer._answer.get_token_usage()
         if token_usage is not None:
             self.update_token_display(token_usage.total_tokens)

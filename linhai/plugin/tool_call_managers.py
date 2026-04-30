@@ -157,9 +157,7 @@ class SlowStartPlugin(Plugin):
 
         return False
 
-    async def after_message_generation(
-        self, parsed_answer, _full_response: str, tool_calls: list[dict]
-    ):
+    async def after_message_generation(self, parsed_answer, tool_calls: list[dict]):
         if not self.enabled:
             return
         if len(tool_calls) < 8:
@@ -217,9 +215,7 @@ class SingleToolCallReminderPlugin(Plugin):
         super().__init__(registry)
         self.single_tool_call_count = 0
 
-    async def after_message_generation(
-        self, parsed_answer, _full_response: str, tool_calls: list[dict]
-    ):
+    async def after_message_generation(self, parsed_answer, tool_calls: list[dict]):
         """检查是否连续多次只调用了一个工具。"""
         agent = self.registry.get_member_typechecked("agent", Agent)
 
@@ -278,7 +274,6 @@ class ToolCallInReasoningPlugin(Plugin):
     async def after_message_generation(
         self,
         parsed_answer,
-        _full_response: str,
         tool_calls: List[Dict[str, JsonValue]],
     ):
         """检查推理内容中是否包含工具调用，且实际输出中没有调用工具。"""
@@ -337,7 +332,6 @@ class LoadImageUrlWarningPlugin(Plugin):
     async def after_message_generation(
         self,
         parsed_answer,
-        _full_response: str,
         tool_calls: List[Dict[str, JsonValue]],
     ):
         """检查工具调用中load_image的参数是否为URL。"""

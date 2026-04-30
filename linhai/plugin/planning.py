@@ -175,7 +175,6 @@ class PlanningStatusReminderPlugin(Plugin):
     async def after_message_generation(
         self,
         parsed_answer,
-        _full_response: str,
         tool_calls: list[dict],
     ) -> None:
         planning_folder = self._get_planning_folder()
@@ -369,7 +368,6 @@ class UserInputRuntimeMessagePlugin(Plugin):
     async def after_message_generation(
         self,
         parsed_answer,
-        _full_response: str,
         _tool_calls: list[dict],
     ) -> None:
         agent = self.registry.get_member_typechecked("agent", Agent)
@@ -441,7 +439,6 @@ class PlanningHeadingCheckPlugin(Plugin):
     async def after_message_generation(
         self,
         parsed_answer,
-        _full_response: str,
         tool_calls: list[dict],
     ) -> None:
         planning_folder = self._get_planning_folder()

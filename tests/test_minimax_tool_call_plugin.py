@@ -55,9 +55,10 @@ class TestMinimaxToolCallPlugin(unittest.IsolatedAsyncioTestCase):
 
     async def test_after_message_generation_no_error_time_when_correct_format(self):
         """Test after_message_generation does not set error time when correct format."""
-        await self.plugin.after_message_generation(
-            self.answer, "```json toolcall content", []
+        self.answer.get_message.return_value.get_content.return_value = (
+            "```json toolcall content"
         )
+        await self.plugin.after_message_generation(self.answer, [])
         self.assertIsNone(self.plugin._last_error_format_time)
 
     async def test_after_message_generation_detects_minimax_m25_error_format(self):
@@ -67,7 +68,8 @@ class TestMinimaxToolCallPlugin(unittest.IsolatedAsyncioTestCase):
         self.registry.send_if_exists = AsyncMock()
 
         error_response = '[TOOL_CALL]\n{\n  "name": "test_tool"\n}\n</TOOL_CALL>'
-        await self.plugin.after_message_generation(self.answer, error_response, [])
+        self.answer.get_message.return_value.get_content.return_value = error_response
+        await self.plugin.after_message_generation(self.answer, [])
 
         self.assertIsNotNone(self.plugin._last_error_format_time)
         self.agent.message_processor.add_new_message.assert_called_once()
@@ -80,9 +82,10 @@ class TestMinimaxToolCallPlugin(unittest.IsolatedAsyncioTestCase):
         self.registry.send_if_exists = AsyncMock()
 
         other_error_response = "<minimax:tool_call>"
-        await self.plugin.after_message_generation(
-            self.answer, other_error_response, []
+        self.answer.get_message.return_value.get_content.return_value = (
+            other_error_response
         )
+        await self.plugin.after_message_generation(self.answer, [])
 
         self.assertIsNotNone(self.plugin._last_error_format_time)
         self.agent.message_processor.add_new_message.assert_called_once()

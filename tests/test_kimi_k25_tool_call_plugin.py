@@ -55,9 +55,10 @@ class TestKimiK25ToolCallPlugin(unittest.IsolatedAsyncioTestCase):
 
     async def test_after_message_generation_no_error_time_when_correct_format(self):
         """Test after_message_generation does not set error time when correct format."""
-        await self.plugin.after_message_generation(
-            self.answer, "```json toolcall content", []
+        self.answer.get_message.return_value.get_content.return_value = (
+            "```json toolcall content"
         )
+        await self.plugin.after_message_generation(self.answer, [])
         self.assertIsNone(self.plugin._last_error_format_time)
 
     def test_register(self):

@@ -29,7 +29,7 @@ if TYPE_CHECKING:
 BeforeMessageGenerationCallback: TypeAlias = Callable[[], Awaitable[None]]
 
 AfterMessageGenerationCallback: TypeAlias = Callable[
-    ["ParsedAnswer", str, list[dict]],
+    ["ParsedAnswer", list[dict]],
     Awaitable[None],
 ]
 

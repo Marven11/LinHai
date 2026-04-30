@@ -40,8 +40,9 @@ class Plugin(ABC):
 class WaitingUserPlugin(Plugin):
     """等待用户标记检查Plugin。"""
 
-    async def after_message_generation(self, parsed_answer, full_response, tool_calls):
+    async def after_message_generation(self, parsed_answer, tool_calls):
         """检查等待用户标记的位置和工具调用冲突。"""
+        full_response = parsed_answer.get_message().get_content() or ""
         agent = self.registry.get_member_typechecked("agent", Agent)
         if not agent.get_current_model().get_custom_toolcall_format():
             return
@@ -112,9 +113,9 @@ class WrongEndPlugin(Plugin):
     async def after_message_generation(
         self,
         parsed_answer,
-        full_response: str,
         _tool_calls,
     ):
+        full_response = parsed_answer.get_message().get_content() or ""
         agent = self.registry.get_member_typechecked("agent", Agent)
         regex_result = re.search(r"<｜end▁of▁[a-z]+｜>", full_response)
         if regex_result:
@@ -159,10 +160,10 @@ class VolcanoDeepseekFixPlugin(Plugin):
     async def after_message_generation(
         self,
         parsed_answer,
-        full_response: str,
         _tool_calls: list,
     ) -> None:
         """在消息生成后检查并提醒异常标记。"""
+        full_response = parsed_answer.get_message().get_content() or ""
         agent = self.registry.get_member_typechecked("agent", Agent)
 
         positions = []
@@ -222,9 +223,9 @@ class OnlyReasoningPlugin(Plugin):
     async def after_message_generation(
         self,
         parsed_answer,
-        full_response: str,
         _tool_calls: List[Dict[str, JsonValue]],
     ):
+        full_response = parsed_answer.get_message().get_content() or ""
         agent = self.registry.get_member_typechecked("agent", Agent)
         model = agent.get_current_model()
 
@@ -266,7 +267,6 @@ class PreviousReasoningPlugin(Plugin):
     async def after_message_generation(
         self,
         parsed_answer,
-        _full_response: str,
         _tool_calls: List[Dict[str, JsonValue]],
     ):
         agent = self.registry.get_member_typechecked("agent", Agent)
@@ -294,10 +294,9 @@ class PreviousReasoningPlugin(Plugin):
 class JsonCodeBlockPlugin(Plugin):
     """检测agent误用`json`而非`json toolcall`代码块的插件。"""
 
-    async def after_message_generation(
-        self, parsed_answer, full_response: str, _tool_calls
-    ):
+    async def after_message_generation(self, parsed_answer, _tool_calls):
         """检查是否有json代码块包含有效的工具调用。"""
+        full_response = parsed_answer.get_message().get_content() or ""
         agent = self.registry.get_member_typechecked("agent", Agent)
 
         if not agent.get_current_model().get_custom_toolcall_format():
@@ -367,9 +366,9 @@ class KimiK25ToolCallPlugin(Plugin):
     async def after_message_generation(
         self,
         parsed_answer,
-        full_response: str,
         _tool_calls: list[dict],
     ):
+        full_response = parsed_answer.get_message().get_content() or ""
         if not full_response:
             return
 
@@ -468,9 +467,9 @@ class MinimaxToolCallPlugin(Plugin):
     async def after_message_generation(
         self,
         parsed_answer,
-        full_response: str,
         _tool_calls: list[dict],
     ):
+        full_response = parsed_answer.get_message().get_content() or ""
         if not full_response:
             return
 
@@ -600,7 +599,6 @@ class GlmToolCallPlugin(Plugin):
     async def after_message_generation(
         self,
         parsed_answer,
-        full_response: str,
         _tool_calls: list,
     ):
         """在消息生成后检查GLM是否错误使用了<tool_call>格式。"""
@@ -612,6 +610,7 @@ class GlmToolCallPlugin(Plugin):
 
         if not model.get_custom_toolcall_format():
             return
+        full_response = parsed_answer.get_message().get_content() or ""
 
         if full_response.lstrip().startswith("<tool_call>"):
             warning_msg = (
@@ -643,9 +642,9 @@ class MisplacedToolCallPlugin(Plugin):
     async def after_message_generation(
         self,
         parsed_answer,
-        full_response: str,
         _tool_calls: list,
     ):
+        full_response = parsed_answer.get_message().get_content() or ""
         agent = self.registry.get_member_typechecked("agent", Agent)
 
         misplaced_lines: list[str] = []
@@ -703,7 +702,7 @@ class WaitingUserReminderPlugin(Plugin):
                 None, source="waiting_user_reminder", sort_value=800
             )
 
-    async def after_message_generation(self, parsed_answer, full_response, tool_calls):
+    async def after_message_generation(self, parsed_answer, tool_calls):
         self._message_count += 1
 
     def register(self, lifecycle: "Lifecycle"):
