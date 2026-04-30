@@ -14,7 +14,7 @@ from linhai.machine_control.process import (
     ProcessCreateInfo,
 )
 from linhai.registry import Registry
-from linhai.tool.base import ToolResultSuccess, ToolResultFailed
+from linhai.tool.base import SuccessfulToolResult, FailedToolResult
 from linhai.utils.common import UiNotice
 from .file import (
     read_file as _read_file,
@@ -173,11 +173,11 @@ class BashHostControl:
 
         return exit_code, "\n".join(output_lines), ""
 
-    async def ping(self) -> ToolResultSuccess | ToolResultFailed:
+    async def ping(self) -> SuccessfulToolResult | FailedToolResult:
         rc, stdout, stderr = await self.execute_raw("echo pong", timeout=5.0)
         if rc == 0 and "pong" in stdout:
-            return ToolResultSuccess(content="pong")
-        return ToolResultFailed(
+            return SuccessfulToolResult(content="pong")
+        return FailedToolResult(
             content=f"ping失败: rc={rc}, stdout={stdout}, stderr={stderr}"
         )
 
@@ -195,9 +195,9 @@ class BashHostControl:
         json_data: Optional[Dict[str, Any]] = None,
         proxy: Optional[str] = None,
         verify: Optional[bool] = None,
-    ) -> HttpMessage | ToolResultFailed:
+    ) -> HttpMessage | FailedToolResult:
         if not self._has_curl:
-            return ToolResultFailed(content="远程机器没有安装curl")
+            return FailedToolResult(content="远程机器没有安装curl")
         return await _http_request(
             self,
             method,
@@ -216,15 +216,15 @@ class BashHostControl:
 
     async def change_directory(
         self, directory: str
-    ) -> ToolResultSuccess | ToolResultFailed:
+    ) -> SuccessfulToolResult | FailedToolResult:
         rc, stdout, stderr = await self.execute_raw(
             f"cd {shlex.quote(directory)} 2>&1 && pwd"
         )
         if rc != 0:
-            return ToolResultFailed(content=f"切换目录失败: {stderr or stdout}")
+            return FailedToolResult(content=f"切换目录失败: {stderr or stdout}")
         old_cwd = self._cwd
         self._cwd = stdout.strip().split("\n")[-1].strip()
-        return ToolResultSuccess(content=f"从目录{old_cwd}切换到了{self._cwd}")
+        return SuccessfulToolResult(content=f"从目录{old_cwd}切换到了{self._cwd}")
 
     async def create_process(
         self,
@@ -325,64 +325,64 @@ class BashHostControl:
 
     async def terminal_create(
         self, columns: int = 80, lines: int = 24
-    ) -> ToolResultSuccess | ToolResultFailed:
+    ) -> SuccessfulToolResult | FailedToolResult:
         return await _terminal.terminal_create(self, columns, lines)
 
     async def terminal_send_keys(
         self, terminal_id: str, keys: list[str]
-    ) -> ToolResultSuccess | ToolResultFailed:
+    ) -> SuccessfulToolResult | FailedToolResult:
         return await _terminal.terminal_send_keys(self, terminal_id, keys)
 
     async def terminal_send_string(
         self, terminal_id: str, string: str, with_enter: bool, wait_seconds: float = 0.3
-    ) -> ToolResultSuccess | ToolResultFailed:
+    ) -> SuccessfulToolResult | FailedToolResult:
         return await _terminal.terminal_send_string(
             self, terminal_id, string, with_enter, wait_seconds
         )
 
     async def terminal_read_screen(
         self, terminal_id: str
-    ) -> ToolResultSuccess | ToolResultFailed:
+    ) -> SuccessfulToolResult | FailedToolResult:
         return await _terminal.terminal_read_screen(self, terminal_id)
 
     async def terminal_close(
         self, terminal_id: str
-    ) -> ToolResultSuccess | ToolResultFailed:
+    ) -> SuccessfulToolResult | FailedToolResult:
         return await _terminal.terminal_close(self, terminal_id)
 
     async def read_file(
         self, filepath: str, show_line_numbers: bool = False
-    ) -> ToolResultSuccess | ToolResultFailed | FileContentMessage:
+    ) -> SuccessfulToolResult | FailedToolResult | FileContentMessage:
         return await _read_file(self, filepath, show_line_numbers)
 
     async def write_file(
         self, filepath: str, content: str, override: bool = False
-    ) -> ToolResultSuccess | ToolResultFailed:
+    ) -> SuccessfulToolResult | FailedToolResult:
         return await _write_file(self, filepath, content, override)
 
     async def replace_file_content(
         self, filepath: str, old: str, new: str, replace_times: Optional[int] = None
-    ) -> ToolResultSuccess | ToolResultFailed:
+    ) -> SuccessfulToolResult | FailedToolResult:
         return await _replace_file_content(self, filepath, old, new, replace_times)
 
     async def list_files(
         self, dirpath: str, glob: bool = False
-    ) -> ToolResultSuccess | ToolResultFailed:
+    ) -> SuccessfulToolResult | FailedToolResult:
         if glob:
             raise RuntimeError("list_files的glob选项仅支持master_host")
         return await _list_files(self, dirpath)
 
     async def get_absolute_path(
         self, path: str
-    ) -> ToolResultSuccess | ToolResultFailed:
+    ) -> SuccessfulToolResult | FailedToolResult:
         return await _get_absolute_path(self, path)
 
     async def read_file_with_sed(
         self, expression: str, filepath: str
-    ) -> ToolResultSuccess | ToolResultFailed:
+    ) -> SuccessfulToolResult | FailedToolResult:
         return await _read_file_with_sed(self, expression, filepath)
 
-    async def get_terminals(self) -> ToolResultSuccess | ToolResultFailed:
+    async def get_terminals(self) -> SuccessfulToolResult | FailedToolResult:
         return await _terminal.get_terminals(self, self._machine_id)
 
     def list_process_pids(self) -> list[str]:
@@ -390,14 +390,14 @@ class BashHostControl:
 
     async def download_file_concurrent(
         self, remote_path: str, local_path: str
-    ) -> ToolResultSuccess | ToolResultFailed:
+    ) -> SuccessfulToolResult | FailedToolResult:
         rc, _, _ = await self.execute_raw(f"test -f {shlex.quote(remote_path)}")
         if rc != 0:
-            return ToolResultFailed(content=f"远程文件不存在: {remote_path}")
+            return FailedToolResult(content=f"远程文件不存在: {remote_path}")
 
         rc, size_str, _ = await self.execute_raw(f"wc -c < {shlex.quote(remote_path)}")
         if rc != 0 or not size_str.strip().isdigit():
-            return ToolResultFailed(content=f"无法获取文件大小: {remote_path}")
+            return FailedToolResult(content=f"无法获取文件大小: {remote_path}")
 
         file_size = int(size_str.strip())
         chunk_size = 30720
@@ -410,20 +410,22 @@ class BashHostControl:
             )
             rc, b64_data, _ = await self.execute_raw(cmd, timeout=60.0)
             if rc != 0:
-                return ToolResultFailed(content=f"读取文件块失败 (offset={offset})")
+                return FailedToolResult(content=f"读取文件块失败 (offset={offset})")
             if b64_data.strip():
                 data.extend(base64.b64decode(b64_data.strip()))
 
         pathlib.Path(local_path).write_bytes(bytes(data))
-        return ToolResultSuccess(content=f"文件已下载: {local_path} ({file_size}字节)")
+        return SuccessfulToolResult(
+            content=f"文件已下载: {local_path} ({file_size}字节)"
+        )
 
     async def upload_file_concurrent(
         self, data: bytes, remote_path: str
-    ) -> ToolResultSuccess | ToolResultFailed:
+    ) -> SuccessfulToolResult | FailedToolResult:
         parent = remote_path.rsplit("/", 1)[0] if "/" in remote_path else "."
         rc, _, _ = await self.execute_raw(f"test -d {shlex.quote(parent)}")
         if rc != 0:
-            return ToolResultFailed(content=f"远程目录不存在: {parent}")
+            return FailedToolResult(content=f"远程目录不存在: {parent}")
 
         chunk_size = 30720
         tmp_path = self.make_temp_path("upload")
@@ -436,16 +438,18 @@ class BashHostControl:
             rc, _, stderr = await self.execute_raw(cmd, timeout=30.0)
             if rc != 0:
                 await self.execute_raw(f"rm -f {shlex.quote(tmp_path)}")
-                return ToolResultFailed(content=f"上传文件块失败: {stderr}")
+                return FailedToolResult(content=f"上传文件块失败: {stderr}")
 
         rc, _, stderr = await self.execute_raw(
             f"mv {shlex.quote(tmp_path)} {shlex.quote(remote_path)}"
         )
         if rc != 0:
             await self.execute_raw(f"rm -f {shlex.quote(tmp_path)}")
-            return ToolResultFailed(content=f"移动文件失败: {stderr}")
+            return FailedToolResult(content=f"移动文件失败: {stderr}")
 
-        return ToolResultSuccess(content=f"文件已上传: {remote_path} ({len(data)}字节)")
+        return SuccessfulToolResult(
+            content=f"文件已上传: {remote_path} ({len(data)}字节)"
+        )
 
     async def disconnect(self) -> None:
         if self._shell_process is not None:

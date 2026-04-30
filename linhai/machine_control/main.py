@@ -6,7 +6,7 @@ from typing import Any, Dict, Optional, TypedDict
 from linhai.agent.lifecycle import Lifecycle
 from linhai.config import RemoteMachineConfig
 from linhai.registry import Registry
-from linhai.tool.base import ToolResultSuccess, ToolResultFailed
+from linhai.tool.base import SuccessfulToolResult, FailedToolResult
 from linhai.utils.common import UiNotice
 from .protocol import HostControl
 from .master_host.master_host import MasterHostControl
@@ -60,9 +60,9 @@ class MachineControl:
 
     async def switch_machine(
         self, machine_id: str
-    ) -> ToolResultSuccess | ToolResultFailed:
+    ) -> SuccessfulToolResult | FailedToolResult:
         if machine_id not in self.machines:
-            return ToolResultFailed(content=f"机器未找到: {machine_id}")
+            return FailedToolResult(content=f"机器未找到: {machine_id}")
 
         old_machine_id = self.target_machine
         self.target_machine = machine_id
@@ -74,17 +74,17 @@ class MachineControl:
             ),
         )
 
-        return ToolResultSuccess(content=f"已切换到机器: {machine_id}")
+        return SuccessfulToolResult(content=f"已切换到机器: {machine_id}")
 
     async def disconnect_machine(
         self, machine_id: str
-    ) -> ToolResultSuccess | ToolResultFailed:
+    ) -> SuccessfulToolResult | FailedToolResult:
         if machine_id not in self.machines:
-            return ToolResultFailed(content=f"机器未找到: {machine_id}")
+            return FailedToolResult(content=f"机器未找到: {machine_id}")
 
         host_control = self.machines[machine_id]
         if isinstance(host_control, MasterHostControl):
-            return ToolResultFailed(content="不能断开master_host")
+            return FailedToolResult(content="不能断开master_host")
 
         await host_control.disconnect()
 
@@ -102,25 +102,25 @@ class MachineControl:
             UiNotice(level="INFO", content=f"已断开机器: {machine_id}{switched}"),
         )
 
-        return ToolResultSuccess(content=f"已断开机器: {machine_id}{switched}")
+        return SuccessfulToolResult(content=f"已断开机器: {machine_id}{switched}")
 
     async def add_posix_shell_machine(
         self,
         machine_id: str,
         pid: str,
         source_machine: Optional[str] = None,
-    ) -> ToolResultSuccess | ToolResultFailed:
+    ) -> SuccessfulToolResult | FailedToolResult:
         if machine_id in self.machines:
-            return ToolResultFailed(content=f"机器ID已存在: {machine_id}")
+            return FailedToolResult(content=f"机器ID已存在: {machine_id}")
 
         source_machine_id = source_machine or self.target_machine
         if source_machine_id not in self.machines:
-            return ToolResultFailed(content=f"源机器不存在: {source_machine_id}")
+            return FailedToolResult(content=f"源机器不存在: {source_machine_id}")
 
         source_host = self.machines[source_machine_id]
         process = source_host.get_process(pid)
         if process is None:
-            return ToolResultFailed(
+            return FailedToolResult(
                 content=f"进程不存在: {pid} (在机器 {source_machine_id} 上)"
             )
 
@@ -146,7 +146,7 @@ class MachineControl:
                 return await self._connect_bash_control(
                     machine_id, process, source_machine_id, pid
                 )
-            return ToolResultFailed(content=f"连接posix shell进程失败: PID {pid}")
+            return FailedToolResult(content=f"连接posix shell进程失败: PID {pid}")
 
         self.machines[machine_id] = shell_control
         shell_control._machine_id = machine_id
@@ -163,7 +163,7 @@ class MachineControl:
             ),
         )
 
-        return ToolResultSuccess(
+        return SuccessfulToolResult(
             content=f"已成功连接posix shell进程为机器: {machine_id} (PID: {pid})"
         )
 
@@ -173,11 +173,11 @@ class MachineControl:
         process: Process,
         source_machine_id: str,
         pid: str,
-    ) -> ToolResultSuccess | ToolResultFailed:
+    ) -> SuccessfulToolResult | FailedToolResult:
         bash_control = BashHostControl(registry=self.registry)
         connected = await bash_control.connect(process)
         if not connected:
-            return ToolResultFailed(content=f"Bash控制连接失败: PID {pid}")
+            return FailedToolResult(content=f"Bash控制连接失败: PID {pid}")
 
         self.machines[machine_id] = bash_control
         bash_control._machine_id = machine_id
@@ -194,20 +194,20 @@ class MachineControl:
             ),
         )
 
-        return ToolResultSuccess(
+        return SuccessfulToolResult(
             content=f"已成功连接bash shell进程为机器: {machine_id} (PID: {pid})"
         )
 
     async def connect_remote_config(
         self, name: str
-    ) -> ToolResultSuccess | ToolResultFailed:
+    ) -> SuccessfulToolResult | FailedToolResult:
         if name not in self.remote_machines:
             available = ", ".join(self.remote_machines.keys()) or "无"
-            return ToolResultFailed(
+            return FailedToolResult(
                 content=f"远程机器配置未找到: {name}。可用配置: {available}"
             )
         if name in self.machines:
-            return ToolResultFailed(content=f"机器ID已存在: {name}")
+            return FailedToolResult(content=f"机器ID已存在: {name}")
 
         config = self.remote_machines[name]
 
@@ -217,21 +217,21 @@ class MachineControl:
         result = await current_host.create_process(config.argv, wait_second=15.0)
 
         if not result.success:
-            return ToolResultFailed(content=f"连接远程机器失败: {result.error}")
+            return FailedToolResult(content=f"连接远程机器失败: {result.error}")
 
         if result.returncode is not None:
-            return ToolResultFailed(
+            return FailedToolResult(
                 content=f"连接进程立即退出(code={result.returncode}): {result.stderr}"
             )
 
         process = current_host.get_process(result.pid)
         if process is None:
-            return ToolResultFailed(content=f"连接进程不存在: {result.pid}")
+            return FailedToolResult(content=f"连接进程不存在: {result.pid}")
 
         connected = await shell_control.connect(process)
         if not connected:
             await process.kill()
-            return ToolResultFailed(content=f"连接远程机器失败: {name}")
+            return FailedToolResult(content=f"连接远程机器失败: {name}")
 
         self.machines[name] = shell_control
         shell_control._machine_id = name
@@ -247,16 +247,16 @@ class MachineControl:
             ),
         )
 
-        return ToolResultSuccess(content=f"已成功连接远程机器: {name}")
+        return SuccessfulToolResult(content=f"已成功连接远程机器: {name}")
 
     async def add_ether_ghost_machine(
         self,
         machine_id: str,
         session_type: str,
         connection_args: Dict[str, Any],
-    ) -> ToolResultSuccess | ToolResultFailed:
+    ) -> SuccessfulToolResult | FailedToolResult:
         if machine_id in self.machines:
-            return ToolResultFailed(content=f"机器ID已存在: {machine_id}")
+            return FailedToolResult(content=f"机器ID已存在: {machine_id}")
 
         from .ether_ghost_host.ether_ghost_host import EtherGhostMachineControl
 
@@ -281,17 +281,17 @@ class MachineControl:
             ),
         )
 
-        return ToolResultSuccess(
+        return SuccessfulToolResult(
             content=f"已成功添加EtherGhost机器: {machine_id} (session类型: {session_type})"
         )
 
-    async def list_all_terminals(self) -> ToolResultSuccess | ToolResultFailed:
+    async def list_all_terminals(self) -> SuccessfulToolResult | FailedToolResult:
         """列出所有机器上的所有终端"""
         all_terminals = []
         for machine_id, host_control in self.machines.items():
             result = await host_control.get_terminals()
-            if isinstance(result, ToolResultFailed):
-                return ToolResultFailed(
+            if isinstance(result, FailedToolResult):
+                return FailedToolResult(
                     content=f"获取机器 {machine_id} 的终端列表失败: {result.content}"
                 )
 
@@ -303,15 +303,15 @@ class MachineControl:
         else:
             content = "\n\n".join(all_terminals)
 
-        return ToolResultSuccess(content=content)
+        return SuccessfulToolResult(content=content)
 
-    async def list_machines(self) -> ToolResultSuccess:
+    async def list_machines(self) -> SuccessfulToolResult:
         lines = ["可用机器:"]
         for machine_id, description in self.machine_descriptions.items():
             current = " (当前)" if machine_id == self.target_machine else ""
             lines.append(f"  - {machine_id}: {description}{current}")
 
-        return ToolResultSuccess(content="\n".join(lines))
+        return SuccessfulToolResult(content="\n".join(lines))
 
     async def transfer_file(
         self,
@@ -319,7 +319,7 @@ class MachineControl:
         from_machine: str,
         to_filepath: str,
         to_machine: str,
-    ) -> ToolResultSuccess | ToolResultFailed:
+    ) -> SuccessfulToolResult | FailedToolResult:
         """将文件从一台机器传输到另一台机器。
 
         Args:
@@ -336,12 +336,12 @@ class MachineControl:
             import os
 
             if from_machine == to_machine:
-                return ToolResultFailed(content=f"源机器和目标机器相同: {from_machine}")
+                return FailedToolResult(content=f"源机器和目标机器相同: {from_machine}")
 
             if from_machine not in self.machines:
-                return ToolResultFailed(content=f"源机器不存在: {from_machine}")
+                return FailedToolResult(content=f"源机器不存在: {from_machine}")
             if to_machine not in self.machines:
-                return ToolResultFailed(content=f"目标机器不存在: {to_machine}")
+                return FailedToolResult(content=f"目标机器不存在: {to_machine}")
 
             from_control = self.machines[from_machine]
             to_control = self.machines[to_machine]
@@ -355,12 +355,12 @@ class MachineControl:
                         from_filepath, temp_path
                     )
                 else:
-                    download_result = ToolResultFailed(
+                    download_result = FailedToolResult(
                         content=f"源机器 {from_machine} 不支持文件下载"
                     )
 
-                if isinstance(download_result, ToolResultFailed):
-                    return ToolResultFailed(
+                if isinstance(download_result, FailedToolResult):
+                    return FailedToolResult(
                         content=f"从源机器下载文件失败: {download_result.content}"
                     )
 
@@ -372,16 +372,16 @@ class MachineControl:
                         file_data, to_filepath
                     )
                 else:
-                    upload_result = ToolResultFailed(
+                    upload_result = FailedToolResult(
                         content=f"目标机器 {to_machine} 不支持文件上传"
                     )
 
-                if isinstance(upload_result, ToolResultFailed):
-                    return ToolResultFailed(
+                if isinstance(upload_result, FailedToolResult):
+                    return FailedToolResult(
                         content=f"向目标机器上传文件失败: {upload_result.content}"
                     )
 
-                return ToolResultSuccess(
+                return SuccessfulToolResult(
                     content=f"文件传输成功: {from_machine}:{from_filepath} -> {to_machine}:{to_filepath}"
                 )
 
@@ -392,7 +392,7 @@ class MachineControl:
                     pass
 
         except Exception as e:
-            return ToolResultFailed(content=f"文件传输失败: {e}")
+            return FailedToolResult(content=f"文件传输失败: {e}")
 
     def get_source_chain(self, machine_id: str) -> list[str]:
         chain: list[str] = []

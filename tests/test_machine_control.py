@@ -249,18 +249,18 @@ class TestMasterHostControl(unittest.IsolatedAsyncioTestCase):
         """测试改变目录 - 使用_cwd而非os.chdir"""
         import tempfile
         import os
-        from linhai.tool.base import ToolResultSuccess, ToolResultFailed
+        from linhai.tool.base import SuccessfulToolResult, FailedToolResult
 
         old_cwd = self.host_control._cwd
 
         with tempfile.TemporaryDirectory() as tmpdir:
             result = await self.host_control.change_directory(tmpdir)
-            self.assertIsInstance(result, ToolResultSuccess)
+            self.assertIsInstance(result, SuccessfulToolResult)
             self.assertIn("切换到了", result.content)
             self.assertEqual(self.host_control._cwd, tmpdir)
 
         result = await self.host_control.change_directory("/nonexistent_dir_xyz")
-        self.assertIsInstance(result, ToolResultFailed)
+        self.assertIsInstance(result, FailedToolResult)
         self.assertIn("目录不存在", result.content)
 
         self.host_control._cwd = old_cwd
@@ -285,12 +285,12 @@ class TestMasterHostControl(unittest.IsolatedAsyncioTestCase):
         """测试write_file使用_cwd解析相对路径"""
         import tempfile
         import os
-        from linhai.tool.base import ToolResultSuccess
+        from linhai.tool.base import SuccessfulToolResult
 
         with tempfile.TemporaryDirectory() as tmpdir:
             self.host_control._cwd = tmpdir
             result = await self.host_control.write_file("test_write.txt", "hello world")
-            self.assertIsInstance(result, ToolResultSuccess)
+            self.assertIsInstance(result, SuccessfulToolResult)
             self.assertTrue(os.path.exists(os.path.join(tmpdir, "test_write.txt")))
             with open(os.path.join(tmpdir, "test_write.txt")) as f:
                 self.assertEqual(f.read(), "hello world")
@@ -311,7 +311,7 @@ class TestMasterHostControl(unittest.IsolatedAsyncioTestCase):
         """测试replace_file_content使用_cwd解析相对路径"""
         import tempfile
         import os
-        from linhai.tool.base import ToolResultSuccess
+        from linhai.tool.base import SuccessfulToolResult
 
         with tempfile.TemporaryDirectory() as tmpdir:
             self.host_control._cwd = tmpdir
@@ -320,7 +320,7 @@ class TestMasterHostControl(unittest.IsolatedAsyncioTestCase):
             result = await self.host_control.replace_file_content(
                 "test_replace.txt", "old text", "new text"
             )
-            self.assertIsInstance(result, ToolResultSuccess)
+            self.assertIsInstance(result, SuccessfulToolResult)
             with open(os.path.join(tmpdir, "test_replace.txt")) as f:
                 self.assertEqual(f.read(), "new text here")
 
@@ -328,25 +328,25 @@ class TestMasterHostControl(unittest.IsolatedAsyncioTestCase):
         """测试list_files使用_cwd解析相对路径"""
         import tempfile
         import os
-        from linhai.tool.base import ToolResultSuccess
+        from linhai.tool.base import SuccessfulToolResult
 
         with tempfile.TemporaryDirectory() as tmpdir:
             subdir = os.path.join(tmpdir, "subdir")
             os.makedirs(subdir)
             self.host_control._cwd = tmpdir
             result = await self.host_control.list_files("subdir")
-            self.assertIsInstance(result, ToolResultSuccess)
+            self.assertIsInstance(result, SuccessfulToolResult)
 
     async def test_get_absolute_path_resolves_cwd(self):
         """测试get_absolute_path使用_cwd解析相对路径"""
         import tempfile
         import os
-        from linhai.tool.base import ToolResultSuccess
+        from linhai.tool.base import SuccessfulToolResult
 
         with tempfile.TemporaryDirectory() as tmpdir:
             self.host_control._cwd = tmpdir
             result = await self.host_control.get_absolute_path("relative/path")
-            self.assertIsInstance(result, ToolResultSuccess)
+            self.assertIsInstance(result, SuccessfulToolResult)
             expected = os.path.join(tmpdir, "relative", "path")
             self.assertIn(expected, result.content)
 
@@ -354,7 +354,7 @@ class TestMasterHostControl(unittest.IsolatedAsyncioTestCase):
         """测试change_directory后文件操作使用新cwd"""
         import tempfile
         import os
-        from linhai.tool.base import ToolResultSuccess
+        from linhai.tool.base import SuccessfulToolResult
 
         old_cwd = self.host_control._cwd
 
@@ -677,12 +677,12 @@ class TestToolResultFormat(unittest.IsolatedAsyncioTestCase):
     """测试工具调用结果格式（<<>>格式）"""
 
     async def test_tool_result_success_format(self):
-        """测试ToolResultSuccess的content格式为<<>>"""
-        from linhai.tool.base import ToolResultSuccess
+        """测试SuccessfulToolResult的content格式为<<>>"""
+        from linhai.tool.base import SuccessfulToolResult
 
         # 测试简单的键值对
         content = "<<pid>>123<<pid>><<message>>test<<message>>"
-        result = ToolResultSuccess(content=content)
+        result = SuccessfulToolResult(content=content)
         self.assertEqual(result.content, content)
         # 验证content包含<<>>格式
         self.assertIn("<<pid>>", result.content)
@@ -690,15 +690,15 @@ class TestToolResultFormat(unittest.IsolatedAsyncioTestCase):
 
         # 测试多个键值对
         content2 = "<<key1>>value1<<key1>><<key2>>value2<<key2>>"
-        result2 = ToolResultSuccess(content=content2)
+        result2 = SuccessfulToolResult(content=content2)
         self.assertEqual(result2.content, content2)
 
     async def test_tool_result_failed_format(self):
-        """测试ToolResultFailed的content格式为<<>>"""
-        from linhai.tool.base import ToolResultFailed
+        """测试FailedToolResult的content格式为<<>>"""
+        from linhai.tool.base import FailedToolResult
 
         content = "<<error>>something went wrong<<error>>"
-        result = ToolResultFailed(content=content)
+        result = FailedToolResult(content=content)
         self.assertEqual(result.content, content)
         self.assertIn("<<error>>", result.content)
 
@@ -717,10 +717,10 @@ class TestMasterHostControlConcurrentFiles(unittest.IsolatedAsyncioTestCase):
         with tempfile.TemporaryDirectory() as tmpdir:
             test_file = os.path.join(tmpdir, "test.bin")
             data = b"test data" * 1000
-            from linhai.tool.base import ToolResultSuccess, ToolResultFailed
+            from linhai.tool.base import SuccessfulToolResult, FailedToolResult
 
             result = await self.host_control.upload_file_concurrent(data, test_file)
-            self.assertIsInstance(result, ToolResultSuccess)
+            self.assertIsInstance(result, SuccessfulToolResult)
             self.assertIn("文件已上传", result.content)
             with open(test_file, "rb") as f:
                 written_data = f.read()
@@ -735,12 +735,12 @@ class TestMasterHostControlConcurrentFiles(unittest.IsolatedAsyncioTestCase):
             test_file = os.path.join(tmpdir, "test.bin")
             with open(test_file, "wb") as f:
                 f.write(b"existing")
-            from linhai.tool.base import ToolResultSuccess, ToolResultFailed
+            from linhai.tool.base import SuccessfulToolResult, FailedToolResult
 
             result = await self.host_control.upload_file_concurrent(
                 b"new data", test_file
             )
-            self.assertIsInstance(result, ToolResultFailed)
+            self.assertIsInstance(result, FailedToolResult)
             self.assertIn("文件已存在", result.content)
 
     async def test_download_file_concurrent_success(self):
@@ -754,12 +754,12 @@ class TestMasterHostControlConcurrentFiles(unittest.IsolatedAsyncioTestCase):
             data = b"download test" * 500
             with open(source_file, "wb") as f:
                 f.write(data)
-            from linhai.tool.base import ToolResultSuccess, ToolResultFailed
+            from linhai.tool.base import SuccessfulToolResult, FailedToolResult
 
             result = await self.host_control.download_file_concurrent(
                 source_file, dest_file
             )
-            self.assertIsInstance(result, ToolResultSuccess)
+            self.assertIsInstance(result, SuccessfulToolResult)
             self.assertIn("文件已下载", result.content)
             with open(dest_file, "rb") as f:
                 downloaded_data = f.read()
@@ -772,12 +772,12 @@ class TestMasterHostControlConcurrentFiles(unittest.IsolatedAsyncioTestCase):
 
         with tempfile.TemporaryDirectory() as tmpdir:
             dest_file = os.path.join(tmpdir, "dest.bin")
-            from linhai.tool.base import ToolResultSuccess, ToolResultFailed
+            from linhai.tool.base import SuccessfulToolResult, FailedToolResult
 
             result = await self.host_control.download_file_concurrent(
                 "/nonexistent", dest_file
             )
-            self.assertIsInstance(result, ToolResultFailed)
+            self.assertIsInstance(result, FailedToolResult)
             self.assertIn("文件不存在", result.content)
 
 
@@ -790,16 +790,16 @@ class TestDisconnectMachine(unittest.IsolatedAsyncioTestCase):
 
     async def test_disconnect_machine_not_found(self):
         result = await self.machine_control.disconnect_machine("nonexistent")
-        from linhai.tool.base import ToolResultFailed
+        from linhai.tool.base import FailedToolResult
 
-        self.assertIsInstance(result, ToolResultFailed)
+        self.assertIsInstance(result, FailedToolResult)
         self.assertIn("机器未找到", result.content)
 
     async def test_disconnect_master_host_raises(self):
-        from linhai.tool.base import ToolResultFailed
+        from linhai.tool.base import FailedToolResult
 
         result = await self.machine_control.disconnect_machine("master_host")
-        self.assertIsInstance(result, ToolResultFailed)
+        self.assertIsInstance(result, FailedToolResult)
         self.assertIn("master_host", result.content)
 
     async def test_disconnect_non_current_machine(self):
@@ -809,10 +809,10 @@ class TestDisconnectMachine(unittest.IsolatedAsyncioTestCase):
         self.machine_control.source_machines["remote"] = "master_host"
         self.machine_control.machine_descriptions["remote"] = "test"
 
-        from linhai.tool.base import ToolResultSuccess
+        from linhai.tool.base import SuccessfulToolResult
 
         result = await self.machine_control.disconnect_machine("remote")
-        self.assertIsInstance(result, ToolResultSuccess)
+        self.assertIsInstance(result, SuccessfulToolResult)
         self.assertNotIn("remote", self.machine_control.machines)
         self.assertNotIn("remote", self.machine_control.source_machines)
         self.assertNotIn("remote", self.machine_control.machine_descriptions)
@@ -827,10 +827,10 @@ class TestDisconnectMachine(unittest.IsolatedAsyncioTestCase):
         self.machine_control.machine_descriptions["remote"] = "test"
         self.machine_control.target_machine = "remote"
 
-        from linhai.tool.base import ToolResultSuccess
+        from linhai.tool.base import SuccessfulToolResult
 
         result = await self.machine_control.disconnect_machine("remote")
-        self.assertIsInstance(result, ToolResultSuccess)
+        self.assertIsInstance(result, SuccessfulToolResult)
         self.assertEqual(self.machine_control.target_machine, "master_host")
         self.assertIn("已自动切换到机器: master_host", result.content)
 
@@ -865,7 +865,7 @@ class TestMachineControlTransferFile(unittest.IsolatedAsyncioTestCase):
 
     async def test_transfer_file_same_machine(self):
         """测试同一台机器传输应失败"""
-        from linhai.tool.base import ToolResultFailed
+        from linhai.tool.base import FailedToolResult
 
         result = await self.machine_control.transfer_file(
             from_filepath="/tmp/source",
@@ -873,13 +873,13 @@ class TestMachineControlTransferFile(unittest.IsolatedAsyncioTestCase):
             to_filepath="/tmp/dest",
             to_machine="master_host",
         )
-        self.assertIsInstance(result, ToolResultFailed)
+        self.assertIsInstance(result, FailedToolResult)
         self.assertIn("源机器和目标机器相同", result.content)
 
     async def test_transfer_file_between_machines_mock(self):
         """测试机器间传输（使用mock）"""
         from unittest.mock import Mock, AsyncMock
-        from linhai.tool.base import ToolResultSuccess
+        from linhai.tool.base import SuccessfulToolResult
         from linhai.machine_control.master_host.master_host import MasterHostControl
         from linhai.machine_control.posix_shell.posix_shell_control import (
             PosixShellControl,
@@ -888,10 +888,10 @@ class TestMachineControlTransferFile(unittest.IsolatedAsyncioTestCase):
         mock_master = Mock(spec=MasterHostControl)
         mock_ssh = Mock(spec=PosixShellControl)
         mock_ssh.download_file_concurrent = AsyncMock(
-            return_value=ToolResultSuccess(content="<<message>>下载成功<<message>>")
+            return_value=SuccessfulToolResult(content="<<message>>下载成功<<message>>")
         )
         mock_master.upload_file_concurrent = AsyncMock(
-            return_value=ToolResultSuccess(content="<<message>>上传成功<<message>>")
+            return_value=SuccessfulToolResult(content="<<message>>上传成功<<message>>")
         )
 
         self.machine_control.machines = {
@@ -905,9 +905,9 @@ class TestMachineControlTransferFile(unittest.IsolatedAsyncioTestCase):
             to_filepath="/tmp/dest",
             to_machine="master_host",
         )
-        from linhai.tool.base import ToolResultSuccess
+        from linhai.tool.base import SuccessfulToolResult
 
-        self.assertIsInstance(result, ToolResultSuccess)
+        self.assertIsInstance(result, SuccessfulToolResult)
         mock_ssh.download_file_concurrent.assert_called_once()
         mock_master.upload_file_concurrent.assert_called_once()
 

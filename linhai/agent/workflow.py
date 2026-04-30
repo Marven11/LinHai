@@ -9,7 +9,7 @@ import linhai
 from .messages import RuntimeMessage, MessagesListSummerizeMessage, GlobalPrompt
 from linhai.markdown_parser import extract_json_blocks
 from linhai.base import AssistantMessage, SystemMessage, UserMessage
-from linhai.tool.base import ToolResultSuccess, ToolResultFailed
+from linhai.tool.base import SuccessfulToolResult, FailedToolResult
 from linhai.utils.common import UiNotice, generate_id
 from pathlib import Path
 from .conversation import save_cleaned_messages
@@ -142,7 +142,7 @@ def _validate_compression_range(
 
 async def context_forget_range_step1(
     registry: "linhai.registry.Registry",
-) -> ToolResultSuccess | ToolResultFailed:
+) -> SuccessfulToolResult | FailedToolResult:
     """
     压缩范围第一步：生成消息列表总结并返回range_clean_id。
     """
@@ -184,7 +184,7 @@ async def context_forget_range_step1(
         )
     )
 
-    return ToolResultSuccess(
+    return SuccessfulToolResult(
         content=(
             f"已生成消息列表总结，ID: {range_clean_id}，当前共有{message_length}条消息。"
             "请查看消息列表总结后调用context_forget_range_step2进行删除。"
@@ -198,7 +198,7 @@ async def context_forget_range_step2(
     start_id: int,
     end_id: int,
     description: str,
-) -> ToolResultSuccess | ToolResultFailed:
+) -> SuccessfulToolResult | FailedToolResult:
     """
     压缩范围第二步：使用range_clean_id确认删除范围并执行删除。
     """
@@ -211,24 +211,24 @@ async def context_forget_range_step2(
     )
     info = range_clean_manager.get_clean_info(range_clean_id)
     if info is None:
-        return ToolResultFailed(content=f"range_clean_id无效或已过期: {range_clean_id}")
+        return FailedToolResult(content=f"range_clean_id无效或已过期: {range_clean_id}")
 
     current_message_count = len(agent.message_processor.messages)
     max_allowed_id = min(info.message_length - 1, current_message_count - 1)
     allowed_range = (info.min_safe_id, max_allowed_id)
 
     if start_id < allowed_range[0] or start_id > allowed_range[1]:
-        return ToolResultFailed(
+        return FailedToolResult(
             content=f"start_id必须在{allowed_range[0]}到{allowed_range[1]}之间"
         )
     if end_id < allowed_range[0] or end_id > allowed_range[1]:
-        return ToolResultFailed(
+        return FailedToolResult(
             content=f"end_id必须在{allowed_range[0]}到{allowed_range[1]}之间"
         )
 
     passed, error_msg = _validate_compression_range(agent, start_id, end_id)
     if not passed:
-        return ToolResultFailed(content=f"历史压缩失败：{error_msg}")
+        return FailedToolResult(content=f"历史压缩失败：{error_msg}")
 
     for i, msg in enumerate(agent.message_processor.messages):
         if (
@@ -270,6 +270,6 @@ async def context_forget_range_step2(
         ),
     )
 
-    return ToolResultSuccess(
+    return SuccessfulToolResult(
         content=f"你使用历史压缩删除（遗忘）了一段消息，被转储到了{filepath}中，请根据**历史压缩总结**明确当前任务继续工作"
     )

@@ -4,7 +4,7 @@
 import unittest
 from unittest.mock import Mock, AsyncMock
 from linhai.plugin.sudo_stdio_checker import SudoStdioCheckerPlugin
-from linhai.tool.base import ToolResultFailed
+from linhai.tool.base import FailedToolResult
 
 
 class TestSudoStdioCheckerPlugin(unittest.IsolatedAsyncioTestCase):
@@ -55,7 +55,7 @@ class TestSudoStdioCheckerPlugin(unittest.IsolatedAsyncioTestCase):
                     toolcall_arguments=toolcall_arguments,
                     with_secret=None,
                 )
-                self.assertIsInstance(result, ToolResultFailed)
+                self.assertIsInstance(result, FailedToolResult)
                 self.assertIn("必须是列表类型", result.content)
 
     async def test_before_tool_call_first_arg_not_sudo(self):
@@ -83,7 +83,7 @@ class TestSudoStdioCheckerPlugin(unittest.IsolatedAsyncioTestCase):
                     toolcall_arguments=toolcall_arguments,
                     with_secret=None,
                 )
-                self.assertIsInstance(result, ToolResultFailed)
+                self.assertIsInstance(result, FailedToolResult)
                 self.assertIn("sudo命令必须使用-S标志", result.content)
                 self.assertIn("connect_posix_shell_as_machine", result.content)
 

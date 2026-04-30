@@ -10,8 +10,8 @@ from linhai.registry import Registry
 from linhai.tool.base import (
     ToolArgInfo,
     ToolCallResultMessage,
-    ToolResultFailed,
-    ToolResultSuccess,
+    SuccessfulToolResult,
+    FailedToolResult,
     ToolSet,
 )
 from linhai.tool.main import ToolManager
@@ -115,7 +115,7 @@ class AgentToolcall:
         )
         async def switch_llm(llm_name: str):
             await llm_manager.switch_to_llm(llm_name)
-            return ToolResultSuccess(content=f"已切换到LLM: {llm_name}")
+            return SuccessfulToolResult(content=f"已切换到LLM: {llm_name}")
 
         @toolset.register_tool(
             name="current_llm",
@@ -131,7 +131,7 @@ class AgentToolcall:
         def current_llm():
             current_llm_instance = llm_manager.get_current_llm()
             current_name = current_llm_instance.get_name()
-            return ToolResultSuccess(content=f"当前使用的LLM: {current_name}")
+            return SuccessfulToolResult(content=f"当前使用的LLM: {current_name}")
 
         @toolset.register_tool(
             name="list_llm",
@@ -159,7 +159,7 @@ class AgentToolcall:
                 result.append(f"    错误计数: {info['error_count']}")
                 result.append("")
 
-            return ToolResultSuccess(content="\n".join(result))
+            return SuccessfulToolResult(content="\n".join(result))
 
     def _register_dummy_tools(self, toolset: ToolSet):
         """注册虚拟工具到给定的toolset（token使用情况、历史消息管理等）。"""
@@ -178,11 +178,11 @@ class AgentToolcall:
             )
             if token_manager.cumulative_token_usage is not None:
                 total = token_manager.cumulative_token_usage["total_tokens"]
-                return ToolResultSuccess(
+                return SuccessfulToolResult(
                     content=f"当前token总用量为: {total} ({total/1000:.2f} k)"
                 )
             else:
-                return ToolResultSuccess(content="暂无token用量信息")
+                return SuccessfulToolResult(content="暂无token用量信息")
 
     def _split_and_save_large_output(
         self,
@@ -387,7 +387,7 @@ class AgentToolcall:
             arguments,
             tool_call.with_secret,
         )
-        if isinstance(beforecbs_result, ToolResultFailed):
+        if isinstance(beforecbs_result, FailedToolResult):
             await lifecycle.after_toolcall.trigger(
                 tool_name=tool_call.function_name,
                 tool_index=tool_index,
@@ -416,7 +416,7 @@ class AgentToolcall:
             tool_result = await tool_manager.process_tool_call(tool_call, tool_index)
 
             if isinstance(tool_result, ToolCallResultMessage) and isinstance(
-                tool_result.result, ToolResultFailed
+                tool_result.result, FailedToolResult
             ):
                 lifecycle = self.registry.get_member_typechecked("lifecycle", Lifecycle)
                 await lifecycle.after_toolcall.trigger(

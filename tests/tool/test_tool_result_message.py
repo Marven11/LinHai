@@ -4,7 +4,7 @@ import unittest
 import os
 import re
 import tempfile
-from linhai.tool.base import ToolResultSuccess, ToolResultFailed
+from linhai.tool.base import SuccessfulToolResult, FailedToolResult
 
 
 class TestToolCallResultMessage(unittest.TestCase):
@@ -15,7 +15,7 @@ class TestToolCallResultMessage(unittest.TestCase):
         from linhai.tool.main import ToolCallResultMessage
 
         short_content = "This is a short message"
-        result = ToolResultSuccess(content=short_content)
+        result = SuccessfulToolResult(content=short_content)
         message = ToolCallResultMessage(
             tool_name="test_tool",
             tool_index=1,
@@ -32,7 +32,7 @@ class TestToolCallResultMessage(unittest.TestCase):
         from linhai.tool.main import ToolCallResultMessage
 
         long_content = "A" * 50001  # 50001个字符，1行
-        result = ToolResultSuccess(content=long_content)
+        result = SuccessfulToolResult(content=long_content)
         message = ToolCallResultMessage(
             tool_name="test_tool",
             tool_index=1,
@@ -52,7 +52,7 @@ class TestToolCallResultMessage(unittest.TestCase):
 
         lines = [f"Line {i}: {'A' * 50}" for i in range(1200)]  # 1200行，每行约55字符
         long_content = "\n".join(lines)
-        result = ToolResultSuccess(content=long_content)
+        result = SuccessfulToolResult(content=long_content)
         message = ToolCallResultMessage(
             tool_name="test_tool",
             tool_index=1,
@@ -74,7 +74,7 @@ class TestToolCallResultMessage(unittest.TestCase):
         custom_max_length = 1000
 
         long_content = "A" * 1001  # 1001个字符
-        result = ToolResultSuccess(content=long_content)
+        result = SuccessfulToolResult(content=long_content)
         message = ToolCallResultMessage(
             tool_name="test_tool",
             tool_index=1,
@@ -90,7 +90,7 @@ class TestToolCallResultMessage(unittest.TestCase):
         self.assertIn("AAAAAAAA", content)  # 检查至少部分内容存在
 
         short_content = "A" * 1000  # 1000个字符
-        result = ToolResultSuccess(content=short_content)
+        result = SuccessfulToolResult(content=short_content)
         message = ToolCallResultMessage(
             tool_name="test_tool",
             tool_index=1,
@@ -105,7 +105,7 @@ class TestToolCallResultMessage(unittest.TestCase):
         from linhai.tool.main import ToolCallResultMessage
 
         json_content = {"key": "value", "number": 42}
-        result = ToolResultSuccess(content=str(json_content))
+        result = SuccessfulToolResult(content=str(json_content))
         message = ToolCallResultMessage(
             tool_name="test_tool",
             tool_index=1,
@@ -121,7 +121,7 @@ class TestToolCallResultMessage(unittest.TestCase):
         from linhai.tool.main import ToolCallResultMessage
 
         long_json_content = {"data": "A" * 50000}  # 超过50000字符
-        result = ToolResultSuccess(content=str(long_json_content))
+        result = SuccessfulToolResult(content=str(long_json_content))
         message = ToolCallResultMessage(
             tool_name="test_tool",
             tool_index=1,
@@ -145,7 +145,7 @@ class TestToolCallResultMessage(unittest.TestCase):
         while len(long_content) < 50000:
             long_content += "\nAdditional line to make it longer"
 
-        result = ToolResultSuccess(content=long_content)
+        result = SuccessfulToolResult(content=long_content)
         message = ToolCallResultMessage(
             tool_name="test_tool",
             tool_index=1,

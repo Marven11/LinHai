@@ -8,7 +8,7 @@ from linhai.machine_control.http_message import (
     _is_binary,
     build_http_message,
 )
-from linhai.tool.base import ToolResultFailed
+from linhai.tool.base import FailedToolResult
 
 
 class TestIsBinary(unittest.TestCase):
@@ -94,7 +94,7 @@ class TestHttpMessage(unittest.TestCase):
         self.assertNotIn("<<body>>", msg.content)
 
     def test_isinstance_tool_result_success(self):
-        from linhai.tool.base import ToolResultSuccess
+        from linhai.tool.base import SuccessfulToolResult
 
         msg = HttpMessage(
             status_code=200,
@@ -103,7 +103,7 @@ class TestHttpMessage(unittest.TestCase):
             size=0,
             body="",
         )
-        self.assertIsInstance(msg, ToolResultSuccess)
+        self.assertIsInstance(msg, SuccessfulToolResult)
 
     def test_headers_serialized_as_json(self):
         import json
@@ -206,7 +206,7 @@ class TestBuildHttpMessage(unittest.IsolatedAsyncioTestCase):
             content=content,
             content_type="text/plain; charset=utf-8",
         )
-        self.assertIsInstance(result, ToolResultFailed)
+        self.assertIsInstance(result, FailedToolResult)
         self.assertIn("\u65e0\u6cd5\u4f7f\u7528\u7f16\u7801", result.content)
 
     async def test_error_status_code_still_returns_http_message(self):

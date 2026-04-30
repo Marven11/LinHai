@@ -15,7 +15,7 @@ from linhai.machine_control.process import (
     ProcessWriteResult,
 )
 from linhai.registry import Registry
-from linhai.tool.base import ToolResultSuccess, ToolResultFailed
+from linhai.tool.base import SuccessfulToolResult, FailedToolResult
 
 
 class TestBashProcess(unittest.TestCase):
@@ -295,7 +295,7 @@ class TestBashHostChangeDirectory(unittest.TestCase):
         async def test():
             self.control.execute_raw = AsyncMock(return_value=(0, "/tmp", ""))
             result = await self.control.change_directory("/tmp")
-            self.assertIsInstance(result, ToolResultSuccess)
+            self.assertIsInstance(result, SuccessfulToolResult)
             self.assertEqual(self.control._cwd, "/tmp")
             self.assertIn("/tmp", result.content)
 
@@ -307,7 +307,7 @@ class TestBashHostChangeDirectory(unittest.TestCase):
                 return_value=(1, "", "not a directory")
             )
             result = await self.control.change_directory("/no/such/dir")
-            self.assertIsInstance(result, ToolResultFailed)
+            self.assertIsInstance(result, FailedToolResult)
             self.assertEqual(self.control._cwd, "/home/user")
 
         self.loop.run_until_complete(test())
@@ -335,7 +335,7 @@ class TestBashHostDownloadUpload(unittest.TestCase):
             result = await self.control.download_file_concurrent(
                 "/no/file", "/tmp/local"
             )
-            self.assertIsInstance(result, ToolResultFailed)
+            self.assertIsInstance(result, FailedToolResult)
             self.assertIn("不存在", result.content)
 
         self.loop.run_until_complete(test())
@@ -357,7 +357,7 @@ class TestBashHostDownloadUpload(unittest.TestCase):
                 result = await self.control.download_file_concurrent(
                     "/remote/file", local_path
                 )
-                self.assertIsInstance(result, ToolResultSuccess)
+                self.assertIsInstance(result, SuccessfulToolResult)
                 with open(local_path, "rb") as f:
                     self.assertEqual(f.read(), content)
             finally:
@@ -378,7 +378,7 @@ class TestBashHostDownloadUpload(unittest.TestCase):
             result = await self.control.upload_file_concurrent(
                 data, "/remote/path/file.txt"
             )
-            self.assertIsInstance(result, ToolResultSuccess)
+            self.assertIsInstance(result, SuccessfulToolResult)
             self.assertIn("上传", result.content)
 
         self.loop.run_until_complete(test())
@@ -389,7 +389,7 @@ class TestBashHostDownloadUpload(unittest.TestCase):
             result = await self.control.upload_file_concurrent(
                 b"data", "/no/dir/file.txt"
             )
-            self.assertIsInstance(result, ToolResultFailed)
+            self.assertIsInstance(result, FailedToolResult)
             self.assertIn("目录不存在", result.content)
 
         self.loop.run_until_complete(test())

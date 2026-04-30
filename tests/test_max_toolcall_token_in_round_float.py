@@ -7,7 +7,7 @@ from pathlib import Path
 from unittest.mock import Mock, AsyncMock
 from linhai.agent.toolcall import AgentToolcall
 from linhai.base import ToolCallMessage
-from linhai.tool.base import ToolCallResultMessage, ToolResultSuccess
+from linhai.tool.base import ToolCallResultMessage, SuccessfulToolResult
 
 
 class TestMaxToolcallTokenInRoundFloat(unittest.IsolatedAsyncioTestCase):

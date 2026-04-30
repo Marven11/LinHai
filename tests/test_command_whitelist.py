@@ -6,7 +6,7 @@ import unittest
 from unittest.mock import Mock
 from linhai.config import Config
 from linhai.plugin import CommandWhitelistPlugin
-from linhai.tool.base import ToolResultFailed
+from linhai.tool.base import FailedToolResult
 
 
 class TestCommandWhitelistConfig(unittest.TestCase):
@@ -78,7 +78,7 @@ class TestCommandWhitelistPlugin(unittest.IsolatedAsyncioTestCase):
             {"argv": ["git", "commit"]},
             None,
         )
-        self.assertIsInstance(result, ToolResultFailed)
+        self.assertIsInstance(result, FailedToolResult)
         self.assertIn("不在白名单中", result.content)
 
     async def test_plugin_ignores_other_tools(self):
@@ -108,7 +108,7 @@ class TestCommandWhitelistPlugin(unittest.IsolatedAsyncioTestCase):
             {"argv": "ls -lah"},
             None,
         )
-        self.assertIsInstance(result, ToolResultFailed)
+        self.assertIsInstance(result, FailedToolResult)
         self.assertIn("必须是列表类型", result.content)
 
         # argv是数字
@@ -117,7 +117,7 @@ class TestCommandWhitelistPlugin(unittest.IsolatedAsyncioTestCase):
             {"argv": 123},
             None,
         )
-        self.assertIsInstance(result, ToolResultFailed)
+        self.assertIsInstance(result, FailedToolResult)
         self.assertIn("必须是列表类型", result.content)
 
         # argv是字典
@@ -126,7 +126,7 @@ class TestCommandWhitelistPlugin(unittest.IsolatedAsyncioTestCase):
             {"argv": {"command": "ls"}},
             None,
         )
-        self.assertIsInstance(result, ToolResultFailed)
+        self.assertIsInstance(result, FailedToolResult)
         self.assertIn("必须是列表类型", result.content)
 
     async def test_plugin_rejects_non_string_elements(self):
@@ -141,7 +141,7 @@ class TestCommandWhitelistPlugin(unittest.IsolatedAsyncioTestCase):
             {"argv": ["ls", 123, "-lah"]},
             None,
         )
-        self.assertIsInstance(result, ToolResultFailed)
+        self.assertIsInstance(result, FailedToolResult)
         self.assertIn("必须是字符串类型", result.content)
         self.assertIn("第1个元素", result.content)  # 索引从0开始，123是第1个元素
 
@@ -151,7 +151,7 @@ class TestCommandWhitelistPlugin(unittest.IsolatedAsyncioTestCase):
             {"argv": ["ls", ["-l", "-a"], "-h"]},
             None,
         )
-        self.assertIsInstance(result, ToolResultFailed)
+        self.assertIsInstance(result, FailedToolResult)
         self.assertIn("必须是字符串类型", result.content)
 
         # argv包含字典
@@ -160,7 +160,7 @@ class TestCommandWhitelistPlugin(unittest.IsolatedAsyncioTestCase):
             {"argv": ["ls", {"option": "-l"}, "-a"]},
             None,
         )
-        self.assertIsInstance(result, ToolResultFailed)
+        self.assertIsInstance(result, FailedToolResult)
         self.assertIn("必须是字符串类型", result.content)
 
 

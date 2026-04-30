@@ -12,7 +12,7 @@ from linhai.llm import OpenAi
 from linhai.llm_manager import LlmManager
 from linhai.registry import Registry
 from linhai.token_manager import TokenManager
-from linhai.tool.base import ToolResultFailed, ToolResultSuccess
+from linhai.tool.base import FailedToolResult, SuccessfulToolResult
 from linhai.tool.mcp_connector import MCPConnector
 from linhai.tool.main import ToolManager
 from linhai.task_supervisor import PlainTaskSupervisor
@@ -57,11 +57,11 @@ async def test_mcp_tool_call():
     connector = await _connect_mcp_server(registry)
 
     result = await connector.call_tool_raw("test", "add", {"a": 3, "b": 5})
-    assert isinstance(result, ToolResultSuccess)
+    assert isinstance(result, SuccessfulToolResult)
     assert "8" in result.content
 
     result2 = await connector.call_tool_raw("test", "multiply", {"a": 4, "b": 7})
-    assert isinstance(result2, ToolResultSuccess)
+    assert isinstance(result2, SuccessfulToolResult)
     assert "28" in result2.content
 
     await connector.disconnect_mcp_server("test")

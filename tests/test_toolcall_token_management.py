@@ -8,7 +8,11 @@ from unittest.mock import Mock, AsyncMock, patch
 from linhai.agent.toolcall import AgentToolcall
 from linhai.base import ToolCallMessage
 from linhai.agent.messages import RuntimeMessage
-from linhai.tool.base import ToolCallResultMessage, ToolResultSuccess, ToolResultFailed
+from linhai.tool.base import (
+    ToolCallResultMessage,
+    SuccessfulToolResult,
+    FailedToolResult,
+)
 
 
 class TestToolcallTokenManagementTDD(unittest.IsolatedAsyncioTestCase):
@@ -71,7 +75,7 @@ class TestToolcallTokenManagementTDD(unittest.IsolatedAsyncioTestCase):
         tool_result = ToolCallResultMessage(
             tool_name="test_tool",
             tool_index=1,
-            result=ToolResultSuccess(content=short_content),
+            result=SuccessfulToolResult(content=short_content),
             toolcall_arguments=None,
         )
 
@@ -95,7 +99,7 @@ class TestToolcallTokenManagementTDD(unittest.IsolatedAsyncioTestCase):
         tool_result = ToolCallResultMessage(
             tool_name="test_tool",
             tool_index=1,
-            result=ToolResultSuccess(content=long_content),
+            result=SuccessfulToolResult(content=long_content),
             toolcall_arguments=None,
         )
 
@@ -129,7 +133,7 @@ class TestToolcallTokenManagementTDD(unittest.IsolatedAsyncioTestCase):
         tool_result1 = ToolCallResultMessage(
             tool_name="test_tool1",
             tool_index=1,
-            result=ToolResultSuccess(content=short_content1),
+            result=SuccessfulToolResult(content=short_content1),
             toolcall_arguments=None,
         )
 
@@ -150,7 +154,7 @@ class TestToolcallTokenManagementTDD(unittest.IsolatedAsyncioTestCase):
         tool_result2 = ToolCallResultMessage(
             tool_name="test_tool2",
             tool_index=2,
-            result=ToolResultSuccess(content=short_content2),
+            result=SuccessfulToolResult(content=short_content2),
             toolcall_arguments=None,
         )
 
@@ -177,7 +181,7 @@ class TestToolcallTokenManagementTDD(unittest.IsolatedAsyncioTestCase):
             tool_result = ToolCallResultMessage(
                 tool_name=f"test_tool{i}",
                 tool_index=i + 1,
-                result=ToolResultSuccess(content=content),
+                result=SuccessfulToolResult(content=content),
                 toolcall_arguments=None,
             )
 
@@ -202,7 +206,7 @@ class TestToolcallTokenManagementTDD(unittest.IsolatedAsyncioTestCase):
         tool_result1 = ToolCallResultMessage(
             tool_name="test_tool1",
             tool_index=1,
-            result=ToolResultSuccess(content=content1),
+            result=SuccessfulToolResult(content=content1),
             toolcall_arguments=None,
         )
 
@@ -222,7 +226,7 @@ class TestToolcallTokenManagementTDD(unittest.IsolatedAsyncioTestCase):
             tool_result = ToolCallResultMessage(
                 tool_name=f"test_tool{i}",
                 tool_index=i + 1,
-                result=ToolResultSuccess(content=content),
+                result=SuccessfulToolResult(content=content),
                 toolcall_arguments=None,
             )
 
@@ -246,7 +250,7 @@ class TestToolcallTokenManagementTDD(unittest.IsolatedAsyncioTestCase):
         tool_result1 = ToolCallResultMessage(
             tool_name="test_tool1",
             tool_index=1,
-            result=ToolResultSuccess(content=content1),
+            result=SuccessfulToolResult(content=content1),
             toolcall_arguments=None,
         )
 
@@ -265,7 +269,7 @@ class TestToolcallTokenManagementTDD(unittest.IsolatedAsyncioTestCase):
         tool_result2 = ToolCallResultMessage(
             tool_name="test_tool2",
             tool_index=2,
-            result=ToolResultSuccess(content=content2),
+            result=SuccessfulToolResult(content=content2),
             toolcall_arguments=None,
         )
 
@@ -285,7 +289,7 @@ class TestToolcallTokenManagementTDD(unittest.IsolatedAsyncioTestCase):
         tool_result3 = ToolCallResultMessage(
             tool_name="test_tool3",
             tool_index=3,
-            result=ToolResultSuccess(content=content3),
+            result=SuccessfulToolResult(content=content3),
             toolcall_arguments=None,
         )
 
@@ -311,7 +315,7 @@ class TestToolcallTokenManagementTDD(unittest.IsolatedAsyncioTestCase):
         tool_result = ToolCallResultMessage(
             tool_name="test_tool",
             tool_index=1,
-            result=ToolResultSuccess(content=content),
+            result=SuccessfulToolResult(content=content),
             toolcall_arguments=None,
         )
         tool_call = ToolCallMessage(

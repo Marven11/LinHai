@@ -20,7 +20,12 @@ from linhai.tool.base import ToolCallResultMessage
 from linhai.multimodal import ImageMessage
 from linhai.utils.tokenizer import count_tokens
 from linhai.registry import Registry
-from linhai.tool.base import ToolSet, ToolResultSuccess, ToolResultFailed, ToolArgInfo
+from linhai.tool.base import (
+    ToolSet,
+    SuccessfulToolResult,
+    FailedToolResult,
+    ToolArgInfo,
+)
 from linhai.utils.common import UiNotice
 from linhai.utils.i18n import t
 from linhai.type_hints import ThresholdInfo
@@ -130,7 +135,7 @@ class AgentContextOrchestration:
 
     async def context_forget_large_message(
         self,
-    ) -> ToolResultSuccess | ToolResultFailed:
+    ) -> SuccessfulToolResult | FailedToolResult:
         """清理大消息，但保留最近添加的大消息。
 
         Returns:
@@ -138,7 +143,7 @@ class AgentContextOrchestration:
         """
         large_count = len(self.large_messages)
         if large_count < MIN_CLEANABLE_LARGE_MESSAGES:
-            return ToolResultFailed(
+            return FailedToolResult(
                 content=f"需要至少{MIN_CLEANABLE_LARGE_MESSAGES}条大消息，当前只有{large_count}条"
             )
 
@@ -152,7 +157,7 @@ class AgentContextOrchestration:
             removed_messages
         )
         if not meets_threshold:
-            return ToolResultFailed(
+            return FailedToolResult(
                 content=f"可清理的大消息不满足阈值（消息数:{msg_count}, token数:{total_tokens}），需要至少{MIN_CLEANABLE_LARGE_MESSAGES}条消息且总token数至少{MIN_CLEANABLE_TOTAL_TOKENS}"
             )
 
@@ -183,7 +188,7 @@ class AgentContextOrchestration:
                 content=f"已清理{len(removed_messages)}条大消息（约{total_tokens} token）",
             ),
         )
-        return ToolResultSuccess(content=result)
+        return SuccessfulToolResult(content=result)
 
     def compute_orchestration_context(
         self, tool_name: str, threshold_info: Optional[ThresholdInfo]
@@ -415,10 +420,10 @@ class AgentContextOrchestration:
             conflict_with=["context_forget_range_step1", "context_forget_range_step2"],
         )
         async def context_forget_large_message_tool() -> (
-            ToolResultSuccess | ToolResultFailed
+            SuccessfulToolResult | FailedToolResult
         ):
             result = await self.context_forget_large_message()
-            if isinstance(result, ToolResultSuccess):
+            if isinstance(result, SuccessfulToolResult):
                 token_manager = self.registry.get_member_typechecked(
                     "token_manager", TokenManager
                 )
@@ -441,7 +446,7 @@ class AgentContextOrchestration:
             ],
         )
         async def context_forget_range_step1_tool() -> (
-            ToolResultSuccess | ToolResultFailed
+            SuccessfulToolResult | FailedToolResult
         ):
             result = await context_forget_range_step1(self.registry)
             return result
@@ -497,11 +502,11 @@ class AgentContextOrchestration:
         )
         async def context_forget_range_step2_tool(
             range_clean_id: str, start_id: int, end_id: int, description: str
-        ) -> ToolResultSuccess | ToolResultFailed:
+        ) -> SuccessfulToolResult | FailedToolResult:
             result = await context_forget_range_step2(
                 self.registry, range_clean_id, start_id, end_id, description
             )
-            if isinstance(result, ToolResultSuccess):
+            if isinstance(result, SuccessfulToolResult):
                 token_manager = self.registry.get_member_typechecked(
                     "token_manager", TokenManager
                 )
@@ -588,11 +593,11 @@ class RedStateToolBlockPlugin:
         tool_name: str,
         toolcall_arguments: dict,
         with_secret: list[str] | None,
-    ) -> Union[ToolResultSuccess, ToolResultFailed, dict, None]:
+    ) -> Union[SuccessfulToolResult, FailedToolResult, dict, None]:
         """在工具调用前检查是否需要阻止工具调用。
 
         Returns:
-            ToolResultFailed: 阻止工具调用并返回失败结果
+            FailedToolResult: 阻止工具调用并返回失败结果
             dict: 修改后的工具调用参数
             None: 不做处理
         """
@@ -661,7 +666,7 @@ class RedStateToolBlockPlugin:
                     content=ui_msg,
                 ),
             )
-            return ToolResultFailed(content=error_msg)
+            return FailedToolResult(content=error_msg)
 
         orchestration.consecutive_red_block_count = 0
         agent.message_processor.update_notification_message(

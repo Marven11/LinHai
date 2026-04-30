@@ -22,7 +22,7 @@ from functools import partial
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 
-from .base import ToolArgInfo, ToolSet, ToolResultSuccess, ToolResultFailed
+from .base import ToolArgInfo, ToolSet, SuccessfulToolResult, FailedToolResult
 from ..registry import Registry
 from ..sandbox import ProcessSandboxProtocol, NoSandbox
 from ..task_supervisor import PlainTaskSupervisor
@@ -139,9 +139,9 @@ class MCPConnector:
             for content in data.content:
                 if content.type == "text":
                     result += content.text
-            return ToolResultSuccess(content=result)
+            return SuccessfulToolResult(content=result)
         except Exception as e:  # pylint: disable=broad-exception-caught
-            return ToolResultFailed(content=f"调用时发生错误：{type(e)} {e!r}")
+            return FailedToolResult(content=f"调用时发生错误：{type(e)} {e!r}")
 
     def init_connector_toolset(self):
         connector_toolset = ToolSet()
@@ -191,7 +191,7 @@ class MCPConnector:
             try:
                 conn = await self.connect_mcp_server(name, wrapped_command)
                 assert conn.toolset is not None
-                return ToolResultSuccess(
+                return SuccessfulToolResult(
                     content=f"连接{command!r}成功，名字为{name!r}，添加了以下工具: "
                     + ", ".join(n for n in conn.toolset.tools.keys())
                     + "注意：为了避免工具名称冲突重命名了工具。"
@@ -200,7 +200,7 @@ class MCPConnector:
             except (
                 Exception
             ) as e:  # WHY: MCP SDK写得很差，抛出的错误类型很多且不确定，我们只能直接捕获Exception
-                return ToolResultFailed(content=f"连接{command!r}失败，错误: {e!r}")
+                return FailedToolResult(content=f"连接{command!r}失败，错误: {e!r}")
 
         @connector_toolset.register_tool(
             name="disconnect_mcp_server",
@@ -226,9 +226,9 @@ class MCPConnector:
         async def disconnect_mcp_server(name: str):
             try:
                 await self.disconnect_mcp_server(name)
-                return ToolResultSuccess(content=f"成功断开MCP服务器: {name!r}")
+                return SuccessfulToolResult(content=f"成功断开MCP服务器: {name!r}")
             except RuntimeError as e:
-                return ToolResultFailed(content=f"断开失败: {e!r}")
+                return FailedToolResult(content=f"断开失败: {e!r}")
 
         @connector_toolset.register_tool(
             name="list_mcp_servers",
@@ -243,10 +243,10 @@ class MCPConnector:
         )
         async def list_mcp_servers():
             if not self.sessions:
-                return ToolResultSuccess(content="当前没有已连接的MCP服务器")
+                return SuccessfulToolResult(content="当前没有已连接的MCP服务器")
 
             server_names = list(self.sessions.keys())
-            return ToolResultSuccess(
+            return SuccessfulToolResult(
                 content=f"已连接的MCP服务器 ({len(server_names)}个):\n"
                 + "\n".join(f"- {name}" for name in server_names)
             )

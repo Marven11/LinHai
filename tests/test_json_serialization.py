@@ -5,7 +5,11 @@ import unittest
 from unittest.mock import Mock
 
 from linhai.base import SystemMessage, UserMessage, AssistantMessage
-from linhai.tool.base import ToolCallResultMessage, ToolResultSuccess, ToolResultFailed
+from linhai.tool.base import (
+    ToolCallResultMessage,
+    SuccessfulToolResult,
+    FailedToolResult,
+)
 
 
 class TestJsonSerialization(unittest.TestCase):
@@ -75,7 +79,7 @@ class TestJsonSerialization(unittest.TestCase):
         original = ToolCallResultMessage(
             tool_name="test_tool",
             tool_index=0,
-            result=ToolResultSuccess(content="工具执行结果"),
+            result=SuccessfulToolResult(content="工具执行结果"),
             toolcall_arguments=None,
         )
         json_str = original.to_json()
@@ -89,7 +93,7 @@ class TestJsonSerialization(unittest.TestCase):
         original = ToolCallResultMessage(
             tool_name="test_tool",
             tool_index=0,
-            result=ToolResultFailed(content="工具执行错误"),
+            result=FailedToolResult(content="工具执行错误"),
             toolcall_arguments={"arg": "value"},
         )
         json_str = original.to_json()

@@ -18,7 +18,7 @@ from linhai.agent.workflow import (
 )
 from linhai.base import UserMessage, AssistantMessage, SystemMessage
 from linhai.tool.main import ToolManager
-from linhai.tool.base import utils_tools, ToolResultSuccess, ToolResultFailed
+from linhai.tool.base import utils_tools, SuccessfulToolResult, FailedToolResult
 from linhai.registry import Registry
 from linhai.agent.messages import GlobalPrompt
 
@@ -140,7 +140,7 @@ class TestTwoStepCompressionBasic(unittest.IsolatedAsyncioTestCase):
             mock_save.return_value = Path(tempfile.mktemp(suffix=".json"))
             result = await context_forget_range_step1(mock_registry)
 
-        self.assertIsInstance(result, ToolResultSuccess)
+        self.assertIsInstance(result, SuccessfulToolResult)
         self.assertIn("已生成消息列表总结，ID:", result.content)
         self.assertIn("当前共有17条消息", result.content)
 
@@ -223,7 +223,7 @@ class TestTwoStepCompressionBasic(unittest.IsolatedAsyncioTestCase):
                 description="Test compression",
             )
 
-        self.assertIsInstance(result, ToolResultSuccess)
+        self.assertIsInstance(result, SuccessfulToolResult)
 
         # Verify summerize message was invalidated
         self.assertFalse(summerize_message.is_valid())
@@ -257,7 +257,7 @@ class TestTwoStepCompressionBasic(unittest.IsolatedAsyncioTestCase):
             description="Test compression",
         )
 
-        self.assertIsInstance(result, ToolResultFailed)
+        self.assertIsInstance(result, FailedToolResult)
         self.assertIn("range_clean_id无效或已过期", result.content)
 
     async def test_step2_out_of_range(self):
@@ -306,7 +306,7 @@ class TestTwoStepCompressionBasic(unittest.IsolatedAsyncioTestCase):
             description="Test compression",
         )
 
-        self.assertIsInstance(result, ToolResultFailed)
+        self.assertIsInstance(result, FailedToolResult)
         self.assertIn("end_id必须在", result.content)
 
     async def test_range_clean_manager_functionality(self):
@@ -421,7 +421,7 @@ class TestTwoStepCompressionBasic(unittest.IsolatedAsyncioTestCase):
             result = await context_forget_range_step1(mock_registry)
 
         # Should still succeed, even if LLM says there are too few messages
-        self.assertIsInstance(result, ToolResultSuccess)
+        self.assertIsInstance(result, SuccessfulToolResult)
 
     async def test_step2_user_message_protection_summary(self):
         """Test that step2 creates a summary of protected user messages."""
@@ -519,7 +519,7 @@ class TestTwoStepCompressionBasic(unittest.IsolatedAsyncioTestCase):
                 description="Test compression with user messages",
             )
 
-        self.assertIsInstance(result, ToolResultSuccess)
+        self.assertIsInstance(result, SuccessfulToolResult)
 
         # Check that a runtime message was inserted summarizing user messages
         user_message_summary_found = False

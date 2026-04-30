@@ -9,7 +9,7 @@ from pathlib import Path
 from linhai.agent import Agent
 from linhai.agent.messages import RuntimeMessage
 from linhai.base import UserMessage, AssistantMessage
-from linhai.tool.base import ToolResultSuccess, ToolCallResultMessage
+from linhai.tool.base import SuccessfulToolResult, ToolCallResultMessage
 from linhai.registry import Registry
 from linhai.tool.main import ToolManager
 from linhai.tool.base import utils_tools
@@ -203,7 +203,7 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
         tool_msg = ToolCallResultMessage(
             tool_name="dummy_tool",
             tool_index=0,
-            result=ToolResultSuccess(content="result"),
+            result=SuccessfulToolResult(content="result"),
             toolcall_arguments=None,
         )
 
@@ -336,7 +336,7 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
             return_value=ToolCallResultMessage(
                 tool_name="add_numbers",
                 tool_index=0,
-                result=ToolResultSuccess(content="工具执行成功"),
+                result=SuccessfulToolResult(content="工具执行成功"),
                 toolcall_arguments=None,
             )
         )

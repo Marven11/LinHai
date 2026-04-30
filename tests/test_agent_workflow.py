@@ -14,7 +14,7 @@ from linhai.agent.workflow import (
 from linhai.agent.orchestration import AgentContextOrchestration
 from linhai.base import UserMessage, AssistantMessage
 from linhai.tool.main import ToolManager
-from linhai.tool.base import utils_tools, ToolResultSuccess, ToolResultFailed
+from linhai.tool.base import utils_tools, SuccessfulToolResult, FailedToolResult
 from linhai.registry import Registry
 
 r = reprlib.Repr()
@@ -215,8 +215,8 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
             mock_save.return_value = Path("/tmp/test.json")
             result = await context_forget_range_step1(mock_registry)
 
-        # 验证结果，应为ToolResultSuccess
-        self.assertIsInstance(result, ToolResultSuccess)
+        # 验证结果，应为SuccessfulToolResult
+        self.assertIsInstance(result, SuccessfulToolResult)
 
     async def test_compress_threshold_trigger(self):
         """Test that compression is triggered when token threshold is exceeded."""
@@ -263,7 +263,7 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
             mock_save.return_value = Path("/tmp/test.json")
             result = await context_forget_range_step1(mock_registry)
 
-        self.assertIsInstance(result, ToolResultSuccess)
+        self.assertIsInstance(result, SuccessfulToolResult)
 
     async def test_workflow_with_small_range(self):
         """Test context_forget_range_step1 with range smaller than minimum."""
@@ -307,7 +307,7 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
             mock_save.return_value = Path("/tmp/test.json")
             result = await context_forget_range_step1(mock_registry)
 
-        self.assertIsInstance(result, ToolResultSuccess)
+        self.assertIsInstance(result, SuccessfulToolResult)
 
     async def test_tool_manager_has_no_workflow_methods(self):
         """Test that ToolManager no longer has workflow-specific methods."""
@@ -449,7 +449,7 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
                 description="测试压缩范围",
             )
 
-        self.assertTrue(isinstance(result, ToolResultSuccess))
+        self.assertTrue(isinstance(result, SuccessfulToolResult))
 
         runtime_messages = [
             msg
@@ -597,7 +597,7 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
         self.assertIn("启动历史压缩", ui_message.content)
         self.assertIn("当前共有4条消息", ui_message.content)
 
-        self.assertIsInstance(result, ToolResultSuccess)
+        self.assertIsInstance(result, SuccessfulToolResult)
 
 
 if __name__ == "__main__":

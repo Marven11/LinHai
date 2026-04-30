@@ -8,14 +8,14 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 from linhai.agent.messages import RuntimeMessage
 from linhai.plugin.file_operations import SedFragmentedReadPlugin
-from linhai.tool.base import ToolCallResultMessage, ToolResultSuccess
+from linhai.tool.base import ToolCallResultMessage, SuccessfulToolResult
 
 
 def _make_message(content: str) -> ToolCallResultMessage:
     return ToolCallResultMessage(
         tool_name="read_file_with_sed",
         tool_index=0,
-        result=ToolResultSuccess(content=content),
+        result=SuccessfulToolResult(content=content),
         toolcall_arguments={"filepath": "/tmp/test.py", "expression": "1,10p"},
     )
 

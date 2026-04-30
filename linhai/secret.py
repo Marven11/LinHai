@@ -11,7 +11,7 @@ from .agent.messages import RuntimeMessage
 from .agent.conversation import save_secret_intercepted
 from .base import Message
 from .agent.lifecycle import Lifecycle
-from .tool.base import ToolResultSuccess, ToolResultFailed
+from .tool.base import SuccessfulToolResult, FailedToolResult
 
 if TYPE_CHECKING:
     from .registry import Registry
@@ -270,7 +270,7 @@ class SecretInterceptorPlugin:
         tool_name: str,
         toolcall_arguments: dict,
         with_secret: list[str] | None,
-    ) -> Union[ToolResultSuccess, ToolResultFailed, dict, None]:
+    ) -> Union[SuccessfulToolResult, FailedToolResult, dict, None]:
         _ = tool_name  # unused parameter
         if with_secret is None:
             return None
@@ -279,17 +279,17 @@ class SecretInterceptorPlugin:
         for key in with_secret:
             cleaned_key = key
             if key.startswith("<$") and key.endswith("$>"):
-                return ToolResultFailed(
+                return FailedToolResult(
                     content=f"在{tool_name}工具调用中：Secret键 '{key}' 未找到，请使用 'KEY' 而不是 '<$KEY$>' 格式"
                 )
             cleaned_keys.append(cleaned_key)
             if cleaned_key not in self.secrets_dict:
-                return ToolResultFailed(
+                return FailedToolResult(
                     content=f"在{tool_name}工具调用中：Secret键 '{key}' 未找到"
                 )
             secret_info = self.secrets_dict[cleaned_key]
             if secret_info["disabled_in_toolcall_argument"]:
-                return ToolResultFailed(
+                return FailedToolResult(
                     content=f"在{tool_name}工具调用中：Secret键 '{key}' 被禁止在工具调用参数中使用"
                 )
 

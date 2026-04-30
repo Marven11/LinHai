@@ -69,10 +69,10 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
         )
         from linhai.tool.base import (
             ToolCallResultMessage,
-            ToolResultSuccess,
-            ToolResultFailed,
-            ToolResultSuccess,
-            ToolResultFailed,
+            SuccessfulToolResult,
+            FailedToolResult,
+            SuccessfulToolResult,
+            FailedToolResult,
         )
 
         mock_message = MagicMock()
@@ -133,10 +133,10 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
         )
         from linhai.tool.base import (
             ToolCallResultMessage,
-            ToolResultSuccess,
-            ToolResultFailed,
-            ToolResultSuccess,
-            ToolResultFailed,
+            SuccessfulToolResult,
+            FailedToolResult,
+            SuccessfulToolResult,
+            FailedToolResult,
         )
 
         result = asyncio.run(
@@ -170,10 +170,10 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
         )
         from linhai.tool.base import (
             ToolCallResultMessage,
-            ToolResultSuccess,
-            ToolResultFailed,
-            ToolResultSuccess,
-            ToolResultFailed,
+            SuccessfulToolResult,
+            FailedToolResult,
+            SuccessfulToolResult,
+            FailedToolResult,
         )
 
         large_result = "x" * 10000  # 刚好10000字符
@@ -213,10 +213,10 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
         )
         from linhai.tool.base import (
             ToolCallResultMessage,
-            ToolResultSuccess,
-            ToolResultFailed,
-            ToolResultSuccess,
-            ToolResultFailed,
+            SuccessfulToolResult,
+            FailedToolResult,
+            SuccessfulToolResult,
+            FailedToolResult,
         )
 
         result = asyncio.run(
@@ -255,10 +255,10 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
         )
         from linhai.tool.base import (
             ToolCallResultMessage,
-            ToolResultSuccess,
-            ToolResultFailed,
-            ToolResultSuccess,
-            ToolResultFailed,
+            SuccessfulToolResult,
+            FailedToolResult,
+            SuccessfulToolResult,
+            FailedToolResult,
         )
 
         result = asyncio.run(
@@ -292,10 +292,10 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
         )
         from linhai.tool.base import (
             ToolCallResultMessage,
-            ToolResultSuccess,
-            ToolResultFailed,
-            ToolResultSuccess,
-            ToolResultFailed,
+            SuccessfulToolResult,
+            FailedToolResult,
+            SuccessfulToolResult,
+            FailedToolResult,
         )
 
         result = asyncio.run(
@@ -332,10 +332,10 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
         )
         from linhai.tool.base import (
             ToolCallResultMessage,
-            ToolResultSuccess,
-            ToolResultFailed,
-            ToolResultSuccess,
-            ToolResultFailed,
+            SuccessfulToolResult,
+            FailedToolResult,
+            SuccessfulToolResult,
+            FailedToolResult,
         )
 
         result = asyncio.run(
@@ -389,10 +389,10 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
         )
         from linhai.tool.base import (
             ToolCallResultMessage,
-            ToolResultSuccess,
-            ToolResultFailed,
-            ToolResultSuccess,
-            ToolResultFailed,
+            SuccessfulToolResult,
+            FailedToolResult,
+            SuccessfulToolResult,
+            FailedToolResult,
         )
 
         result = asyncio.run(

@@ -6,7 +6,7 @@ from unittest.mock import AsyncMock, Mock
 from linhai.machine_control.main import MachineControl
 from linhai.machine_control.plugin import MachineHeartbeatPlugin
 from linhai.registry import Registry
-from linhai.tool.base import ToolResultSuccess, ToolResultFailed
+from linhai.tool.base import SuccessfulToolResult, FailedToolResult
 
 
 class TestSourceChain(unittest.TestCase):
@@ -121,7 +121,9 @@ class TestMachineHeartbeatPlugin(unittest.TestCase):
     def test_heartbeat_updates_source_chain_on_success(self):
         async def test():
             mock_host = AsyncMock()
-            mock_host.ping = AsyncMock(return_value=ToolResultSuccess(content="pong"))
+            mock_host.ping = AsyncMock(
+                return_value=SuccessfulToolResult(content="pong")
+            )
             self.mc.machines["ssh_bash_hop2"] = mock_host
             self.mc.source_machines["ssh_hop1"] = "master_host"
             self.mc.source_machines["ssh_bash_hop2"] = "ssh_hop1"
@@ -134,7 +136,7 @@ class TestMachineHeartbeatPlugin(unittest.TestCase):
             self.assertEqual(earliest_id, "ssh_bash_hop2")
 
             result = await mock_host.ping()
-            self.assertNotIsInstance(result, ToolResultFailed)
+            self.assertNotIsInstance(result, FailedToolResult)
 
             interval = self.plugin._get_interval("ssh_bash_hop2")
             next_time = time.monotonic() + interval
@@ -168,7 +170,7 @@ class TestMachineHeartbeatPlugin(unittest.TestCase):
         async def test():
             mock_host = AsyncMock()
             mock_host.ping = AsyncMock(
-                return_value=ToolResultFailed(content="connection lost")
+                return_value=FailedToolResult(content="connection lost")
             )
             self.mc.machines["ssh_hop1"] = mock_host
             self.mc.source_machines["ssh_hop1"] = "master_host"
@@ -180,7 +182,7 @@ class TestMachineHeartbeatPlugin(unittest.TestCase):
             self.assertEqual(earliest_id, "ssh_hop1")
 
             result = await mock_host.ping()
-            self.assertIsInstance(result, ToolResultFailed)
+            self.assertIsInstance(result, FailedToolResult)
 
             interval = self.plugin._get_interval("ssh_hop1")
             next_time = time.monotonic() + interval

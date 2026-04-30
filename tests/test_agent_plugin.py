@@ -545,10 +545,10 @@ class TestRedStateToolBlockPlugin(unittest.TestCase):
             )
         )
 
-        # 验证阻止 - 新实现返回ToolResultFailed
-        from linhai.tool.base import ToolResultFailed
+        # 验证阻止 - 新实现返回FailedToolResult
+        from linhai.tool.base import FailedToolResult
 
-        self.assertIsInstance(result, ToolResultFailed)
+        self.assertIsInstance(result, FailedToolResult)
         self.agent.get_threshold_info.assert_called_once()
 
         # 验证通过send_if_exists发送UI消息（而不是interrupt）

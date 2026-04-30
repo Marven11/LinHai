@@ -10,7 +10,7 @@ from linhai.agent import Agent
 from linhai.agent.messages import WAITING_USER_MARKER, RuntimeMessage
 from linhai.plugin import WaitingUserPlugin
 from linhai.base import UserMessage, AssistantMessage, SystemMessage
-from linhai.tool.base import ToolResultSuccess, ToolCallResultMessage
+from linhai.tool.base import SuccessfulToolResult, ToolCallResultMessage
 
 r = reprlib.Repr()
 r.maxstring = 200
@@ -234,7 +234,7 @@ class TestAgentMarkerValidation(unittest.IsolatedAsyncioTestCase):
         tool_result = ToolCallResultMessage(
             tool_name="add_numbers",
             tool_index=0,
-            result=ToolResultSuccess(content="tool result"),
+            result=SuccessfulToolResult(content="tool result"),
             toolcall_arguments={"a": 2, "b": 2},
         )
         self.tool_manager.process_tool_call = AsyncMock(return_value=tool_result)
@@ -329,7 +329,7 @@ class TestAgentMarkerValidation(unittest.IsolatedAsyncioTestCase):
         tool_result = ToolCallResultMessage(
             tool_name="add_numbers",
             tool_index=0,
-            result=ToolResultSuccess(content="tool result"),
+            result=SuccessfulToolResult(content="tool result"),
             toolcall_arguments={"a": 2, "b": 2},
         )
         self.tool_manager.process_tool_call = AsyncMock(return_value=tool_result)

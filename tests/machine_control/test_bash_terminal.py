@@ -6,7 +6,7 @@ from unittest.mock import AsyncMock, Mock
 
 from linhai.machine_control.bash_host.bash_host import BashHostControl
 from linhai.machine_control.bash_host import terminal as _terminal
-from linhai.tool.base import ToolResultSuccess, ToolResultFailed
+from linhai.tool.base import SuccessfulToolResult, FailedToolResult
 
 
 class TestBashTerminal(unittest.TestCase):
@@ -26,7 +26,7 @@ class TestBashTerminal(unittest.TestCase):
         async def test():
             self.host.execute_raw = AsyncMock(return_value=(1, "", "not found"))
             result = await _terminal.terminal_create(self.host)
-            self.assertIsInstance(result, ToolResultFailed)
+            self.assertIsInstance(result, FailedToolResult)
             self.assertIn("tmux", result.content)
 
         self.loop.run_until_complete(test())
@@ -40,7 +40,7 @@ class TestBashTerminal(unittest.TestCase):
                 ]
             )
             result = await _terminal.terminal_create(self.host, columns=80, lines=24)
-            self.assertIsInstance(result, ToolResultSuccess)
+            self.assertIsInstance(result, SuccessfulToolResult)
             self.assertTrue(len(result.content) > 0)
             self.assertIn(result.content, _terminal._terminals)
 
@@ -55,14 +55,14 @@ class TestBashTerminal(unittest.TestCase):
                 ]
             )
             result = await _terminal.terminal_create(self.host)
-            self.assertIsInstance(result, ToolResultFailed)
+            self.assertIsInstance(result, FailedToolResult)
 
         self.loop.run_until_complete(test())
 
     def test_terminal_send_keys_not_found(self):
         async def test():
             result = await _terminal.terminal_send_keys(self.host, "fake_id", ["enter"])
-            self.assertIsInstance(result, ToolResultFailed)
+            self.assertIsInstance(result, FailedToolResult)
 
         self.loop.run_until_complete(test())
 
@@ -77,7 +77,7 @@ class TestBashTerminal(unittest.TestCase):
             result = await _terminal.terminal_send_keys(
                 self.host, "t1", ["enter", "ctrl+c"]
             )
-            self.assertIsInstance(result, ToolResultSuccess)
+            self.assertIsInstance(result, SuccessfulToolResult)
 
         self.loop.run_until_complete(test())
 
@@ -90,7 +90,7 @@ class TestBashTerminal(unittest.TestCase):
             }
             self.host.execute_raw = AsyncMock(return_value=(0, "", ""))
             result = await _terminal.terminal_send_keys(self.host, "t1", ["a"])
-            self.assertIsInstance(result, ToolResultSuccess)
+            self.assertIsInstance(result, SuccessfulToolResult)
 
         self.loop.run_until_complete(test())
 
@@ -104,7 +104,7 @@ class TestBashTerminal(unittest.TestCase):
             result = await _terminal.terminal_send_keys(
                 self.host, "t1", ["unknown_key"]
             )
-            self.assertIsInstance(result, ToolResultFailed)
+            self.assertIsInstance(result, FailedToolResult)
             self.assertIn("未知按键", result.content)
 
         self.loop.run_until_complete(test())
@@ -114,7 +114,7 @@ class TestBashTerminal(unittest.TestCase):
             result = await _terminal.terminal_send_string(
                 self.host, "fake_id", "ls", True
             )
-            self.assertIsInstance(result, ToolResultFailed)
+            self.assertIsInstance(result, FailedToolResult)
 
         self.loop.run_until_complete(test())
 
@@ -129,7 +129,7 @@ class TestBashTerminal(unittest.TestCase):
             result = await _terminal.terminal_send_string(
                 self.host, "t1", "ls", with_enter=True, wait_seconds=0.0
             )
-            self.assertIsInstance(result, ToolResultSuccess)
+            self.assertIsInstance(result, SuccessfulToolResult)
             self.assertIn("ls", result.content)
 
         self.loop.run_until_complete(test())
@@ -145,14 +145,14 @@ class TestBashTerminal(unittest.TestCase):
             result = await _terminal.terminal_send_string(
                 self.host, "t1", "ls", with_enter=False, wait_seconds=0.0
             )
-            self.assertIsInstance(result, ToolResultFailed)
+            self.assertIsInstance(result, FailedToolResult)
 
         self.loop.run_until_complete(test())
 
     def test_terminal_read_screen_not_found(self):
         async def test():
             result = await _terminal.terminal_read_screen(self.host, "fake_id")
-            self.assertIsInstance(result, ToolResultFailed)
+            self.assertIsInstance(result, FailedToolResult)
 
         self.loop.run_until_complete(test())
 
@@ -165,7 +165,7 @@ class TestBashTerminal(unittest.TestCase):
             }
             self.host.execute_raw = AsyncMock(return_value=(0, "$ ls\nfile.txt", ""))
             result = await _terminal.terminal_read_screen(self.host, "t1")
-            self.assertIsInstance(result, ToolResultSuccess)
+            self.assertIsInstance(result, SuccessfulToolResult)
             self.assertIn("ls", result.content)
 
         self.loop.run_until_complete(test())
@@ -173,7 +173,7 @@ class TestBashTerminal(unittest.TestCase):
     def test_terminal_close_not_found(self):
         async def test():
             result = await _terminal.terminal_close(self.host, "fake_id")
-            self.assertIsInstance(result, ToolResultFailed)
+            self.assertIsInstance(result, FailedToolResult)
 
         self.loop.run_until_complete(test())
 
@@ -186,7 +186,7 @@ class TestBashTerminal(unittest.TestCase):
             }
             self.host.execute_raw = AsyncMock(return_value=(0, "", ""))
             result = await _terminal.terminal_close(self.host, "t1")
-            self.assertIsInstance(result, ToolResultSuccess)
+            self.assertIsInstance(result, SuccessfulToolResult)
             self.assertNotIn("t1", _terminal._terminals)
 
         self.loop.run_until_complete(test())
@@ -194,7 +194,7 @@ class TestBashTerminal(unittest.TestCase):
     def test_get_terminals_empty(self):
         async def test():
             result = await _terminal.get_terminals(self.host, "test_machine")
-            self.assertIsInstance(result, ToolResultSuccess)
+            self.assertIsInstance(result, SuccessfulToolResult)
             self.assertIn("没有活动", result.content)
 
         self.loop.run_until_complete(test())
@@ -208,7 +208,7 @@ class TestBashTerminal(unittest.TestCase):
             }
             self.host.execute_raw = AsyncMock(return_value=(0, "$ prompt", ""))
             result = await _terminal.get_terminals(self.host, "test_machine")
-            self.assertIsInstance(result, ToolResultSuccess)
+            self.assertIsInstance(result, SuccessfulToolResult)
             self.assertIn("t1", result.content)
             self.assertIn("test_machine", result.content)
 

@@ -6,7 +6,7 @@ import shutil
 
 from linhai.plugin import FileOperationPermissionPlugin
 from linhai.registry import Registry
-from linhai.tool.base import ToolResultFailed
+from linhai.tool.base import FailedToolResult
 from linhai.config import ToolConfig, FileOperationRule
 
 
@@ -123,7 +123,7 @@ class TestFileOperationPermissionPlugin(unittest.IsolatedAsyncioTestCase):
             },
             with_secret=[],
         )
-        self.assertIsInstance(result, ToolResultFailed)
+        self.assertIsInstance(result, FailedToolResult)
         self.assertIn("文件操作被阻止", result.content)
 
     async def test_before_tool_call_unsupported_tool(self):

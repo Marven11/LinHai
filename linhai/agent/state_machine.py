@@ -7,7 +7,7 @@ from linhai.utils.i18n import t
 from linhai.tool.base import (
     ToolArgInfo,
     ToolSet,
-    ToolResultSuccess,
+    SuccessfulToolResult,
 )
 
 
@@ -91,13 +91,13 @@ class AgentStateMachine:
             },
             required_args=["seconds"],
         )
-        async def sleep_tool(seconds: float) -> ToolResultSuccess:
+        async def sleep_tool(seconds: float) -> SuccessfulToolResult:
             start = datetime.now()
             state_machine.transition_to_sleeping(
                 start, start + timedelta(seconds=seconds)
             )
             result = await state_machine.execute_sleep()
-            return ToolResultSuccess(content=result)
+            return SuccessfulToolResult(content=result)
 
         return sleep_toolset
 

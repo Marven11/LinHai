@@ -8,7 +8,7 @@ from typing import Dict, Any
 from linhai.machine_control.ether_ghost_host.ether_ghost_host import (
     EtherGhostMachineControl,
 )
-from linhai.tool.base import ToolResultSuccess, ToolResultFailed
+from linhai.tool.base import SuccessfulToolResult, FailedToolResult
 from linhai.agent.messages import FileContentMessage
 
 
@@ -72,7 +72,7 @@ class TestEtherGhostMachineControl(unittest.IsolatedAsyncioTestCase):
             machine_id=self.machine_id,
         )
         result = await control.http_request("GET", "http://example.com")
-        self.assertIsInstance(result, ToolResultFailed)
+        self.assertIsInstance(result, FailedToolResult)
         self.assertIn("Session未初始化", result.content)
 
     async def test_read_file_without_session(self):
@@ -83,7 +83,7 @@ class TestEtherGhostMachineControl(unittest.IsolatedAsyncioTestCase):
             machine_id=self.machine_id,
         )
         result = await control.read_file("/tmp/test.txt")
-        self.assertIsInstance(result, ToolResultFailed)
+        self.assertIsInstance(result, FailedToolResult)
         self.assertIn("Session未初始化", result.content)
 
     async def test_read_file_with_line_numbers(self):
@@ -131,7 +131,7 @@ class TestEtherGhostMachineControl(unittest.IsolatedAsyncioTestCase):
         )
         control.session = mock_session
         result = await control.http_request("GET", "http://example.com")
-        # 检查返回的是ToolResultSuccess，内容为<<>>格式
+        # 检查返回的是SuccessfulToolResult，内容为<<>>格式
         content = result.content
         self.assertIn("<<status_code>>", content)
         self.assertIn("<<headers>>", content)
@@ -164,7 +164,7 @@ class TestEtherGhostMachineControl(unittest.IsolatedAsyncioTestCase):
         )
         control.session = mock_session
         result = await control.http_request("GET", "http://example.com/image.png")
-        self.assertIsInstance(result, ToolResultSuccess)
+        self.assertIsInstance(result, SuccessfulToolResult)
         content = result.content
         self.assertIn("<<status_code>>", content)
         self.assertIn("<<headers>>", content)

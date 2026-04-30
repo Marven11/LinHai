@@ -12,8 +12,8 @@ import pathspec
 
 from linhai.agent.messages import FileContentMessage
 from linhai.tool.base import (
-    ToolResultSuccess,
-    ToolResultFailed,
+    SuccessfulToolResult,
+    FailedToolResult,
 )
 from linhai.utils.tokenizer import count_tokens
 
@@ -118,7 +118,7 @@ def validate_file_for_sed(file_path: Path) -> str:
 
 def read_file(
     filepath: str, show_line_numbers: bool = False
-) -> FileContentMessage | ToolResultFailed:
+) -> FileContentMessage | FailedToolResult:
     """读取文件内容。
 
     Args:
@@ -131,12 +131,12 @@ def read_file(
     file_path = Path(filepath)
     validation_error = validate_file(file_path)
     if validation_error:
-        return ToolResultFailed(content=validation_error)
+        return FailedToolResult(content=validation_error)
 
     try:
         content = file_path.read_text(encoding="utf-8")
     except OSError as exc:
-        return ToolResultFailed(content=f"发生错误: {exc!r}")
+        return FailedToolResult(content=f"发生错误: {exc!r}")
 
     return FileContentMessage(
         filepath=file_path.as_posix(),
@@ -147,7 +147,7 @@ def read_file(
 
 def write_file(
     filepath: str, content: str, override: bool = False
-) -> ToolResultSuccess | ToolResultFailed:
+) -> SuccessfulToolResult | FailedToolResult:
     """写入内容到文件。
 
     Args:
@@ -161,22 +161,22 @@ def write_file(
     file_path = Path(filepath)
     if file_path.exists():
         if not override:
-            return ToolResultFailed(
+            return FailedToolResult(
                 content=f"文件{filepath!r}已存在，如果需要覆盖请使用override参数"
             )
         validation_error = validate_file(file_path)
         if validation_error:
-            return ToolResultFailed(content=validation_error)
+            return FailedToolResult(content=validation_error)
     try:
         file_path.write_text(content, encoding="utf-8")
     except OSError as exc:
-        return ToolResultFailed(content=f"写入文件时发生错误: {exc!r}")
-    return ToolResultSuccess(content=f"成功写入文件: {file_path.as_posix()!r}")
+        return FailedToolResult(content=f"写入文件时发生错误: {exc!r}")
+    return SuccessfulToolResult(content=f"成功写入文件: {file_path.as_posix()!r}")
 
 
 def replace_file_content(
     filepath: str, old: str, new: str, replace_times: int | None = None
-) -> ToolResultSuccess | ToolResultFailed:
+) -> SuccessfulToolResult | FailedToolResult:
     """替换文件内容中的指定字符串。
 
     Args:
@@ -191,11 +191,11 @@ def replace_file_content(
     file_path = Path(filepath)
     validation_error = validate_file(file_path)
     if validation_error:
-        return ToolResultFailed(content=validation_error)
+        return FailedToolResult(content=validation_error)
     try:
         content = file_path.read_text(encoding="utf-8")
         if old not in content:
-            return ToolResultFailed(
+            return FailedToolResult(
                 content=f"内容{old!r}在文件{file_path.as_posix()!r}中未找到。"
                 f"内容类似的部分如下: {find_most_similar_in_files(old, content)}"
             )
@@ -205,7 +205,7 @@ def replace_file_content(
         if replace_times is None:
 
             if count != 1:
-                return ToolResultFailed(
+                return FailedToolResult(
                     content=f"内容{old!r}在文件{file_path.as_posix()!r}中找到{count}次匹配。"
                     "默认只替换一次匹配，但找到多次匹配。"
                     "建议1. 需要替换多处：直接指定替换次数/指定全部替换。"
@@ -215,7 +215,7 @@ def replace_file_content(
         elif replace_times > 0:
 
             if count < replace_times:
-                return ToolResultFailed(
+                return FailedToolResult(
                     content=f"内容{old!r}在文件{file_path.as_posix()!r}中只找到{count}次匹配，"
                     f"但要求替换{replace_times}次。"
                 )
@@ -223,7 +223,7 @@ def replace_file_content(
         elif replace_times == -1:
             replace_count = -1
         else:
-            return ToolResultFailed(
+            return FailedToolResult(
                 content=f"无效的replace_times参数值: {replace_times}，应为正数或-1"
             )
 
@@ -236,8 +236,8 @@ def replace_file_content(
 
         file_path.write_text(new_content, encoding="utf-8")
     except OSError as exc:
-        return ToolResultFailed(content=f"替换内容时发生错误: {exc!r}")
-    return ToolResultSuccess(
+        return FailedToolResult(content=f"替换内容时发生错误: {exc!r}")
+    return SuccessfulToolResult(
         content=f"路径{file_path.as_posix()!r}的文件内容{old!r}已替换为{new!r}，替换次数: {actual_replace_count}"
     )
 
@@ -292,7 +292,7 @@ def get_file_info(file_path: Path) -> str:
         )
 
 
-def list_files(dirpath: str) -> ToolResultSuccess | ToolResultFailed:
+def list_files(dirpath: str) -> SuccessfulToolResult | FailedToolResult:
     """列出指定文件夹中的文件和子目录。
 
     Args:
@@ -303,9 +303,9 @@ def list_files(dirpath: str) -> ToolResultSuccess | ToolResultFailed:
     """
     dir_path = Path(dirpath)
     if not dir_path.exists():
-        return ToolResultFailed(content=f"文件夹路径{dir_path.as_posix()!r}不存在")
+        return FailedToolResult(content=f"文件夹路径{dir_path.as_posix()!r}不存在")
     if not dir_path.is_dir():
-        return ToolResultFailed(content=f"路径{dir_path.as_posix()!r}不是文件夹")
+        return FailedToolResult(content=f"路径{dir_path.as_posix()!r}不是文件夹")
     try:
 
         items = []
@@ -315,12 +315,12 @@ def list_files(dirpath: str) -> ToolResultSuccess | ToolResultFailed:
         items.sort(key=lambda x: x.split()[-1])
 
         items_str = "\n".join(items)
-        return ToolResultSuccess(content=f"""\
+        return SuccessfulToolResult(content=f"""\
 文件夹路径: {dir_path.as_posix()}
 总用量 {len(items)}
 {items_str}""")
     except OSError as exc:
-        return ToolResultFailed(content=f"列出文件时发生错误: {exc!r}")
+        return FailedToolResult(content=f"列出文件时发生错误: {exc!r}")
 
 
 GLOB_FILE_LIMIT = 5000
@@ -334,12 +334,12 @@ def _load_gitignore_spec(base: Path) -> pathspec.PathSpec | None:
     return pathspec.PathSpec.from_lines("gitignore", gitignore_text.splitlines())
 
 
-def list_files_glob(cwd: str, pattern: str) -> ToolResultSuccess | ToolResultFailed:
+def list_files_glob(cwd: str, pattern: str) -> SuccessfulToolResult | FailedToolResult:
     if pattern.startswith("/"):
-        return ToolResultFailed(content="glob模式不支持绝对路径")
+        return FailedToolResult(content="glob模式不支持绝对路径")
     base = Path(cwd)
     if not base.is_dir():
-        return ToolResultFailed(content=f"当前目录{cwd!r}不存在或不是文件夹")
+        return FailedToolResult(content=f"当前目录{cwd!r}不存在或不是文件夹")
     spec = _load_gitignore_spec(base)
     files: list[Path] = []
     for file in base.glob(pattern):
@@ -364,10 +364,12 @@ def list_files_glob(cwd: str, pattern: str) -> ToolResultSuccess | ToolResultFai
     if truncated:
         header += f" (Showing top {GLOB_FILE_LIMIT} files)"
     total = len(files)
-    return ToolResultSuccess(content=f"{header}\n总用量 {total}\n" + "\n".join(lines))
+    return SuccessfulToolResult(
+        content=f"{header}\n总用量 {total}\n" + "\n".join(lines)
+    )
 
 
-def get_absolute_path(path: str) -> ToolResultSuccess | ToolResultFailed:
+def get_absolute_path(path: str) -> SuccessfulToolResult | FailedToolResult:
     """获取路径的绝对路径。
 
     Args:
@@ -378,9 +380,9 @@ def get_absolute_path(path: str) -> ToolResultSuccess | ToolResultFailed:
     """
     try:
         abs_path = Path(path).absolute()
-        return ToolResultSuccess(content=f"绝对路径: {abs_path.as_posix()}")
+        return SuccessfulToolResult(content=f"绝对路径: {abs_path.as_posix()}")
     except OSError as exc:
-        return ToolResultFailed(content=f"获取绝对路径时发生错误: {exc!r}")
+        return FailedToolResult(content=f"获取绝对路径时发生错误: {exc!r}")
 
 
 def _check_small_file(file_path: Path) -> str | None:
@@ -416,7 +418,7 @@ def read_file_with_sed(
     expression: str,
     filepath: str,
     wrap_argv: Callable[[list[str]], list[str]],
-) -> ToolResultSuccess | ToolResultFailed:
+) -> SuccessfulToolResult | FailedToolResult:
     """执行sed表达式并返回输出，不修改文件。
 
     Args:
@@ -430,11 +432,11 @@ def read_file_with_sed(
     file_path = Path(filepath)
     validation_error = validate_file_for_sed(file_path)
     if validation_error:
-        return ToolResultFailed(content=validation_error)
+        return FailedToolResult(content=validation_error)
 
     small_file_error = _check_small_file(file_path)
     if small_file_error:
-        return ToolResultFailed(content=small_file_error)
+        return FailedToolResult(content=small_file_error)
 
     try:
         result = subprocess.run(
@@ -444,17 +446,17 @@ def read_file_with_sed(
             check=True,
         )
         if expression.startswith("s"):
-            return ToolResultFailed(
+            return FailedToolResult(
                 content=f"错误: 表达式以s开头，但此工具不能修改文件!\n{result.stdout=}"
             )
 
         if len(result.stdout) > 1024 * 1024:
-            return ToolResultFailed(
+            return FailedToolResult(
                 content=f"错误: sed输出过大（{len(result.stdout)}字符），超过1MB限制。请使用更精确的sed表达式以减少输出。"
             )
 
-        return ToolResultSuccess(content=result.stdout)
+        return SuccessfulToolResult(content=result.stdout)
     except subprocess.CalledProcessError as exc:
-        return ToolResultFailed(content=f"sed命令执行错误: {exc.stderr}")
+        return FailedToolResult(content=f"sed命令执行错误: {exc.stderr}")
     except OSError as exc:
-        return ToolResultFailed(content=f"运行sed时发生错误: {exc!r}")
+        return FailedToolResult(content=f"运行sed时发生错误: {exc!r}")

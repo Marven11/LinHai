@@ -645,9 +645,9 @@ class TestSecretInterceptorPlugin(unittest.TestCase):
         self.assertEqual(result, expected)
 
     def test_before_tool_call_secret_not_found(self):
-        """测试：如果指定了with_secret但是其中的secret没有找到，返回ToolResultFailed"""
+        """测试：如果指定了with_secret但是其中的secret没有找到，返回FailedToolResult"""
         import asyncio
-        from linhai.tool.base import ToolResultFailed
+        from linhai.tool.base import FailedToolResult
 
         toolcall_arguments = {"key": "API key is <$NONEXISTENT$>"}
 
@@ -662,13 +662,13 @@ class TestSecretInterceptorPlugin(unittest.TestCase):
         )
         loop.close()
 
-        self.assertIsInstance(result, ToolResultFailed)
+        self.assertIsInstance(result, FailedToolResult)
         self.assertIn("NONEXISTENT", result.content)
 
     def test_before_tool_call_with_placeholder_in_with_secret(self):
-        """测试：如果指定了with_secret，参数中包含`<$KEY$>`占位符，但是with_secret中包含的是`<$KEY$>`而不是`KEY`字符串，返回ToolResultFailed"""
+        """测试：如果指定了with_secret，参数中包含`<$KEY$>`占位符，但是with_secret中包含的是`<$KEY$>`而不是`KEY`字符串，返回FailedToolResult"""
         import asyncio
-        from linhai.tool.base import ToolResultFailed
+        from linhai.tool.base import FailedToolResult
 
         toolcall_arguments = {"key": "API key is <$SECRET1$>"}
 
@@ -683,7 +683,7 @@ class TestSecretInterceptorPlugin(unittest.TestCase):
         )
         loop.close()
 
-        self.assertIsInstance(result, ToolResultFailed)
+        self.assertIsInstance(result, FailedToolResult)
         self.assertIn("<$SECRET1$>", result.content)
 
     def test_before_tool_call_placeholder_not_in_with_secret(self):

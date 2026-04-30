@@ -3,7 +3,7 @@ from typing import Any, Optional
 import httpx
 
 from linhai.machine_control.http_message import HttpMessage, build_http_message
-from linhai.tool.base import ToolResultFailed
+from linhai.tool.base import FailedToolResult
 
 
 async def http_request(
@@ -19,7 +19,7 @@ async def http_request(
     json_data: Optional[dict] = None,
     proxy: Optional[str] = None,
     verify: Optional[bool] = None,
-) -> HttpMessage | ToolResultFailed:
+) -> HttpMessage | FailedToolResult:
     headers = headers or {}
     headers.setdefault(
         "User-Agent", "Mozilla/5.0 (compatible; LinHai/1.0; Chrome-like)"
@@ -50,4 +50,4 @@ async def http_request(
                 content_type=response.headers.get("content-type", "").lower(),
             )
     except httpx.RequestError as e:
-        return ToolResultFailed(content=f"请求失败: {str(e)}")
+        return FailedToolResult(content=f"请求失败: {str(e)}")

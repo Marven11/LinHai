@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Any, Optional, Union
 from urllib.parse import urlencode
 
 from linhai.machine_control.http_message import HttpMessage, build_http_message
-from linhai.tool.base import ToolResultFailed
+from linhai.tool.base import FailedToolResult
 
 if TYPE_CHECKING:
     from .bash_host import BashHostControl
@@ -29,7 +29,7 @@ async def http_request(
     json_data: Optional[dict[str, Any]] = None,
     proxy: Optional[str] = None,
     verify: Optional[bool] = None,
-) -> HttpMessage | ToolResultFailed:
+) -> HttpMessage | FailedToolResult:
     header_file = host.make_temp_path("http_hdr")
     body_file = host.make_temp_path("http_body")
 
@@ -66,7 +66,7 @@ async def http_request(
         write_cmd = f"echo '{encoded}' | base64 -d > {shlex.quote(data_file)}"
         rc, _, stderr = await host.execute_raw(write_cmd, timeout=30.0)
         if rc != 0:
-            return ToolResultFailed(content=f"写入请求数据失败: {stderr}")
+            return FailedToolResult(content=f"写入请求数据失败: {stderr}")
         curl_parts.extend(["-d", f"@{data_file}"])
 
     if json_data is not None:
@@ -76,7 +76,7 @@ async def http_request(
         write_cmd = f"echo '{encoded}' | base64 -d > {shlex.quote(data_file)}"
         rc, _, stderr = await host.execute_raw(write_cmd, timeout=30.0)
         if rc != 0:
-            return ToolResultFailed(content=f"写入JSON数据失败: {stderr}")
+            return FailedToolResult(content=f"写入JSON数据失败: {stderr}")
         curl_parts.extend(["-H", "Content-Type: application/json"])
         curl_parts.extend(["-d", f"@{data_file}"])
 
@@ -112,15 +112,15 @@ async def http_request(
                 if parts[0].isdigit():
                     status_code = int(parts[0])
                 else:
-                    return ToolResultFailed(content=f"无法解析HTTP状态码: {parts[0]}")
+                    return FailedToolResult(content=f"无法解析HTTP状态码: {parts[0]}")
                 content_type = parts[1]
             break
 
     if status_code == 0:
         error_msg = stderr or stdout
         if "not found" in error_msg.lower():
-            return ToolResultFailed(content="远程机器没有安装curl")
-        return ToolResultFailed(content=f"HTTP请求失败: {error_msg}")
+            return FailedToolResult(content="远程机器没有安装curl")
+        return FailedToolResult(content=f"HTTP请求失败: {error_msg}")
 
     headers_dict: dict[str, str] = {}
     rc_hdr, hdr_b64, _ = await host.execute_raw(

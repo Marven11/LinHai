@@ -14,7 +14,7 @@ from pathlib import Path
 from linhai.secret import SecretInterceptorPlugin, load_secrets_from_config
 from linhai.tool.main import ToolManager
 from linhai.registry import Registry
-from linhai.tool.base import ToolSet, ToolResultFailed
+from linhai.tool.base import ToolSet, FailedToolResult
 from linhai.base import ToolCallMessage
 from linhai.agent.messages import RuntimeMessage
 
@@ -110,12 +110,12 @@ class TestSecretExceptionLeak(unittest.TestCase):
                 func = self.test_toolset.get_tool(tool_call_msg.function_name)
                 func(**tool_call_msg.function_arguments)
             except Exception as e:
-                from linhai.tool.base import ToolCallResultMessage, ToolResultFailed
+                from linhai.tool.base import ToolCallResultMessage, FailedToolResult
 
                 return ToolCallResultMessage(
                     tool_name=tool_call_msg.function_name,
                     tool_index=tool_index,
-                    result=ToolResultFailed(content=str(e)),
+                    result=FailedToolResult(content=str(e)),
                     toolcall_arguments=tool_call_msg.function_arguments,
                 )
 
@@ -172,12 +172,12 @@ class TestSecretExceptionLeak(unittest.TestCase):
                 func = self.test_toolset.get_tool(tool_call_msg.function_name)
                 func(**tool_call_msg.function_arguments)
             except Exception as e:
-                from linhai.tool.base import ToolCallResultMessage, ToolResultFailed
+                from linhai.tool.base import ToolCallResultMessage, FailedToolResult
 
                 return ToolCallResultMessage(
                     tool_name=tool_call_msg.function_name,
                     tool_index=tool_index,
-                    result=ToolResultFailed(content=str(e)),
+                    result=FailedToolResult(content=str(e)),
                     toolcall_arguments=tool_call_msg.function_arguments,
                 )
 
@@ -236,12 +236,12 @@ class TestSecretExceptionLeak(unittest.TestCase):
                 func = self.test_toolset.get_tool(tool_call_msg.function_name)
                 func(**tool_call_msg.function_arguments)
             except Exception as e:
-                from linhai.tool.base import ToolCallResultMessage, ToolResultFailed
+                from linhai.tool.base import ToolCallResultMessage, FailedToolResult
 
                 return ToolCallResultMessage(
                     tool_name=tool_call_msg.function_name,
                     tool_index=tool_index,
-                    result=ToolResultFailed(content=str(e)),
+                    result=FailedToolResult(content=str(e)),
                     toolcall_arguments=tool_call_msg.function_arguments,
                 )
 

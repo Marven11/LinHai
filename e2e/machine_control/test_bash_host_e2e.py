@@ -5,7 +5,7 @@ import unittest
 from linhai.machine_control.bash_host import BashHostControl
 from linhai.registry import Registry
 from linhai.task_supervisor import PlainTaskSupervisor
-from linhai.tool.base import ToolResultSuccess
+from linhai.tool.base import SuccessfulToolResult
 from tests.test_helpers import _AsyncioProcessAdapter
 
 
@@ -48,7 +48,7 @@ class TestBashHostControlE2E(unittest.IsolatedAsyncioTestCase):
         try:
             ping_result = await control.ping()
             self.assertIsInstance(
-                ping_result, ToolResultSuccess, f"ping failed: {ping_result}"
+                ping_result, SuccessfulToolResult, f"ping failed: {ping_result}"
             )
         finally:
             await self._cleanup(process)

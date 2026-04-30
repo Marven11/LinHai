@@ -11,7 +11,7 @@ from linhai.machine_control.bash_host.http import (
 )
 from linhai.machine_control.http_message import HttpMessage
 from linhai.registry import Registry
-from linhai.tool.base import ToolResultFailed
+from linhai.tool.base import FailedToolResult
 
 
 def _b64(text: str) -> str:
@@ -46,7 +46,7 @@ class TestHttpRequestNoCurl(unittest.TestCase):
             host = _make_host()
             host._has_curl = False
             result = await host.http_request("GET", "http://example.com")
-            self.assertIsInstance(result, ToolResultFailed)
+            self.assertIsInstance(result, FailedToolResult)
             self.assertIn("curl", result.content)
 
         self.loop.run_until_complete(test())
@@ -72,7 +72,7 @@ class TestHttpRequestBasic(unittest.TestCase):
                 (0, "", ""),
             ]
             result = await http_request(host, "GET", "http://example.com")
-            self.assertIsInstance(result, ToolResultFailed)
+            self.assertIsInstance(result, FailedToolResult)
             self.assertIn("curl", result.content)
 
         self.loop.run_until_complete(test())
@@ -104,7 +104,7 @@ class TestHttpRequestBasic(unittest.TestCase):
                 (28, "", "curl: timeout"),
             ]
             result = await http_request(host, "GET", "http://example.com", timeout=5)
-            self.assertIsInstance(result, ToolResultFailed)
+            self.assertIsInstance(result, FailedToolResult)
             self.assertIn("HTTP请求失败", result.content)
 
         self.loop.run_until_complete(test())

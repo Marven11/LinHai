@@ -34,6 +34,9 @@ class FileContentMessage(Message):
             "<<file_content>>"
         )
 
+    def to_llm_content(self) -> str:
+        return self.get_content()
+
     def to_json(self) -> str:
         data = {
             "filepath": self.filepath,

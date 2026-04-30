@@ -17,7 +17,11 @@ from typing import TYPE_CHECKING
 
 from linhai.base import Message
 from linhai.agent.lifecycle import Lifecycle
-from linhai.type_hints import LanguageModelMessage
+from linhai.type_hints import (
+    LanguageModelMessage,
+    ChatCompletionContentPartImageParam,
+    ChatCompletionContentPartTextParam,
+)
 from linhai.registry import Registry
 from linhai.utils.i18n import t
 
@@ -107,6 +111,16 @@ class ImageMessage(Message):
     def get_content(self) -> None:
         return None
 
+    def to_llm_content(
+        self,
+    ) -> list[ChatCompletionContentPartTextParam | ChatCompletionContentPartImageParam]:
+        return [
+            ChatCompletionContentPartImageParam(
+                type="image_url",
+                image_url={"url": self.to_data_url()},
+            )
+        ]
+
     def __repr__(self) -> str:
         return f"ImageMessage(size={len(self.image_bytes)} bytes, mime_type={self.mime_type}, quality={self.quality}, width={self.width}, height={self.height})"
 
@@ -166,7 +180,7 @@ async def load_image(
         FileNotFoundError: 图片文件不存在
         ValueError: 图像文件损坏或格式不支持
     """
-    from linhai.tool.base import ToolResultFailed
+    from linhai.tool.base import FailedToolResult
 
     temp_path: Path | None = None
     if machine_control is not None and machine_control.target_machine != "master_host":
@@ -175,7 +189,7 @@ async def load_image(
             temp_path = Path(tmp.name)
         host = machine_control.machines[machine_control.target_machine]
         result = await host.download_file_concurrent(image_filepath, str(temp_path))
-        if isinstance(result, ToolResultFailed):
+        if isinstance(result, FailedToolResult):
             os.unlink(temp_path)
             raise FileNotFoundError(
                 f"从机器 {machine_control.target_machine} 下载图片失败: {result.content}"

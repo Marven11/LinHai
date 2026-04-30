@@ -7,7 +7,7 @@ from typing import Optional
 import chardet
 from pydantic import model_validator
 
-from linhai.tool.base import ToolResultFailed, ToolResultSuccess
+from linhai.tool.base import FailedToolResult, SuccessfulToolResult
 from linhai.utils.tokenizer import count_tokens
 
 
@@ -38,7 +38,7 @@ async def _decode_bytes(content: bytes, encoding: str) -> str:
     return content.decode(encoding)
 
 
-class HttpMessage(ToolResultSuccess):
+class HttpMessage(SuccessfulToolResult):
     content: str = ""
     status_code: int
     headers: dict[str, str]
@@ -70,7 +70,7 @@ async def build_http_message(
     headers: dict[str, str],
     content: bytes,
     content_type: str,
-) -> HttpMessage | ToolResultFailed:
+) -> HttpMessage | FailedToolResult:
     is_bin, encoding = _is_binary(content_type, content)
 
     if is_bin:
@@ -99,7 +99,7 @@ async def build_http_message(
     )
     decoded = results[0]
     if isinstance(decoded, BaseException):
-        return ToolResultFailed(content=f"无法使用编码 {encoding} 解码响应内容")
+        return FailedToolResult(content=f"无法使用编码 {encoding} 解码响应内容")
     text_content = decoded
 
     size = len(text_content)

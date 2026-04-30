@@ -10,7 +10,7 @@ from linhai.agent.messages import RuntimeMessage
 from linhai.registry import Registry
 from linhai.utils.i18n import t
 
-from linhai.tool.base import ToolResultFailed
+from linhai.tool.base import FailedToolResult
 
 if TYPE_CHECKING:
     from .main import MachineControl
@@ -112,7 +112,7 @@ class MachineHeartbeatPlugin:
             interval = self._get_interval(earliest_id)
             next_time = time.monotonic() + interval
 
-            if not isinstance(result, ToolResultFailed):
+            if not isinstance(result, FailedToolResult):
                 self._next_heartbeat[earliest_id] = next_time
                 for source_id in self.machine_control.get_source_chain(earliest_id):
                     if source_id != "master_host" and source_id in self._next_heartbeat:

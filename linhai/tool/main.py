@@ -16,8 +16,9 @@ from linhai.tool.base import (
     ToolSet,
     to_tools_info,
     ToolCallResultMessage,
-    ToolResultSuccess,
-    ToolResultFailed,
+    SuccessfulToolResult,
+    FailedToolResult,
+    ToolResult,
 )
 from linhai.tool.mcp_connector import MCPConnector
 from linhai.utils.common import UiNotice
@@ -109,7 +110,7 @@ class ToolManager:
                     level="ERROR", content=f"未找到工具: {tool_call.function_name}"
                 ),
             )
-            failed_result = ToolResultFailed(
+            failed_result = FailedToolResult(
                 content=f"未找到工具: {tool_call.function_name}"
             )
             return ToolCallResultMessage(
@@ -128,7 +129,7 @@ class ToolManager:
             else:
                 result = await asyncio.to_thread(func, **kwargs)
 
-            if isinstance(result, ToolResultFailed):
+            if isinstance(result, FailedToolResult):
                 await self.registry.send_if_exists(
                     "ui_log",
                     UiNotice(
@@ -140,21 +141,12 @@ class ToolManager:
             if isinstance(result, Awaitable):
                 result = await result
 
-            if isinstance(result, Message):
-                return result
-
-            if isinstance(result, ToolResultSuccess) or isinstance(
-                result, ToolResultFailed
-            ):
+            if isinstance(result, ToolResult):
                 tool_result = result
+            elif isinstance(result, Message):
+                return result
             else:
-                tool_result = ToolResultSuccess(content=str(result))
-
-            processed_content = tool_result.content
-            if isinstance(tool_result, ToolResultFailed):
-                tool_result = ToolResultFailed(content=processed_content)
-            else:
-                tool_result = ToolResultSuccess(content=processed_content)
+                tool_result = SuccessfulToolResult(content=str(result))
 
             return ToolCallResultMessage(
                 tool_name=tool_call.function_name,
@@ -169,7 +161,7 @@ class ToolManager:
             failed_result = ToolCallResultMessage(
                 tool_name=tool_call.function_name,
                 tool_index=tool_index,
-                result=ToolResultFailed(content=error_msg),
+                result=FailedToolResult(content=error_msg),
                 toolcall_arguments={},
             )
 

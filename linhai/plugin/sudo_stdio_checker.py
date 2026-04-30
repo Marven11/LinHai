@@ -6,7 +6,7 @@ from linhai.agent import Agent
 from linhai.agent.messages import RuntimeMessage
 from linhai.agent.lifecycle import Lifecycle
 from linhai.registry import Registry
-from linhai.tool.base import ToolResultFailed, ToolResultSuccess
+from linhai.tool.base import FailedToolResult, SuccessfulToolResult
 from linhai.plugin import Plugin
 from linhai.utils.common import UiNotice
 
@@ -33,7 +33,7 @@ class SudoStdioCheckerPlugin(Plugin):
         tool_name: str,
         toolcall_arguments: dict,
         with_secret: list[str] | None,
-    ) -> Union[ToolResultSuccess, ToolResultFailed, dict, None]:
+    ) -> Union[SuccessfulToolResult, FailedToolResult, dict, None]:
         """在工具调用前检查sudo命令。"""
         if tool_name != "process_create":
             return None
@@ -43,7 +43,7 @@ class SudoStdioCheckerPlugin(Plugin):
             return None
 
         if not isinstance(argv, list):
-            return ToolResultFailed(
+            return FailedToolResult(
                 content=f"argv参数必须是列表类型，但收到{type(argv).__name__}"
             )
 
@@ -58,7 +58,7 @@ class SudoStdioCheckerPlugin(Plugin):
         )
 
         if not has_stdin_flag:
-            return ToolResultFailed(
+            return FailedToolResult(
                 content="sudo命令必须使用-S标志以确保从标准输入读取密码。"
                 "建议使用sudo -S bash启动新bash并用connect_posix_shell_as_machine连接为机器，"
                 "以避免重复授权。"

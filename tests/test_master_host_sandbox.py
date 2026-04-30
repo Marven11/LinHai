@@ -79,9 +79,9 @@ class TestTerminalCreateSandbox(unittest.IsolatedAsyncioTestCase):
 
             result = await host.terminal_create(80, 24)
 
-        from linhai.tool.base import ToolResultSuccess
+        from linhai.tool.base import SuccessfulToolResult
 
-        self.assertIsInstance(result, ToolResultSuccess)
+        self.assertIsInstance(result, SuccessfulToolResult)
         mock_cls.assert_called_once_with(
             columns=80,
             lines=24,

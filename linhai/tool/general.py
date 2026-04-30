@@ -19,8 +19,8 @@ from linhai.tool.base import (
     utils_tools,
     ToolArgInfo,
     ToolSet,
-    ToolResultSuccess,
-    ToolResultFailed,
+    SuccessfulToolResult,
+    FailedToolResult,
     ToolResult,
 )
 from linhai.registry import Registry
@@ -107,7 +107,7 @@ def _download_with_httpx(url: str) -> str:
 def fetch_webpage(url: str, http_downloader: str):
 
     if http_downloader not in ("selenium", "httpx"):
-        return ToolResultFailed(
+        return FailedToolResult(
             content=f"错误: http_downloader参数只能是'selenium'或'httpx'，得到'{http_downloader}'"
         )
 
@@ -138,7 +138,7 @@ def fetch_webpage(url: str, http_downloader: str):
         with open(output_html, "w", encoding="utf-8") as f:
             f.write(str(soup))
         if shutil.which("pandoc") is None:
-            return ToolResultFailed(content="错误：pandoc未安装，请先安装pandoc")
+            return FailedToolResult(content="错误：pandoc未安装，请先安装pandoc")
 
         subprocess.run(
             [
@@ -165,7 +165,7 @@ def fetch_webpage(url: str, http_downloader: str):
 
         with open(output_md, "r", encoding="utf-8") as f:
             content = f.read()
-            return ToolResultSuccess(content=f"""
+            return SuccessfulToolResult(content=f"""
 文件已经保存在: {output_html=} {output_md=} 用户需要时优先提供markdown
 
 markdown内容如下
@@ -176,7 +176,7 @@ markdown内容如下
 """)
 
     except (OSError, subprocess.SubprocessError) as e:
-        return ToolResultFailed(content=f"转换失败: {str(e)}")
+        return FailedToolResult(content=f"转换失败: {str(e)}")
 
 
 @utils_tools.register_tool(
@@ -226,7 +226,7 @@ async def search_web(query: str, max_results: int = 5) -> ToolResult:
 
             soup = BeautifulSoup(response.text, "html.parser")
             if not soup:
-                return ToolResultFailed(content="解析HTML响应失败")
+                return FailedToolResult(content="解析HTML响应失败")
 
             results = []
             for result in soup.select(".result"):
@@ -265,7 +265,7 @@ async def search_web(query: str, max_results: int = 5) -> ToolResult:
                     break
 
             if not results:
-                return ToolResultFailed(
+                return FailedToolResult(
                     content="未找到相关搜索结果。可能是由于DuckDuckGo的机器人检测或查询无匹配结果。请尝试重新表述搜索或稍后重试。"
                 )
 
@@ -278,12 +278,12 @@ async def search_web(query: str, max_results: int = 5) -> ToolResult:
                 output.append(f"   摘要: {result['snippet']}")
                 output.append("")
 
-            return ToolResultSuccess(content="\n".join(output))
+            return SuccessfulToolResult(content="\n".join(output))
 
     except httpx.RequestError as e:
-        return ToolResultFailed(content=f"搜索请求失败: {str(e)}")
+        return FailedToolResult(content=f"搜索请求失败: {str(e)}")
     except (ConnectionError, TimeoutError, OSError) as e:
-        return ToolResultFailed(content=f"搜索过程中发生错误: {str(e)}")
+        return FailedToolResult(content=f"搜索过程中发生错误: {str(e)}")
 
 
 @utils_tools.register_tool(
@@ -309,4 +309,4 @@ async def search_web(query: str, max_results: int = 5) -> ToolResult:
 )
 def quickjs_calculator(expression: str) -> ToolResult:
     ctx = quickjs.Context()
-    return ToolResultSuccess(content=str(ctx.eval(expression)))
+    return SuccessfulToolResult(content=str(ctx.eval(expression)))

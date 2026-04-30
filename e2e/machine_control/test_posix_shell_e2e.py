@@ -83,7 +83,7 @@ class TestPosixShellControlE2E(unittest.IsolatedAsyncioTestCase):
         self.assertTrue(result)
 
         try:
-            from linhai.tool.base import ToolResultSuccess
+            from linhai.tool.base import SuccessfulToolResult
 
             # 使用跨平台存在的文件路径
             # /etc/passwd 在Unix-like系统上都存在
@@ -96,7 +96,7 @@ class TestPosixShellControlE2E(unittest.IsolatedAsyncioTestCase):
                     test_file = tmp.name
 
             tool_result = await control.call_tool("read_file", {"filepath": test_file})
-            self.assertIsInstance(tool_result, ToolResultSuccess)
+            self.assertIsInstance(tool_result, SuccessfulToolResult)
 
             # 清理临时文件
             if test_file.startswith(tempfile.gettempdir()):

@@ -8,7 +8,7 @@ from linhai.agent.lifecycle import Lifecycle
 from linhai.plugin.message_checkers import Plugin
 from linhai.plugin.reminder import ReminderPlugin, ReminderWriteGuardPlugin
 from linhai.registry import Registry
-from linhai.tool.base import ToolResultFailed
+from linhai.tool.base import FailedToolResult
 
 
 class TestReminderPlugin(TestCase):
@@ -89,7 +89,7 @@ class TestReminderWriteGuardPlugin(unittest.IsolatedAsyncioTestCase):
             },
             None,
         )
-        self.assertIsInstance(result, ToolResultFailed)
+        self.assertIsInstance(result, FailedToolResult)
         self.assertIn("换行符", result.content)
 
     async def test_write_file_too_long_blocked(self):
@@ -101,7 +101,7 @@ class TestReminderWriteGuardPlugin(unittest.IsolatedAsyncioTestCase):
             },
             None,
         )
-        self.assertIsInstance(result, ToolResultFailed)
+        self.assertIsInstance(result, FailedToolResult)
         self.assertIn("101字符", result.content)
 
     async def test_write_file_exactly_100_chars_allowed(self):
@@ -146,7 +146,7 @@ class TestReminderWriteGuardPlugin(unittest.IsolatedAsyncioTestCase):
             },
             None,
         )
-        self.assertIsInstance(result, ToolResultFailed)
+        self.assertIsInstance(result, FailedToolResult)
         self.assertIn("换行符", result.content)
 
     async def test_replace_file_content_result_too_long_blocked(self):
@@ -160,7 +160,7 @@ class TestReminderWriteGuardPlugin(unittest.IsolatedAsyncioTestCase):
             },
             None,
         )
-        self.assertIsInstance(result, ToolResultFailed)
+        self.assertIsInstance(result, FailedToolResult)
         self.assertIn("过长", result.content)
 
     async def test_replace_file_content_short_replacement_allowed(self):
@@ -222,7 +222,7 @@ class TestReminderWriteGuardPlugin(unittest.IsolatedAsyncioTestCase):
             },
             None,
         )
-        self.assertIsInstance(result, ToolResultFailed)
+        self.assertIsInstance(result, FailedToolResult)
 
     async def test_replace_file_content_replace_times_positive(self):
         self.reminder_file.write_text("abc abc", encoding="utf-8")
@@ -236,7 +236,7 @@ class TestReminderWriteGuardPlugin(unittest.IsolatedAsyncioTestCase):
             },
             None,
         )
-        self.assertIsInstance(result, ToolResultFailed)
+        self.assertIsInstance(result, FailedToolResult)
 
     async def test_replace_file_content_ambiguous_old_returns_none(self):
         self.reminder_file.write_text("abc abc", encoding="utf-8")

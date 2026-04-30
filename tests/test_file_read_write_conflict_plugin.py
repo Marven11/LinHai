@@ -6,7 +6,7 @@ import tempfile
 from linhai.plugin import FileReadWriteConflictPlugin
 from linhai.registry import Registry
 from linhai.base import ToolCallMessage
-from linhai.tool.base import ToolResultSuccess
+from linhai.tool.base import SuccessfulToolResult
 
 
 class TestFileReadWriteConflictPlugin(unittest.IsolatedAsyncioTestCase):
@@ -45,7 +45,7 @@ class TestFileReadWriteConflictPlugin(unittest.IsolatedAsyncioTestCase):
             assert_success=True,
             with_secret=[],
         )
-        read_result = ToolResultSuccess(
+        read_result = SuccessfulToolResult(
             content="文件内容",
             original_tool_call=read_tool_call,
             with_secret=[],
@@ -74,7 +74,7 @@ class TestFileReadWriteConflictPlugin(unittest.IsolatedAsyncioTestCase):
             assert_success=True,
             with_secret=[],
         )
-        write_result = ToolResultSuccess(
+        write_result = SuccessfulToolResult(
             content="写入成功",
             original_tool_call=write_tool_call,
             with_secret=[],
@@ -145,7 +145,7 @@ class TestFileReadWriteConflictPlugin(unittest.IsolatedAsyncioTestCase):
             assert_success=True,
             with_secret=[],
         )
-        read_result = ToolResultSuccess(
+        read_result = SuccessfulToolResult(
             content="文件内容",
             original_tool_call=read_tool_call,
             with_secret=[],
@@ -183,7 +183,7 @@ class TestFileReadWriteConflictPlugin(unittest.IsolatedAsyncioTestCase):
             assert_success=True,
             with_secret=[],
         )
-        write_result = ToolResultSuccess(
+        write_result = SuccessfulToolResult(
             content="写入成功",
             original_tool_call=write_tool_call,
             with_secret=[],
@@ -226,7 +226,7 @@ class TestFileReadWriteConflictPlugin(unittest.IsolatedAsyncioTestCase):
             assert_success=True,
             with_secret=[],
         )
-        read_result = ToolResultSuccess(
+        read_result = SuccessfulToolResult(
             content="第一行",
             original_tool_call=read_tool_call,
             with_secret=[],
@@ -264,7 +264,7 @@ class TestFileReadWriteConflictPlugin(unittest.IsolatedAsyncioTestCase):
             assert_success=True,
             with_secret=[],
         )
-        write_result = ToolResultSuccess(
+        write_result = SuccessfulToolResult(
             content="替换成功",
             original_tool_call=write_tool_call,
             with_secret=[],

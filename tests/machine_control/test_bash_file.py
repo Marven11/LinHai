@@ -15,7 +15,7 @@ from linhai.machine_control.bash_host.file import (
     read_file_with_sed,
 )
 from linhai.registry import Registry
-from linhai.tool.base import ToolResultSuccess, ToolResultFailed
+from linhai.tool.base import SuccessfulToolResult, FailedToolResult
 
 
 def _b64(text: str) -> str:
@@ -45,7 +45,7 @@ class TestReadFile(unittest.TestCase):
             host = _make_host()
             host.execute_raw.return_value = (1, "", "")
             result = await read_file(host, "/no/such/file")
-            self.assertIsInstance(result, ToolResultFailed)
+            self.assertIsInstance(result, FailedToolResult)
             self.assertIn("不存在", result.content)
 
         self.loop.run_until_complete(test())
@@ -60,7 +60,7 @@ class TestReadFile(unittest.TestCase):
                 (0, str(MAX_FILE_SIZE + 1), ""),
             ]
             result = await read_file(host, "/big/file")
-            self.assertIsInstance(result, ToolResultFailed)
+            self.assertIsInstance(result, FailedToolResult)
             self.assertIn("过大", result.content)
 
         self.loop.run_until_complete(test())
@@ -97,7 +97,7 @@ class TestWriteFile(unittest.TestCase):
             host = _make_host()
             host.execute_raw.return_value = (1, "", "")
             result = await write_file(host, "/no/write/dir/file.txt", "data")
-            self.assertIsInstance(result, ToolResultFailed)
+            self.assertIsInstance(result, FailedToolResult)
             self.assertIn("不可写", result.content)
 
         self.loop.run_until_complete(test())
@@ -110,7 +110,7 @@ class TestWriteFile(unittest.TestCase):
                 (0, "", ""),
             ]
             result = await write_file(host, "/existing/file", "data", override=False)
-            self.assertIsInstance(result, ToolResultFailed)
+            self.assertIsInstance(result, FailedToolResult)
             self.assertIn("已存在", result.content)
 
         self.loop.run_until_complete(test())
@@ -124,7 +124,7 @@ class TestWriteFile(unittest.TestCase):
                 (0, "", ""),
             ]
             result = await write_file(host, "/new/file", "hello")
-            self.assertIsInstance(result, ToolResultSuccess)
+            self.assertIsInstance(result, SuccessfulToolResult)
             self.assertIn("成功", result.content)
 
         self.loop.run_until_complete(test())
@@ -137,7 +137,7 @@ class TestWriteFile(unittest.TestCase):
                 (0, "", ""),
             ]
             result = await write_file(host, "/existing/file", "new data", override=True)
-            self.assertIsInstance(result, ToolResultSuccess)
+            self.assertIsInstance(result, SuccessfulToolResult)
             self.assertIn("成功", result.content)
 
         self.loop.run_until_complete(test())
@@ -165,7 +165,7 @@ class TestReplaceFileContent(unittest.TestCase):
                 (0, _b64(content), ""),
             ]
             result = await replace_file_content(host, "/file", "xyz", "abc")
-            self.assertIsInstance(result, ToolResultFailed)
+            self.assertIsInstance(result, FailedToolResult)
             self.assertIn("未找到", result.content)
 
         self.loop.run_until_complete(test())
@@ -186,7 +186,7 @@ class TestReplaceFileContent(unittest.TestCase):
                 (0, "", ""),
             ]
             result = await replace_file_content(host, "/file", "world", "earth")
-            self.assertIsInstance(result, ToolResultSuccess)
+            self.assertIsInstance(result, SuccessfulToolResult)
             self.assertIn("替换次数: 1", result.content)
 
         self.loop.run_until_complete(test())
@@ -204,7 +204,7 @@ class TestReplaceFileContent(unittest.TestCase):
                 (0, _b64(content), ""),
             ]
             result = await replace_file_content(host, "/file", "aaa", "bbb")
-            self.assertIsInstance(result, ToolResultFailed)
+            self.assertIsInstance(result, FailedToolResult)
             self.assertIn("多次匹配", result.content)
 
         self.loop.run_until_complete(test())
@@ -225,7 +225,7 @@ class TestReplaceFileContent(unittest.TestCase):
                 (0, "", ""),
             ]
             result = await replace_file_content(host, "/file", "aaa", "ccc", -1)
-            self.assertIsInstance(result, ToolResultSuccess)
+            self.assertIsInstance(result, SuccessfulToolResult)
             self.assertIn("替换次数: 2", result.content)
 
         self.loop.run_until_complete(test())
@@ -246,7 +246,7 @@ class TestReplaceFileContent(unittest.TestCase):
                 (0, "", ""),
             ]
             result = await replace_file_content(host, "/file", "world", "earth")
-            self.assertIsInstance(result, ToolResultFailed)
+            self.assertIsInstance(result, FailedToolResult)
             self.assertIn("被外部修改", result.content)
 
         self.loop.run_until_complete(test())
@@ -266,7 +266,7 @@ class TestListFiles(unittest.TestCase):
             host = _make_host()
             host.execute_raw.return_value = (1, "", "")
             result = await list_files(host, "/no/dir")
-            self.assertIsInstance(result, ToolResultFailed)
+            self.assertIsInstance(result, FailedToolResult)
             self.assertIn("不存在", result.content)
 
         self.loop.run_until_complete(test())
@@ -279,7 +279,7 @@ class TestListFiles(unittest.TestCase):
                 (0, "total 4\nfile.txt", ""),
             ]
             result = await list_files(host, "/some/dir")
-            self.assertIsInstance(result, ToolResultSuccess)
+            self.assertIsInstance(result, SuccessfulToolResult)
             self.assertIn("file.txt", result.content)
 
         self.loop.run_until_complete(test())
@@ -299,7 +299,7 @@ class TestGetAbsolutePath(unittest.TestCase):
             host = _make_host()
             host.execute_raw.return_value = (0, "/home/user/file.txt", "")
             result = await get_absolute_path(host, "file.txt")
-            self.assertIsInstance(result, ToolResultSuccess)
+            self.assertIsInstance(result, SuccessfulToolResult)
             self.assertIn("/home/user/file.txt", result.content)
 
         self.loop.run_until_complete(test())
@@ -309,7 +309,7 @@ class TestGetAbsolutePath(unittest.TestCase):
             host = _make_host()
             host.execute_raw.return_value = (1, "", "error")
             result = await get_absolute_path(host, "bad/path")
-            self.assertIsInstance(result, ToolResultFailed)
+            self.assertIsInstance(result, FailedToolResult)
             self.assertIn("失败", result.content)
 
         self.loop.run_until_complete(test())
@@ -334,7 +334,7 @@ class TestReadFileWithSed(unittest.TestCase):
                 (0, "replaced", ""),
             ]
             result = await read_file_with_sed(host, "s/old/new/", "/file")
-            self.assertIsInstance(result, ToolResultFailed)
+            self.assertIsInstance(result, FailedToolResult)
             self.assertIn("不能修改", result.content)
 
         self.loop.run_until_complete(test())
@@ -349,7 +349,7 @@ class TestReadFileWithSed(unittest.TestCase):
                 (0, "line1\nline2", ""),
             ]
             result = await read_file_with_sed(host, "1,2p", "/file")
-            self.assertIsInstance(result, ToolResultSuccess)
+            self.assertIsInstance(result, SuccessfulToolResult)
             self.assertIn("line1", result.content)
 
         self.loop.run_until_complete(test())
@@ -364,7 +364,7 @@ class TestReadFileWithSed(unittest.TestCase):
                 (1, "", "sed error"),
             ]
             result = await read_file_with_sed(host, "bad_expr", "/file")
-            self.assertIsInstance(result, ToolResultFailed)
+            self.assertIsInstance(result, FailedToolResult)
             self.assertIn("sed执行失败", result.content)
 
         self.loop.run_until_complete(test())

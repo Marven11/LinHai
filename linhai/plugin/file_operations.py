@@ -461,7 +461,9 @@ class SedFragmentedReadPlugin(Plugin):
         if not isinstance(message, ToolCallResultMessage):
             return None
 
-        content = message.result.content
+        content = message.result.to_llm_content()
+        if not isinstance(content, str):
+            return None
         now = time.time()
 
         self._cleanup(now)

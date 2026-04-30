@@ -8,7 +8,7 @@ from linhai.machine_control.posix_shell.posix_shell_control import PosixShellCon
 from linhai.machine_control.master_host.process import LocalPtyProcess
 from linhai.registry import Registry
 from linhai.task_supervisor import PlainTaskSupervisor
-from linhai.tool.base import ToolResultSuccess
+from linhai.tool.base import SuccessfulToolResult
 
 
 class TestPtyConnectE2E(unittest.IsolatedAsyncioTestCase):
@@ -55,14 +55,14 @@ class TestPtyConnectE2E(unittest.IsolatedAsyncioTestCase):
         try:
             ping_result = await control.ping()
             self.assertIsInstance(
-                ping_result, ToolResultSuccess, f"ping失败: {ping_result}"
+                ping_result, SuccessfulToolResult, f"ping失败: {ping_result}"
             )
 
             result = await control.call_tool("read_file", {"filepath": "/etc/hostname"})
-            self.assertIsInstance(result, ToolResultSuccess)
+            self.assertIsInstance(result, SuccessfulToolResult)
 
             result2 = await control.call_tool("get_absolute_path", {"path": "/tmp"})
-            self.assertIsInstance(result2, ToolResultSuccess)
+            self.assertIsInstance(result2, SuccessfulToolResult)
         finally:
             await self._cleanup(control, pty_proc, subprocess)
 
@@ -93,7 +93,7 @@ class TestPtyConnectE2E(unittest.IsolatedAsyncioTestCase):
                     isinstance(r, Exception),
                     f"工具调用{i}抛出异常: {r}",
                 )
-                self.assertIsInstance(r, ToolResultSuccess, f"工具调用{i}失败: {r}")
+                self.assertIsInstance(r, SuccessfulToolResult, f"工具调用{i}失败: {r}")
         finally:
             await self._cleanup(control, pty_proc, subprocess)
 

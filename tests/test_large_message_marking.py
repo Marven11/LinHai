@@ -7,7 +7,7 @@ from linhai.registry import Registry
 from linhai.agent.messages import RuntimeMessage
 from linhai.base import UserMessage, AssistantMessage, SystemMessage
 from linhai.tool.base import ToolCallResultMessage
-from linhai.tool.base import ToolResultSuccess, ToolResultFailed
+from linhai.tool.base import SuccessfulToolResult, FailedToolResult
 from linhai.tool.main import ToolManager
 from linhai.token_manager import TokenManager
 from linhai.multimodal import ImageMessage

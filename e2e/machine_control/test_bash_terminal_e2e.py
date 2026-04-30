@@ -6,7 +6,7 @@ from linhai.machine_control.bash_host import BashHostControl
 from linhai.machine_control.bash_host import terminal as _terminal
 from linhai.registry import Registry
 from linhai.task_supervisor import PlainTaskSupervisor
-from linhai.tool.base import ToolResultSuccess
+from linhai.tool.base import SuccessfulToolResult
 from tests.test_helpers import _AsyncioProcessAdapter
 
 
@@ -51,7 +51,7 @@ class TestBashTerminalE2E(unittest.IsolatedAsyncioTestCase):
         try:
             result = await control.terminal_create(columns=80, lines=24)
             self.assertIsInstance(
-                result, ToolResultSuccess, f"terminal_create failed: {result}"
+                result, SuccessfulToolResult, f"terminal_create failed: {result}"
             )
             term_id = result.content
 
@@ -59,12 +59,12 @@ class TestBashTerminalE2E(unittest.IsolatedAsyncioTestCase):
                 term_id, "echo hello_bash_terminal", with_enter=True, wait_seconds=1.0
             )
             self.assertIsInstance(
-                send_result, ToolResultSuccess, f"send_string failed: {send_result}"
+                send_result, SuccessfulToolResult, f"send_string failed: {send_result}"
             )
 
             screen = await control.terminal_read_screen(term_id)
             self.assertIsInstance(
-                screen, ToolResultSuccess, f"read_screen failed: {screen}"
+                screen, SuccessfulToolResult, f"read_screen failed: {screen}"
             )
             self.assertIn("hello_bash_terminal", screen.content)
 
@@ -78,16 +78,16 @@ class TestBashTerminalE2E(unittest.IsolatedAsyncioTestCase):
         control, adapter, process = await self._create_control()
         try:
             result = await control.terminal_create()
-            self.assertIsInstance(result, ToolResultSuccess)
+            self.assertIsInstance(result, SuccessfulToolResult)
             term_id = result.content
 
             send_result = await control.terminal_send_string(
                 term_id, "echo key_test", with_enter=True, wait_seconds=1.0
             )
-            self.assertIsInstance(send_result, ToolResultSuccess)
+            self.assertIsInstance(send_result, SuccessfulToolResult)
 
             keys_result = await control.terminal_send_keys(term_id, ["up"])
-            self.assertIsInstance(keys_result, ToolResultSuccess)
+            self.assertIsInstance(keys_result, SuccessfulToolResult)
 
             screen = await control.terminal_read_screen(term_id)
             self.assertIn("key_test", screen.content)
@@ -102,15 +102,15 @@ class TestBashTerminalE2E(unittest.IsolatedAsyncioTestCase):
         control, adapter, process = await self._create_control()
         try:
             empty = await control.get_terminals()
-            self.assertIsInstance(empty, ToolResultSuccess)
+            self.assertIsInstance(empty, SuccessfulToolResult)
             self.assertIn("没有活动", empty.content)
 
             result = await control.terminal_create()
-            self.assertIsInstance(result, ToolResultSuccess)
+            self.assertIsInstance(result, SuccessfulToolResult)
             term_id = result.content
 
             terminals_result = await control.get_terminals()
-            self.assertIsInstance(terminals_result, ToolResultSuccess)
+            self.assertIsInstance(terminals_result, SuccessfulToolResult)
             self.assertIn(term_id, terminals_result.content)
 
             await control.terminal_close(term_id)
@@ -125,7 +125,7 @@ class TestBashTerminalE2E(unittest.IsolatedAsyncioTestCase):
                 self.skipTest("cannot hide tmux")
             try:
                 result = await control.terminal_create()
-                self.assertNotIsInstance(result, ToolResultSuccess)
+                self.assertNotIsInstance(result, SuccessfulToolResult)
                 self.assertIn("tmux", result.content)
             finally:
                 await control.execute_raw("mv /usr/bin/tmux_bak /usr/bin/tmux")

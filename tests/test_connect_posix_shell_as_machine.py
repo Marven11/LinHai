@@ -1,7 +1,7 @@
 import unittest
 from unittest.mock import Mock, AsyncMock, patch
 from linhai.plugin.sudo_bash_hint import SudoBashHintPlugin
-from linhai.tool.base import ToolResultSuccess
+from linhai.tool.base import SuccessfulToolResult
 
 
 class TestSudoBashHintPlugin(unittest.IsolatedAsyncioTestCase):
@@ -199,30 +199,30 @@ class TestAddBashMachine(unittest.IsolatedAsyncioTestCase):
         self.machine_control = MachineControl(self.registry, remote_machines=[])
 
     async def test_add_posix_shell_machine_duplicate_id(self):
-        from linhai.tool.base import ToolResultFailed
+        from linhai.tool.base import FailedToolResult
 
         result = await self.machine_control.add_posix_shell_machine(
             "master_host", "123"
         )
-        self.assertIsInstance(result, ToolResultFailed)
+        self.assertIsInstance(result, FailedToolResult)
         self.assertIn("机器ID已存在", result.content)
 
     async def test_add_posix_shell_machine_source_not_found(self):
-        from linhai.tool.base import ToolResultFailed
+        from linhai.tool.base import FailedToolResult
 
         result = await self.machine_control.add_posix_shell_machine(
             "new_machine", "123", source_machine="nonexistent"
         )
-        self.assertIsInstance(result, ToolResultFailed)
+        self.assertIsInstance(result, FailedToolResult)
         self.assertIn("源机器不存在", result.content)
 
     async def test_add_posix_shell_machine_process_not_found(self):
-        from linhai.tool.base import ToolResultFailed
+        from linhai.tool.base import FailedToolResult
 
         result = await self.machine_control.add_posix_shell_machine(
             "new_machine", "99999"
         )
-        self.assertIsInstance(result, ToolResultFailed)
+        self.assertIsInstance(result, FailedToolResult)
         self.assertIn("进程不存在", result.content)
 
     async def test_add_posix_shell_machine_connect_failure(self):
@@ -239,19 +239,19 @@ class TestAddBashMachine(unittest.IsolatedAsyncioTestCase):
         with patch.object(
             PosixShellControl, "connect", new_callable=AsyncMock, return_value=False
         ):
-            from linhai.tool.base import ToolResultFailed
+            from linhai.tool.base import FailedToolResult
 
             result = await self.machine_control.add_posix_shell_machine(
                 "bash_machine", "123"
             )
-            self.assertIsInstance(result, ToolResultFailed)
+            self.assertIsInstance(result, FailedToolResult)
             self.assertIn("连接posix shell进程失败", result.content)
 
     async def test_add_posix_shell_machine_success(self):
         from linhai.machine_control.posix_shell.posix_shell_control import (
             PosixShellControl,
         )
-        from linhai.tool.base import ToolResultSuccess
+        from linhai.tool.base import SuccessfulToolResult
 
         mock_host = Mock()
         mock_process = Mock()
@@ -264,7 +264,7 @@ class TestAddBashMachine(unittest.IsolatedAsyncioTestCase):
             result = await self.machine_control.add_posix_shell_machine(
                 "bash_machine", "123"
             )
-            self.assertIsInstance(result, ToolResultSuccess)
+            self.assertIsInstance(result, SuccessfulToolResult)
             self.assertIn("bash_machine", result.content)
             self.assertIn("bash_machine", self.machine_control.machines)
             self.assertIn(
@@ -276,7 +276,7 @@ class TestAddBashMachine(unittest.IsolatedAsyncioTestCase):
         from linhai.machine_control.posix_shell.posix_shell_control import (
             PosixShellControl,
         )
-        from linhai.tool.base import ToolResultFailed
+        from linhai.tool.base import FailedToolResult
 
         mock_remote = Mock()
         mock_remote.get_process = Mock(return_value=None)
@@ -285,7 +285,7 @@ class TestAddBashMachine(unittest.IsolatedAsyncioTestCase):
         result = await self.machine_control.add_posix_shell_machine(
             "bash_machine", "456", source_machine="remote_host"
         )
-        self.assertIsInstance(result, ToolResultFailed)
+        self.assertIsInstance(result, FailedToolResult)
         self.assertIn("进程不存在", result.content)
         mock_remote.get_process.assert_called_once_with("456")
 

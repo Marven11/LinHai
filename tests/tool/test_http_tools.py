@@ -5,7 +5,7 @@ import unittest.mock
 import tempfile
 import os
 
-from linhai.tool.base import ToolSet, ToolArgInfo, ToolResultFailed
+from linhai.tool.base import ToolSet, ToolArgInfo, FailedToolResult
 from linhai.tool.general import fetch_webpage
 
 
@@ -127,7 +127,7 @@ class TestFetchWebpageTool(unittest.TestCase):
             "fetch_webpage", {"url": "http://example.com", "http_downloader": "invalid"}
         )
         # 验证返回了正确的错误信息
-        self.assertIsInstance(result, ToolResultFailed)
+        self.assertIsInstance(result, FailedToolResult)
         self.assertIn(
             "错误: http_downloader参数只能是'selenium'或'httpx'，得到'invalid'",
             result.content,
@@ -145,7 +145,7 @@ class TestFetchWebpageTool(unittest.TestCase):
             {"url": "http://example.com", "http_downloader": "selenium"},
         )
 
-        self.assertIsInstance(result, ToolResultFailed)
+        self.assertIsInstance(result, FailedToolResult)
         self.assertEqual(result.content, "错误：pandoc未安装，请先安装pandoc")
 
     @unittest.mock.patch("linhai.tool.general.Firefox")

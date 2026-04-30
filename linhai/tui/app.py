@@ -14,7 +14,7 @@ from linhai.registry import Registry
 from linhai.task_supervisor import TextualTaskSupervisor
 from linhai.tool.base import ToolSet, ToolArgInfo
 from linhai.machine_control.master_host import close_all_terminals_async
-from linhai.tool.base import ToolResultSuccess
+from linhai.tool.base import SuccessfulToolResult
 from linhai.tool.mcp_connector import MCPConnector
 
 from .components import (
@@ -266,7 +266,7 @@ class TUIApp(App):
             """
             self.exit(return_code=return_code)
 
-            return ToolResultSuccess(content="")
+            return SuccessfulToolResult(content="")
 
         from linhai.tool.main import ToolManager
 

@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Dict, Optional, Any, Union
 
 from linhai.machine_control.http_message import HttpMessage, build_http_message
-from linhai.tool.base import ToolResultSuccess, ToolResultFailed
+from linhai.tool.base import SuccessfulToolResult, FailedToolResult
 from linhai.agent.messages import FileContentMessage
 from ..protocol import HostControl
 from ..process import Process, ProcessCreateResult
@@ -61,9 +61,9 @@ class EtherGhostMachineControl(HostControl):
         json_data: Optional[Dict[str, Any]] = None,
         proxy: Optional[str] = None,
         verify: Optional[bool] = None,
-    ) -> HttpMessage | ToolResultFailed:
+    ) -> HttpMessage | FailedToolResult:
         if self.session is None:
-            return ToolResultFailed(content="Session未初始化")
+            return FailedToolResult(content="Session未初始化")
 
         unsupported = []
         if follow_redirects:
@@ -82,7 +82,7 @@ class EtherGhostMachineControl(HostControl):
             unsupported.append("verify")
 
         if unsupported:
-            return ToolResultFailed(
+            return FailedToolResult(
                 content=f"EtherGhost不支持以下参数: {', '.join(unsupported)}"
             )
 
@@ -104,10 +104,10 @@ class EtherGhostMachineControl(HostControl):
 
     async def change_directory(
         self, directory: str
-    ) -> ToolResultSuccess | ToolResultFailed:
+    ) -> SuccessfulToolResult | FailedToolResult:
         if self.current_dir is None:
-            return ToolResultFailed(content="当前目录未知")
-        return ToolResultFailed(
+            return FailedToolResult(content="当前目录未知")
+        return FailedToolResult(
             content=f"因webshell限制，EtherGhost不支持change_directory，当前路径固定为{self.current_dir}"
         )
 
@@ -147,13 +147,13 @@ class EtherGhostMachineControl(HostControl):
 
     async def terminal_create(
         self, columns: int = 80, lines: int = 24
-    ) -> ToolResultSuccess | ToolResultFailed:
-        return ToolResultFailed(content="EtherGhost不支持终端操作")
+    ) -> SuccessfulToolResult | FailedToolResult:
+        return FailedToolResult(content="EtherGhost不支持终端操作")
 
     async def terminal_send_keys(
         self, terminal_id: str, keys: list[str]
-    ) -> ToolResultSuccess | ToolResultFailed:
-        return ToolResultFailed(content="EtherGhost不支持终端操作")
+    ) -> SuccessfulToolResult | FailedToolResult:
+        return FailedToolResult(content="EtherGhost不支持终端操作")
 
     async def terminal_send_string(
         self,
@@ -161,27 +161,27 @@ class EtherGhostMachineControl(HostControl):
         string: str,
         with_enter: bool = True,
         wait_seconds: float = 0.3,
-    ) -> ToolResultSuccess | ToolResultFailed:
-        return ToolResultFailed(content="EtherGhost不支持终端操作")
+    ) -> SuccessfulToolResult | FailedToolResult:
+        return FailedToolResult(content="EtherGhost不支持终端操作")
 
     async def terminal_read_screen(
         self, terminal_id: str
-    ) -> ToolResultSuccess | ToolResultFailed:
-        return ToolResultFailed(content="EtherGhost不支持终端操作")
+    ) -> SuccessfulToolResult | FailedToolResult:
+        return FailedToolResult(content="EtherGhost不支持终端操作")
 
     async def terminal_close(
         self, terminal_id: str
-    ) -> ToolResultSuccess | ToolResultFailed:
-        return ToolResultFailed(content="EtherGhost不支持终端操作")
+    ) -> SuccessfulToolResult | FailedToolResult:
+        return FailedToolResult(content="EtherGhost不支持终端操作")
 
-    async def get_terminals(self) -> ToolResultSuccess | ToolResultFailed:
-        return ToolResultSuccess(content="EtherGhost不支持终端操作")
+    async def get_terminals(self) -> SuccessfulToolResult | FailedToolResult:
+        return SuccessfulToolResult(content="EtherGhost不支持终端操作")
 
     async def read_file(
         self, filepath: str, show_line_numbers: bool = False
-    ) -> Union[ToolResultSuccess, ToolResultFailed, FileContentMessage]:
+    ) -> Union[SuccessfulToolResult, FailedToolResult, FileContentMessage]:
         if self.session is None:
-            return ToolResultFailed(content="Session未初始化")
+            return FailedToolResult(content="Session未初始化")
 
         content_bytes = await self.session.get_file_contents(filepath)
         content = content_bytes.decode("utf-8", errors="replace")
@@ -200,28 +200,28 @@ class EtherGhostMachineControl(HostControl):
 
     async def write_file(
         self, filepath: str, content: str, override: bool = False
-    ) -> ToolResultSuccess | ToolResultFailed:
+    ) -> SuccessfulToolResult | FailedToolResult:
         if self.session is None:
-            return ToolResultFailed(content="Session未初始化")
+            return FailedToolResult(content="Session未初始化")
 
         content_bytes = content.encode("utf-8")
         success = await self.session.put_file_contents(filepath, content_bytes)
         if success:
-            return ToolResultSuccess(content=f"文件已写入: {filepath}")
-        return ToolResultFailed(content="写入文件失败")
+            return SuccessfulToolResult(content=f"文件已写入: {filepath}")
+        return FailedToolResult(content="写入文件失败")
 
     async def replace_file_content(
         self, filepath: str, old: str, new: str, replace_times: Optional[int] = None
-    ) -> ToolResultSuccess | ToolResultFailed:
+    ) -> SuccessfulToolResult | FailedToolResult:
         if self.session is None:
-            return ToolResultFailed(content="Session未初始化")
+            return FailedToolResult(content="Session未初始化")
 
         content_bytes = await self.session.get_file_contents(filepath)
         content = content_bytes.decode("utf-8", errors="replace")
         if replace_times is None:
             count = content.count(old)
             if count != 1:
-                return ToolResultFailed(
+                return FailedToolResult(
                     content=f"旧内容出现次数不为1，实际出现{count}次"
                 )
             new_content = content.replace(old, new, 1)
@@ -234,16 +234,16 @@ class EtherGhostMachineControl(HostControl):
             filepath, new_content.encode("utf-8")
         )
         if success:
-            return ToolResultSuccess(content="文件内容已替换")
-        return ToolResultFailed(content="替换文件内容失败")
+            return SuccessfulToolResult(content="文件内容已替换")
+        return FailedToolResult(content="替换文件内容失败")
 
     async def list_files(
         self, dirpath: str, glob: bool = False
-    ) -> ToolResultSuccess | ToolResultFailed:
+    ) -> SuccessfulToolResult | FailedToolResult:
         if glob:
             raise RuntimeError("list_files的glob选项仅支持master_host")
         if self.session is None:
-            return ToolResultFailed(content="Session未初始化")
+            return FailedToolResult(content="Session未初始化")
 
         entries = await self.session.list_dir(dirpath)
         lines = []
@@ -257,57 +257,57 @@ class EtherGhostMachineControl(HostControl):
             else:
                 prefix = "-"
             lines.append(f"{prefix}{entry.permission} {entry.filesize:8d} {entry.name}")
-        return ToolResultSuccess(content="\n".join(lines))
+        return SuccessfulToolResult(content="\n".join(lines))
 
     async def get_absolute_path(
         self, path: str
-    ) -> ToolResultSuccess | ToolResultFailed:
+    ) -> SuccessfulToolResult | FailedToolResult:
         if self.session is None:
-            return ToolResultFailed(content="Session未初始化")
+            return FailedToolResult(content="Session未初始化")
 
         result = await self.session.execute_cmd(f"realpath {path}")
-        return ToolResultSuccess(content=result.strip())
+        return SuccessfulToolResult(content=result.strip())
 
     async def read_file_with_sed(
         self, expression: str, filepath: str
-    ) -> ToolResultSuccess | ToolResultFailed:
+    ) -> SuccessfulToolResult | FailedToolResult:
         if self.session is None:
-            return ToolResultFailed(content="Session未初始化")
+            return FailedToolResult(content="Session未初始化")
 
         cmd = f"if command -v sed >/dev/null 2>&1; then sed '{expression}' {filepath}; else echo {self._uuid}; fi"
         result = await self.session.execute_cmd(cmd)
         if self._uuid in result:
-            return ToolResultFailed(content=f"目标机器上未安装sed (uuid: {self._uuid})")
-        return ToolResultSuccess(content=result)
+            return FailedToolResult(content=f"目标机器上未安装sed (uuid: {self._uuid})")
+        return SuccessfulToolResult(content=result)
 
-    async def ping(self) -> ToolResultSuccess | ToolResultFailed:
+    async def ping(self) -> SuccessfulToolResult | FailedToolResult:
         if self.session is None:
-            return ToolResultFailed(content="Session未初始化")
+            return FailedToolResult(content="Session未初始化")
         if await self.session.test_usablility():
-            return ToolResultSuccess(content="pong")
-        return ToolResultFailed(content="ping failed: session not usable")
+            return SuccessfulToolResult(content="pong")
+        return FailedToolResult(content="ping failed: session not usable")
 
     async def download_file_concurrent(
         self, remote_path: str, local_path: str
-    ) -> ToolResultSuccess | ToolResultFailed:
+    ) -> SuccessfulToolResult | FailedToolResult:
         if self.session is None:
-            return ToolResultFailed(content="Session未初始化")
+            return FailedToolResult(content="Session未初始化")
 
         content_bytes = await self.session.download_file(remote_path)
         Path(local_path).write_bytes(content_bytes)
-        return ToolResultSuccess(content=f"文件已下载: {local_path}")
+        return SuccessfulToolResult(content=f"文件已下载: {local_path}")
 
     async def upload_file_concurrent(
         self, data: bytes, remote_path: str
-    ) -> ToolResultSuccess | ToolResultFailed:
+    ) -> SuccessfulToolResult | FailedToolResult:
         if self.session is None:
-            return ToolResultFailed(content="Session未初始化")
+            return FailedToolResult(content="Session未初始化")
 
         success = await self.session.upload_file(remote_path, data)
         if success:
-            return ToolResultSuccess(content=f"文件已上传: {remote_path}")
+            return SuccessfulToolResult(content=f"文件已上传: {remote_path}")
         else:
-            return ToolResultFailed(content="上传文件失败")
+            return FailedToolResult(content="上传文件失败")
 
     async def disconnect(self) -> None:
         self.session = None

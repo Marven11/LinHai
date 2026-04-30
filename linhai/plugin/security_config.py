@@ -10,7 +10,7 @@ from linhai.agent.messages import RuntimeMessage
 from linhai.registry import Registry
 from linhai.utils.common import UiNotice
 from linhai.utils.i18n import t
-from linhai.tool.base import ToolResultSuccess, ToolResultFailed
+from linhai.tool.base import SuccessfulToolResult, FailedToolResult
 from linhai.base import Message
 
 if TYPE_CHECKING:
@@ -144,22 +144,22 @@ class CommandWhitelistPlugin(Plugin):
         tool_name: str,
         toolcall_arguments: dict,
         with_secret: list[str] | None,
-    ) -> Union[ToolResultSuccess, ToolResultFailed, dict, None]:
+    ) -> Union[SuccessfulToolResult, FailedToolResult, dict, None]:
         if tool_name != "process_create":
             return None
 
         argv = toolcall_arguments.get("argv")
         if argv is None:
-            return ToolResultFailed(content="process_create缺少argv参数")
+            return FailedToolResult(content="process_create缺少argv参数")
 
         if not isinstance(argv, list):
-            return ToolResultFailed(
+            return FailedToolResult(
                 content=f"argv参数必须是列表类型，但收到{type(argv).__name__}"
             )
 
         for i, arg in enumerate(argv):
             if not isinstance(arg, str):
-                return ToolResultFailed(
+                return FailedToolResult(
                     content=f"argv参数的第{i}个元素必须是字符串类型，但收到{type(arg).__name__}"
                 )
 
@@ -176,7 +176,7 @@ class CommandWhitelistPlugin(Plugin):
         ):
             return None
 
-        return ToolResultFailed(
+        return FailedToolResult(
             content=f"命令 {' '.join(argv)} 不在白名单中。允许的命令: {self.allowed_commands}"
         )
 
@@ -212,7 +212,7 @@ class ProcessArgvCheckerPlugin(Plugin):
         tool_name: str,
         toolcall_arguments: dict,
         with_secret: list[str] | None,
-    ) -> Union[ToolResultSuccess, ToolResultFailed, dict, None]:
+    ) -> Union[SuccessfulToolResult, FailedToolResult, dict, None]:
         if tool_name == "process_create":
             argv = toolcall_arguments.get("argv")
             if argv is None:
@@ -220,14 +220,14 @@ class ProcessArgvCheckerPlugin(Plugin):
 
             # 检查argv类型
             if not isinstance(argv, list):
-                return ToolResultFailed(
+                return FailedToolResult(
                     content=f"argv参数必须是列表类型，但收到{type(argv).__name__}"
                 )
 
             # 检查argv元素类型
             for i, arg in enumerate(argv):
                 if not isinstance(arg, str):
-                    return ToolResultFailed(
+                    return FailedToolResult(
                         content=f"argv参数的第{i}个元素必须是字符串类型，但收到{type(arg).__name__}"
                     )
 

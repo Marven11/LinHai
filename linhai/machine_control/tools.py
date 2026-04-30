@@ -5,8 +5,8 @@ from typing import TYPE_CHECKING, Dict, Optional, Union, Any
 from linhai.agent.messages import FileContentMessage
 from linhai.tool.base import (
     ToolArgInfo,
-    ToolResultSuccess,
-    ToolResultFailed,
+    SuccessfulToolResult,
+    FailedToolResult,
     ToolSet,
 )
 from rich.text import Text
@@ -31,7 +31,7 @@ def register_machine_control_tools(machine_control: "MachineControl") -> ToolSet
         args={},
         required_args=[],
     )
-    async def list_terminals_tool() -> ToolResultSuccess | ToolResultFailed:
+    async def list_terminals_tool() -> SuccessfulToolResult | FailedToolResult:
         return await machine_control.list_all_terminals()
 
     @toolset.register_tool(
@@ -40,7 +40,7 @@ def register_machine_control_tools(machine_control: "MachineControl") -> ToolSet
         args={},
         required_args=[],
     )
-    async def list_machines_tool() -> ToolResultSuccess:
+    async def list_machines_tool() -> SuccessfulToolResult:
         return await machine_control.list_machines()
 
     @toolset.register_tool(
@@ -61,7 +61,7 @@ def register_machine_control_tools(machine_control: "MachineControl") -> ToolSet
     )
     async def switch_machine_tool(
         machine_id: str,
-    ) -> ToolResultSuccess | ToolResultFailed:
+    ) -> SuccessfulToolResult | FailedToolResult:
         return await machine_control.switch_machine(machine_id)
 
     @toolset.register_tool(
@@ -87,7 +87,7 @@ def register_machine_control_tools(machine_control: "MachineControl") -> ToolSet
     )
     async def disconnect_machine_tool(
         machine_id: str,
-    ) -> ToolResultSuccess | ToolResultFailed:
+    ) -> SuccessfulToolResult | FailedToolResult:
         return await machine_control.disconnect_machine(machine_id)
 
     @toolset.register_tool(
@@ -129,7 +129,7 @@ def register_machine_control_tools(machine_control: "MachineControl") -> ToolSet
         machine_id: str,
         pid: str,
         source_machine: Optional[str] = None,
-    ) -> ToolResultSuccess | ToolResultFailed:
+    ) -> SuccessfulToolResult | FailedToolResult:
         return await machine_control.add_posix_shell_machine(
             machine_id, pid, source_machine
         )
@@ -158,7 +158,7 @@ def register_machine_control_tools(machine_control: "MachineControl") -> ToolSet
     )
     async def connect_remote_config_tool(
         name: str,
-    ) -> ToolResultSuccess | ToolResultFailed:
+    ) -> SuccessfulToolResult | FailedToolResult:
         return await machine_control.connect_remote_config(name)
 
     @toolset.register_tool(
@@ -199,7 +199,7 @@ def register_machine_control_tools(machine_control: "MachineControl") -> ToolSet
         machine_id: str,
         session_type: str,
         connection_args: Dict[str, Any],
-    ) -> ToolResultSuccess | ToolResultFailed:
+    ) -> SuccessfulToolResult | FailedToolResult:
         return await machine_control.add_ether_ghost_machine(
             machine_id, session_type, connection_args
         )
@@ -216,7 +216,7 @@ def register_machine_control_tools(machine_control: "MachineControl") -> ToolSet
         required_args=[],
     )
     async def ether_ghost_get_connection_args_definition_tool() -> (
-        ToolResultSuccess | ToolResultFailed
+        SuccessfulToolResult | FailedToolResult
     ):
         from ether_ghost.core.base import session_type_info
 
@@ -233,7 +233,7 @@ def register_machine_control_tools(machine_control: "MachineControl") -> ToolSet
                 }
             definition[session_type] = args_def
         result = {"type": "ether_ghost", "connection_args_definition": definition}
-        return ToolResultSuccess(content=json.dumps(result, ensure_ascii=False))
+        return SuccessfulToolResult(content=json.dumps(result, ensure_ascii=False))
 
     @toolset.register_tool(
         name="http_request",
@@ -344,7 +344,7 @@ def register_machine_control_tools(machine_control: "MachineControl") -> ToolSet
         json_data: Optional[Dict[str, Any]] = None,
         proxy: Optional[str] = None,
         verify: Optional[bool] = None,
-    ) -> ToolResultSuccess | ToolResultFailed:
+    ) -> SuccessfulToolResult | FailedToolResult:
         host_control = machine_control.machines[machine_control.target_machine]
         return await host_control.http_request(
             method,
@@ -377,7 +377,7 @@ def register_machine_control_tools(machine_control: "MachineControl") -> ToolSet
     )
     async def change_directory_tool(
         directory: str,
-    ) -> ToolResultSuccess | ToolResultFailed:
+    ) -> SuccessfulToolResult | FailedToolResult:
         host_control = machine_control.machines[machine_control.target_machine]
         return await host_control.change_directory(directory)
 
@@ -435,16 +435,16 @@ def register_machine_control_tools(machine_control: "MachineControl") -> ToolSet
         wait_second: Optional[float] = None,
         pty: bool = False,
         env: Optional[Dict[str, str]] = None,
-    ) -> ToolResultSuccess | ToolResultFailed:
+    ) -> SuccessfulToolResult | FailedToolResult:
         host_control = machine_control.machines[machine_control.target_machine]
         result = await host_control.create_process(argv, wait_second, pty=pty, env=env)
         if not result.success:
-            return ToolResultFailed(content=result.error or "创建进程失败")
+            return FailedToolResult(content=result.error or "创建进程失败")
         if result.returncode is None:
-            return ToolResultSuccess(
+            return SuccessfulToolResult(
                 content=f"<<pid>>{result.pid}<<pid>><<message>>{result.message}<<message>>"
             )
-        return ToolResultSuccess(
+        return SuccessfulToolResult(
             content=f"<<pid>>{result.pid}<<pid>><<returncode>>{result.returncode}<<returncode>><<stdout>>{result.stdout}<<stdout>><<stderr>>{result.stderr}<<stderr>>"
         )
 
@@ -475,15 +475,15 @@ def register_machine_control_tools(machine_control: "MachineControl") -> ToolSet
     )
     async def process_stdio_write_tool(
         pid: str, content: str, with_enter: bool
-    ) -> ToolResultSuccess | ToolResultFailed:
+    ) -> SuccessfulToolResult | FailedToolResult:
         host_control = machine_control.machines[machine_control.target_machine]
         proc = host_control.get_process(pid)
         if proc is None:
-            return ToolResultFailed(content=f"进程不存在: {pid}")
+            return FailedToolResult(content=f"进程不存在: {pid}")
         write_result = await proc.stdio_write(content, with_enter)
         if not write_result.success:
-            return ToolResultFailed(content=write_result.error or "写入失败")
-        return ToolResultSuccess(content=write_result.message)
+            return FailedToolResult(content=write_result.error or "写入失败")
+        return SuccessfulToolResult(content=write_result.message)
 
     @toolset.register_tool(
         name="process_stdio_read",
@@ -512,21 +512,21 @@ def register_machine_control_tools(machine_control: "MachineControl") -> ToolSet
     )
     async def process_stdio_read_tool(
         pid: str, timeout: float = 60.0
-    ) -> ToolResultSuccess | ToolResultFailed:
+    ) -> SuccessfulToolResult | FailedToolResult:
         host_control = machine_control.machines[machine_control.target_machine]
         proc = host_control.get_process(pid)
         if proc is None:
-            return ToolResultFailed(content=f"进程不存在: {pid}")
+            return FailedToolResult(content=f"进程不存在: {pid}")
         read_result = await proc.stdio_read(timeout)
         if not read_result.success:
-            return ToolResultFailed(content=read_result.error or "读取失败")
+            return FailedToolResult(content=read_result.error or "读取失败")
         stdout_text = Text.from_ansi(
             read_result.stdout.decode("utf-8", errors="replace")
         ).plain
         stderr_text = Text.from_ansi(
             read_result.stderr.decode("utf-8", errors="replace")
         ).plain
-        return ToolResultSuccess(
+        return SuccessfulToolResult(
             content=json.dumps(
                 {
                     "pid": pid,
@@ -560,15 +560,15 @@ def register_machine_control_tools(machine_control: "MachineControl") -> ToolSet
     )
     async def process_wait_tool(
         pid: str, timeout: float
-    ) -> ToolResultSuccess | ToolResultFailed:
+    ) -> SuccessfulToolResult | FailedToolResult:
         host_control = machine_control.machines[machine_control.target_machine]
         proc = host_control.get_process(pid)
         if proc is None:
-            return ToolResultFailed(content=f"进程不存在: {pid}")
+            return FailedToolResult(content=f"进程不存在: {pid}")
         wait_result = await proc.wait(timeout)
         if not wait_result.success:
-            return ToolResultFailed(content=wait_result.error or "等待失败")
-        return ToolResultSuccess(
+            return FailedToolResult(content=wait_result.error or "等待失败")
+        return SuccessfulToolResult(
             content=f"<<pid>>{pid}<<pid>><<returncode>>{wait_result.returncode}<<returncode>><<stdout>>{wait_result.stdout}<<stdout>><<stderr>>{wait_result.stderr}<<stderr>>"
         )
 
@@ -599,15 +599,15 @@ def register_machine_control_tools(machine_control: "MachineControl") -> ToolSet
     )
     async def process_kill_tool(
         pid: str, graceful: bool = True
-    ) -> ToolResultSuccess | ToolResultFailed:
+    ) -> SuccessfulToolResult | FailedToolResult:
         host_control = machine_control.machines[machine_control.target_machine]
         proc = host_control.get_process(pid)
         if proc is None:
-            return ToolResultFailed(content=f"进程不存在: {pid}")
+            return FailedToolResult(content=f"进程不存在: {pid}")
         kill_result = await proc.kill(graceful)
         if not kill_result.success:
-            return ToolResultFailed(content=kill_result.error or "终止进程失败")
-        return ToolResultSuccess(content=kill_result.message or f"进程 {pid} 已终止")
+            return FailedToolResult(content=kill_result.error or "终止进程失败")
+        return SuccessfulToolResult(content=kill_result.message or f"进程 {pid} 已终止")
 
     @toolset.register_tool(
         name="terminal_create",
@@ -640,7 +640,7 @@ def register_machine_control_tools(machine_control: "MachineControl") -> ToolSet
     )
     async def create_terminal_tool(
         columns: int = 80, lines: int = 24
-    ) -> ToolResultSuccess | ToolResultFailed:
+    ) -> SuccessfulToolResult | FailedToolResult:
         host_control = machine_control.machines[machine_control.target_machine]
         return await host_control.terminal_create(columns, lines)
 
@@ -671,7 +671,7 @@ def register_machine_control_tools(machine_control: "MachineControl") -> ToolSet
     )
     async def send_keys_to_terminal_tool(
         terminal_id: str, keys: list[str]
-    ) -> ToolResultSuccess | ToolResultFailed:
+    ) -> SuccessfulToolResult | FailedToolResult:
         host_control = machine_control.machines[machine_control.target_machine]
         return await host_control.terminal_send_keys(terminal_id, keys)
 
@@ -709,7 +709,7 @@ def register_machine_control_tools(machine_control: "MachineControl") -> ToolSet
     )
     async def send_string_to_terminal_tool(
         terminal_id: str, string: str, with_enter: bool, wait_seconds: float = 0.3
-    ) -> ToolResultSuccess | ToolResultFailed:
+    ) -> SuccessfulToolResult | FailedToolResult:
         host_control = machine_control.machines[machine_control.target_machine]
         return await host_control.terminal_send_string(
             terminal_id, string, with_enter, wait_seconds
@@ -733,7 +733,7 @@ def register_machine_control_tools(machine_control: "MachineControl") -> ToolSet
     )
     async def read_terminal_screen_tool(
         terminal_id: str,
-    ) -> ToolResultSuccess | ToolResultFailed:
+    ) -> SuccessfulToolResult | FailedToolResult:
         host_control = machine_control.machines[machine_control.target_machine]
         return await host_control.terminal_read_screen(terminal_id)
 
@@ -750,7 +750,7 @@ def register_machine_control_tools(machine_control: "MachineControl") -> ToolSet
     )
     async def close_terminal_tool(
         terminal_id: str,
-    ) -> ToolResultSuccess | ToolResultFailed:
+    ) -> SuccessfulToolResult | FailedToolResult:
         host_control = machine_control.machines[machine_control.target_machine]
         return await host_control.terminal_close(terminal_id)
 
@@ -776,7 +776,7 @@ def register_machine_control_tools(machine_control: "MachineControl") -> ToolSet
     )
     async def read_file_tool(
         filepath: str, show_line_numbers: bool = False
-    ) -> Union[ToolResultSuccess, ToolResultFailed, FileContentMessage]:
+    ) -> Union[SuccessfulToolResult, FailedToolResult, FileContentMessage]:
         host_control = machine_control.machines[machine_control.target_machine]
         return await host_control.read_file(filepath, show_line_numbers)
 
@@ -810,7 +810,7 @@ def register_machine_control_tools(machine_control: "MachineControl") -> ToolSet
     )
     async def write_file_tool(
         filepath: str, content: str, override: bool = False
-    ) -> ToolResultSuccess | ToolResultFailed:
+    ) -> SuccessfulToolResult | FailedToolResult:
         host_control = machine_control.machines[machine_control.target_machine]
         return await host_control.write_file(filepath, content, override)
 
@@ -848,7 +848,7 @@ def register_machine_control_tools(machine_control: "MachineControl") -> ToolSet
     )
     async def replace_file_content_tool(
         filepath: str, old: str, new: str, replace_times: Optional[int] = None
-    ) -> ToolResultSuccess | ToolResultFailed:
+    ) -> SuccessfulToolResult | FailedToolResult:
         host_control = machine_control.machines[machine_control.target_machine]
         return await host_control.replace_file_content(
             filepath, old, new, replace_times
@@ -887,7 +887,7 @@ def register_machine_control_tools(machine_control: "MachineControl") -> ToolSet
     )
     async def list_files_tool(
         dirpath: str, glob: bool = False
-    ) -> ToolResultSuccess | ToolResultFailed:
+    ) -> SuccessfulToolResult | FailedToolResult:
         host_control = machine_control.machines[machine_control.target_machine]
         return await host_control.list_files(dirpath, glob)
 
@@ -907,7 +907,7 @@ def register_machine_control_tools(machine_control: "MachineControl") -> ToolSet
     )
     async def get_absolute_path_tool(
         path: str,
-    ) -> ToolResultSuccess | ToolResultFailed:
+    ) -> SuccessfulToolResult | FailedToolResult:
         host_control = machine_control.machines[machine_control.target_machine]
         return await host_control.get_absolute_path(path)
 
@@ -938,7 +938,7 @@ def register_machine_control_tools(machine_control: "MachineControl") -> ToolSet
     )
     async def read_file_with_sed_tool(
         expression: str, filepath: str
-    ) -> ToolResultSuccess | ToolResultFailed:
+    ) -> SuccessfulToolResult | FailedToolResult:
         host_control = machine_control.machines[machine_control.target_machine]
         return await host_control.read_file_with_sed(expression, filepath)
 
@@ -979,7 +979,7 @@ def register_machine_control_tools(machine_control: "MachineControl") -> ToolSet
         from_machine: str,
         to_filepath: str,
         to_machine: str,
-    ) -> ToolResultSuccess | ToolResultFailed:
+    ) -> SuccessfulToolResult | FailedToolResult:
         return await machine_control.transfer_file(
             from_filepath, from_machine, to_filepath, to_machine
         )

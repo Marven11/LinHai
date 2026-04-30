@@ -6,7 +6,7 @@ from linhai.agent.lifecycle import Lifecycle
 from linhai.agent.messages import RuntimeMessage
 from linhai.plugin.message_checkers import Plugin
 from linhai.registry import Registry
-from linhai.tool.base import ToolResultSuccess, ToolResultFailed
+from linhai.tool.base import SuccessfulToolResult, FailedToolResult
 
 
 class ReminderPlugin(Plugin):
@@ -55,14 +55,14 @@ class ReminderWriteGuardPlugin(Plugin):
         tool_name: str,
         toolcall_arguments: dict,
         _with_secret: list[str] | None,
-    ) -> Union[ToolResultSuccess, ToolResultFailed, dict, None]:
+    ) -> Union[SuccessfulToolResult, FailedToolResult, dict, None]:
         if tool_name == "write_file":
             return self._check_write_file(toolcall_arguments)
         if tool_name == "replace_file_content":
             return self._check_replace_file_content(toolcall_arguments)
         return None
 
-    def _check_write_file(self, arguments: dict) -> ToolResultFailed | None:
+    def _check_write_file(self, arguments: dict) -> FailedToolResult | None:
         filepath = arguments.get("filepath")
         if not filepath or not self._is_reminder_file(filepath):
             return None
@@ -70,7 +70,7 @@ class ReminderWriteGuardPlugin(Plugin):
         content = arguments.get("content", "")
         stripped = content.strip()
         if "\n" in stripped or len(stripped) > self.MAX_LENGTH:
-            return ToolResultFailed(
+            return FailedToolResult(
                 content=(
                     f"REMINDER.md写入被拦截：内容过长（{len(stripped)}字符）或包含换行符。"
                     f"REMINDER.md应保持简短（不超过{self.MAX_LENGTH}字符，单行）。"
@@ -98,14 +98,14 @@ class ReminderWriteGuardPlugin(Plugin):
             return current.replace(old, new, replace_times)
         return None
 
-    def _check_replace_file_content(self, arguments: dict) -> ToolResultFailed | None:
+    def _check_replace_file_content(self, arguments: dict) -> FailedToolResult | None:
         filepath = arguments.get("filepath")
         if not filepath or not self._is_reminder_file(filepath):
             return None
 
         new_content = arguments.get("new", "")
         if "\n" in new_content:
-            return ToolResultFailed(
+            return FailedToolResult(
                 content=(
                     "REMINDER.md写入被拦截：替换内容包含换行符。"
                     f"REMINDER.md应保持简短（不超过{self.MAX_LENGTH}字符，单行）。"
@@ -114,7 +114,7 @@ class ReminderWriteGuardPlugin(Plugin):
 
         replaced = self._simulate_replace(arguments)
         if replaced is not None and len(replaced) > self.MAX_LENGTH:
-            return ToolResultFailed(
+            return FailedToolResult(
                 content=(
                     f"REMINDER.md写入被拦截：替换后文件过长（{len(replaced)}字符）。"
                     f"REMINDER.md应保持简短（不超过{self.MAX_LENGTH}字符，单行）。"

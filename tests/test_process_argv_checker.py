@@ -4,7 +4,7 @@
 import unittest
 from unittest.mock import Mock, AsyncMock
 from linhai.plugin.security_config import ProcessArgvCheckerPlugin
-from linhai.tool.base import ToolResultFailed
+from linhai.tool.base import FailedToolResult
 
 
 class TestProcessArgvCheckerPlugin(unittest.IsolatedAsyncioTestCase):
@@ -160,7 +160,7 @@ class TestProcessArgvCheckerPlugin(unittest.IsolatedAsyncioTestCase):
             toolcall_arguments={"argv": "ls -lah"},
             with_secret=None,
         )
-        self.assertIsInstance(result, ToolResultFailed)
+        self.assertIsInstance(result, FailedToolResult)
         self.assertIn("必须是列表类型", result.content)
 
         # argv是数字
@@ -169,7 +169,7 @@ class TestProcessArgvCheckerPlugin(unittest.IsolatedAsyncioTestCase):
             toolcall_arguments={"argv": 123},
             with_secret=None,
         )
-        self.assertIsInstance(result, ToolResultFailed)
+        self.assertIsInstance(result, FailedToolResult)
         self.assertIn("必须是列表类型", result.content)
 
         # argv是字典
@@ -178,7 +178,7 @@ class TestProcessArgvCheckerPlugin(unittest.IsolatedAsyncioTestCase):
             toolcall_arguments={"argv": {"command": "ls"}},
             with_secret=None,
         )
-        self.assertIsInstance(result, ToolResultFailed)
+        self.assertIsInstance(result, FailedToolResult)
         self.assertIn("必须是列表类型", result.content)
 
     async def test_plugin_rejects_non_string_elements(self):
@@ -189,7 +189,7 @@ class TestProcessArgvCheckerPlugin(unittest.IsolatedAsyncioTestCase):
             toolcall_arguments={"argv": ["ls", 123, "-lah"]},
             with_secret=None,
         )
-        self.assertIsInstance(result, ToolResultFailed)
+        self.assertIsInstance(result, FailedToolResult)
         self.assertIn("必须是字符串类型", result.content)
         self.assertIn("第1个元素", result.content)  # 索引从0开始，123是第1个元素
 
@@ -199,7 +199,7 @@ class TestProcessArgvCheckerPlugin(unittest.IsolatedAsyncioTestCase):
             toolcall_arguments={"argv": ["ls", ["-l", "-a"], "-h"]},
             with_secret=None,
         )
-        self.assertIsInstance(result, ToolResultFailed)
+        self.assertIsInstance(result, FailedToolResult)
         self.assertIn("必须是字符串类型", result.content)
 
         # argv包含字典
@@ -208,7 +208,7 @@ class TestProcessArgvCheckerPlugin(unittest.IsolatedAsyncioTestCase):
             toolcall_arguments={"argv": ["ls", {"option": "-l"}, "-a"]},
             with_secret=None,
         )
-        self.assertIsInstance(result, ToolResultFailed)
+        self.assertIsInstance(result, FailedToolResult)
         self.assertIn("必须是字符串类型", result.content)
 
 

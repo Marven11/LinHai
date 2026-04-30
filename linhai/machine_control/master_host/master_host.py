@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Optional
 
 from linhai.machine_control.http_message import HttpMessage
-from linhai.tool.base import ToolResultSuccess, ToolResultFailed
+from linhai.tool.base import SuccessfulToolResult, FailedToolResult
 from linhai.agent.messages import FileContentMessage
 from linhai.registry import Registry
 from linhai.sandbox import ProcessSandboxProtocol
@@ -76,7 +76,7 @@ class MasterHostControl:
         json_data: Optional[dict] = None,
         proxy: Optional[str] = None,
         verify: Optional[bool] = None,
-    ) -> HttpMessage | ToolResultFailed:
+    ) -> HttpMessage | FailedToolResult:
         """发送HTTP请求并返回响应内容或文件路径"""
         return await http_request(
             method,
@@ -215,81 +215,81 @@ class MasterHostControl:
 
     async def change_directory(
         self, directory: str
-    ) -> ToolResultSuccess | ToolResultFailed:
+    ) -> SuccessfulToolResult | FailedToolResult:
         target = self._resolve_path(directory)
         if not target.exists():
-            return ToolResultFailed(content=f"目录不存在: {directory}")
+            return FailedToolResult(content=f"目录不存在: {directory}")
         if not target.is_dir():
-            return ToolResultFailed(content=f"路径不是目录: {directory}")
+            return FailedToolResult(content=f"路径不是目录: {directory}")
         old_cwd = self._cwd
         self._cwd = str(target)
         sandbox = self._registry.get_member_typechecked(
             "process_sandbox", ProcessSandboxProtocol
         )
         sandbox.update_pwd(self._cwd)
-        return ToolResultSuccess(content=f"从目录{old_cwd}切换到了{self._cwd}")
+        return SuccessfulToolResult(content=f"从目录{old_cwd}切换到了{self._cwd}")
 
     async def terminal_create(
         self, columns: int = 80, lines: int = 24
-    ) -> ToolResultSuccess | ToolResultFailed:
+    ) -> SuccessfulToolResult | FailedToolResult:
         sandbox = self._registry.get_member_typechecked(
             "process_sandbox", ProcessSandboxProtocol
         )
         shell_argv = sandbox.wrap_argv(["/usr/bin/env", "bash"])
         result = await terminal_create(columns, lines, shell_argv, cwd=self._cwd)
         if result.startswith("创建终端失败"):
-            return ToolResultFailed(content=result)
-        return ToolResultSuccess(content=result)
+            return FailedToolResult(content=result)
+        return SuccessfulToolResult(content=result)
 
     async def terminal_send_keys(
         self, terminal_id: str, keys: list[str]
-    ) -> ToolResultSuccess | ToolResultFailed:
+    ) -> SuccessfulToolResult | FailedToolResult:
         result = await terminal_send_keys(terminal_id, keys)
         if result.startswith("错误") or result.startswith("未知按键"):
-            return ToolResultFailed(content=result)
-        return ToolResultSuccess(content=result)
+            return FailedToolResult(content=result)
+        return SuccessfulToolResult(content=result)
 
     async def terminal_send_string(
         self, terminal_id: str, string: str, with_enter: bool, wait_seconds: float = 0.3
-    ) -> ToolResultSuccess | ToolResultFailed:
+    ) -> SuccessfulToolResult | FailedToolResult:
         result = await terminal_send_string(
             terminal_id, string, with_enter, wait_seconds
         )
         if result.startswith("错误"):
-            return ToolResultFailed(content=result)
-        return ToolResultSuccess(content=result)
+            return FailedToolResult(content=result)
+        return SuccessfulToolResult(content=result)
 
     async def terminal_read_screen(
         self, terminal_id: str
-    ) -> ToolResultSuccess | ToolResultFailed:
+    ) -> SuccessfulToolResult | FailedToolResult:
         result = await terminal_read_screen(terminal_id)
         if result.startswith("错误"):
-            return ToolResultFailed(content=result)
-        return ToolResultSuccess(content=result)
+            return FailedToolResult(content=result)
+        return SuccessfulToolResult(content=result)
 
     async def terminal_close(
         self, terminal_id: str
-    ) -> ToolResultSuccess | ToolResultFailed:
+    ) -> SuccessfulToolResult | FailedToolResult:
         result = await terminal_close(terminal_id)
         if result.startswith("错误"):
-            return ToolResultFailed(content=result)
-        return ToolResultSuccess(content=result)
+            return FailedToolResult(content=result)
+        return SuccessfulToolResult(content=result)
 
     async def read_file(
         self, filepath: str, show_line_numbers: bool = False
-    ) -> FileContentMessage | ToolResultFailed:
+    ) -> FileContentMessage | FailedToolResult:
         resolved = self._resolve_path(filepath)
         return await asyncio.to_thread(read_file, str(resolved), show_line_numbers)
 
     async def write_file(
         self, filepath: str, content: str, override: bool = False
-    ) -> ToolResultSuccess | ToolResultFailed:
+    ) -> SuccessfulToolResult | FailedToolResult:
         resolved = self._resolve_path(filepath)
         return await asyncio.to_thread(write_file, str(resolved), content, override)
 
     async def replace_file_content(
         self, filepath: str, old: str, new: str, replace_times: Optional[int] = None
-    ) -> ToolResultSuccess | ToolResultFailed:
+    ) -> SuccessfulToolResult | FailedToolResult:
         resolved = self._resolve_path(filepath)
         return await asyncio.to_thread(
             replace_file_content, str(resolved), old, new, replace_times
@@ -297,7 +297,7 @@ class MasterHostControl:
 
     async def list_files(
         self, dirpath: str, glob: bool = False
-    ) -> ToolResultSuccess | ToolResultFailed:
+    ) -> SuccessfulToolResult | FailedToolResult:
         if glob:
             return await asyncio.to_thread(list_files_glob, self._cwd, dirpath)
         resolved = self._resolve_path(dirpath)
@@ -305,13 +305,13 @@ class MasterHostControl:
 
     async def get_absolute_path(
         self, path: str
-    ) -> ToolResultSuccess | ToolResultFailed:
+    ) -> SuccessfulToolResult | FailedToolResult:
         resolved = self._resolve_path(path)
-        return ToolResultSuccess(content=f"绝对路径: {resolved.as_posix()}")
+        return SuccessfulToolResult(content=f"绝对路径: {resolved.as_posix()}")
 
     async def read_file_with_sed(
         self, expression: str, filepath: str
-    ) -> ToolResultSuccess | ToolResultFailed:
+    ) -> SuccessfulToolResult | FailedToolResult:
         resolved = self._resolve_path(filepath)
         sandbox = self._registry.get_member_typechecked(
             "process_sandbox", ProcessSandboxProtocol
@@ -320,12 +320,14 @@ class MasterHostControl:
             read_file_with_sed, expression, str(resolved), sandbox.wrap_argv
         )
 
-    async def get_terminals(self) -> ToolResultSuccess | ToolResultFailed:
+    async def get_terminals(self) -> SuccessfulToolResult | FailedToolResult:
         """获取所有终端列表"""
         from .terminal import terminals
 
         if not terminals:
-            return ToolResultSuccess(content="<<terminals>>没有活动的终端<<terminals>>")
+            return SuccessfulToolResult(
+                content="<<terminals>>没有活动的终端<<terminals>>"
+            )
         lines = []
         for term_id, terminal in terminals.items():
             try:
@@ -337,39 +339,39 @@ class MasterHostControl:
                 lines.append(
                     f"<<terminal_id>>{term_id}<<terminal_id>><<machine>>master_host<<machine>><<screen>>无法获取屏幕内容<<screen>>"
                 )
-        return ToolResultSuccess(content="\n".join(lines))
+        return SuccessfulToolResult(content="\n".join(lines))
 
     async def upload_file_concurrent(
         self, data: bytes, remote_path: str
-    ) -> ToolResultSuccess | ToolResultFailed:
+    ) -> SuccessfulToolResult | FailedToolResult:
         import pathlib
 
         resolved = self._resolve_path(remote_path)
         if resolved.exists():
-            return ToolResultFailed(content=f"文件已存在: {resolved}")
+            return FailedToolResult(content=f"文件已存在: {resolved}")
         try:
             pathlib.Path(resolved).write_bytes(data)
-            return ToolResultSuccess(content=f"文件已上传: {resolved}")
+            return SuccessfulToolResult(content=f"文件已上传: {resolved}")
         except Exception as e:
-            return ToolResultFailed(content=f"上传文件失败: {e}")
+            return FailedToolResult(content=f"上传文件失败: {e}")
 
-    async def ping(self) -> ToolResultSuccess | ToolResultFailed:
-        return ToolResultSuccess(content="pong")
+    async def ping(self) -> SuccessfulToolResult | FailedToolResult:
+        return SuccessfulToolResult(content="pong")
 
     async def disconnect(self) -> None:
         raise RuntimeError("不能断开master_host")
 
     async def download_file_concurrent(
         self, remote_path: str, local_path: str
-    ) -> ToolResultSuccess | ToolResultFailed:
+    ) -> SuccessfulToolResult | FailedToolResult:
         import pathlib
 
         resolved_remote = self._resolve_path(remote_path)
         if not resolved_remote.exists():
-            return ToolResultFailed(content=f"文件不存在: {resolved_remote}")
+            return FailedToolResult(content=f"文件不存在: {resolved_remote}")
         try:
             data = pathlib.Path(resolved_remote).read_bytes()
             pathlib.Path(local_path).write_bytes(data)
-            return ToolResultSuccess(content=f"文件已下载: {local_path}")
+            return SuccessfulToolResult(content=f"文件已下载: {local_path}")
         except Exception as e:
-            return ToolResultFailed(content=f"下载文件失败: {e}")
+            return FailedToolResult(content=f"下载文件失败: {e}")

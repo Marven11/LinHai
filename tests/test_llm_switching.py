@@ -7,7 +7,11 @@ from unittest.mock import MagicMock, AsyncMock
 from linhai.agent import Agent
 from pathlib import Path
 from linhai.base import SystemMessage, ToolCallMessage
-from linhai.tool.base import ToolCallResultMessage, ToolResultSuccess, ToolResultFailed
+from linhai.tool.base import (
+    ToolCallResultMessage,
+    SuccessfulToolResult,
+    FailedToolResult,
+)
 from linhai.registry import Registry
 from linhai.tool.main import ToolManager
 from linhai.tool.base import utils_tools
@@ -89,7 +93,7 @@ class TestLLMSwitching(unittest.IsolatedAsyncioTestCase):
 
         result = await self.tool_manager.process_tool_call(tool_call, tool_index=1)
 
-        if isinstance(result, ToolResultFailed):
+        if isinstance(result, FailedToolResult):
             self.fail(f"current_llm tool failed: {result.content}")  # type: ignore
 
         self.assertIsInstance(result, ToolCallResultMessage)
@@ -106,7 +110,7 @@ class TestLLMSwitching(unittest.IsolatedAsyncioTestCase):
 
         result = await self.tool_manager.process_tool_call(tool_call, tool_index=1)
 
-        if isinstance(result, ToolResultFailed):
+        if isinstance(result, FailedToolResult):
             self.fail(f"switch_llm tool failed: {result.content}")
 
         self.assertIsInstance(result, ToolCallResultMessage)
@@ -125,7 +129,7 @@ class TestLLMSwitching(unittest.IsolatedAsyncioTestCase):
 
         result = await self.tool_manager.process_tool_call(tool_call, tool_index=1)
 
-        if isinstance(result, ToolResultFailed):
+        if isinstance(result, FailedToolResult):
             self.fail(f"switch_llm tool failed: {result.content}")
 
         self.assertIsInstance(result, ToolCallResultMessage)
@@ -162,7 +166,7 @@ class TestLLMSwitching(unittest.IsolatedAsyncioTestCase):
 
         result = await self.tool_manager.process_tool_call(tool_call, tool_index=1)
 
-        if isinstance(result, ToolResultFailed):
+        if isinstance(result, FailedToolResult):
             self.fail(f"list_llm tool failed: {result.content}")
 
         self.assertIsInstance(result, ToolCallResultMessage)

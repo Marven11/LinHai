@@ -111,12 +111,12 @@ class TestAgentToolcall(unittest.IsolatedAsyncioTestCase):
             with_secret=None,
         )
 
-        from linhai.tool.base import ToolCallResultMessage, ToolResultFailed
+        from linhai.tool.base import ToolCallResultMessage, FailedToolResult
 
         mock_error = ToolCallResultMessage(
             tool_name="test_tool",
             tool_index=0,
-            result=ToolResultFailed(content="test error"),
+            result=FailedToolResult(content="test error"),
             toolcall_arguments={},
         )
         self.mock_tool_manager.process_tool_call = AsyncMock(return_value=mock_error)
@@ -146,12 +146,12 @@ class TestAgentToolcall(unittest.IsolatedAsyncioTestCase):
             with_secret=None,
         )
 
-        from linhai.tool.base import ToolCallResultMessage, ToolResultFailed
+        from linhai.tool.base import ToolCallResultMessage, FailedToolResult
 
         mock_error = ToolCallResultMessage(
             tool_name="test_tool",
             tool_index=0,
-            result=ToolResultFailed(content="test error"),
+            result=FailedToolResult(content="test error"),
             toolcall_arguments={},
         )
         self.mock_tool_manager.process_tool_call = AsyncMock(return_value=mock_error)
@@ -195,8 +195,8 @@ class TestAgentToolcall(unittest.IsolatedAsyncioTestCase):
 
         from linhai.tool.base import (
             ToolCallResultMessage,
-            ToolResultSuccess,
-            ToolResultFailed,
+            SuccessfulToolResult,
+            FailedToolResult,
         )
 
         tool_call1 = ToolCallMessage(
@@ -208,7 +208,7 @@ class TestAgentToolcall(unittest.IsolatedAsyncioTestCase):
         mock_result1 = ToolCallResultMessage(
             tool_name="test_tool",
             tool_index=0,
-            result=ToolResultSuccess(content="result1"),
+            result=SuccessfulToolResult(content="result1"),
             toolcall_arguments={},
         )
 
@@ -221,7 +221,7 @@ class TestAgentToolcall(unittest.IsolatedAsyncioTestCase):
         mock_error2 = ToolCallResultMessage(
             tool_name="test_tool",
             tool_index=1,
-            result=ToolResultFailed(content="error2"),
+            result=FailedToolResult(content="error2"),
             toolcall_arguments={},
         )
 
@@ -234,7 +234,7 @@ class TestAgentToolcall(unittest.IsolatedAsyncioTestCase):
         mock_error3 = ToolCallResultMessage(
             tool_name="test_tool",
             tool_index=2,
-            result=ToolResultFailed(content="error3"),
+            result=FailedToolResult(content="error3"),
             toolcall_arguments={},
         )
 
@@ -326,7 +326,7 @@ class TestAgentToolcall(unittest.IsolatedAsyncioTestCase):
 
     async def test_tool_index_increment_and_passing(self):
         """测试tool_index正确递增和传递。"""
-        from linhai.tool.base import ToolCallResultMessage, ToolResultSuccess
+        from linhai.tool.base import ToolCallResultMessage, SuccessfulToolResult
         from unittest.mock import call
 
         tool_call1 = ToolCallMessage(
@@ -345,13 +345,13 @@ class TestAgentToolcall(unittest.IsolatedAsyncioTestCase):
         mock_result1 = ToolCallResultMessage(
             tool_name="test_tool",
             tool_index=1,
-            result=ToolResultSuccess(content="result1"),
+            result=SuccessfulToolResult(content="result1"),
             toolcall_arguments={},
         )
         mock_result2 = ToolCallResultMessage(
             tool_name="test_tool",
             tool_index=2,
-            result=ToolResultSuccess(content="result2"),
+            result=SuccessfulToolResult(content="result2"),
             toolcall_arguments={},
         )
 

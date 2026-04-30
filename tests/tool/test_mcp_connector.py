@@ -6,7 +6,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 from linhai.tool.mcp_connector import MCPConnector, MCPServerConnection
 from linhai.registry import Registry
-from linhai.tool.base import ToolResultSuccess, ToolResultFailed
+from linhai.tool.base import SuccessfulToolResult, FailedToolResult
 from linhai.sandbox import NoSandbox, ProcessSandboxProtocol
 
 
@@ -156,7 +156,7 @@ class TestMCPConnector(unittest.IsolatedAsyncioTestCase):
         mock_conn._session.call_tool.assert_called_once_with(
             "test_tool", arguments={"arg": "value"}
         )
-        self.assertIsInstance(result, ToolResultSuccess)
+        self.assertIsInstance(result, SuccessfulToolResult)
         self.assertEqual(result.content, "data.meta={}\nsuccess")
 
     async def test_call_tool_raw_failure(self):
@@ -168,7 +168,7 @@ class TestMCPConnector(unittest.IsolatedAsyncioTestCase):
             "test_server", "test_tool", {"arg": "value"}
         )
 
-        self.assertIsInstance(result, ToolResultFailed)
+        self.assertIsInstance(result, FailedToolResult)
 
     async def test_get_toolsets_empty(self):
         toolsets = self.connector.get_toolsets()
@@ -204,7 +204,7 @@ class TestMCPConnectorTools(unittest.IsolatedAsyncioTestCase):
             {"name": "test_server", "command": "test.py"},
         )
 
-        self.assertIsInstance(result, ToolResultSuccess)
+        self.assertIsInstance(result, SuccessfulToolResult)
         self.assertIn("连接'test.py'成功", result.content)
         self.assertIn("tool1, tool2", result.content)
 
@@ -217,7 +217,7 @@ class TestMCPConnectorTools(unittest.IsolatedAsyncioTestCase):
             {"name": "test_server", "command": "test.py"},
         )
 
-        self.assertIsInstance(result, ToolResultFailed)
+        self.assertIsInstance(result, FailedToolResult)
         self.assertIn("连接'test.py'失败", result.content)
         self.assertIn("Connection failed", result.content)
 
@@ -229,7 +229,7 @@ class TestMCPConnectorTools(unittest.IsolatedAsyncioTestCase):
             "disconnect_mcp_server", {"name": "test_server"}
         )
 
-        self.assertIsInstance(result, ToolResultSuccess)
+        self.assertIsInstance(result, SuccessfulToolResult)
         self.assertIn("成功断开MCP服务器: 'test_server'", result.content)
         self.assertNotIn("test_server", self.connector.sessions)
 
@@ -238,7 +238,7 @@ class TestMCPConnectorTools(unittest.IsolatedAsyncioTestCase):
             "disconnect_mcp_server", {"name": "nonexistent"}
         )
 
-        self.assertIsInstance(result, ToolResultFailed)
+        self.assertIsInstance(result, FailedToolResult)
         self.assertIn("断开失败", result.content)
         self.assertIn("'nonexistent' not exists", result.content)
 
@@ -250,7 +250,7 @@ class TestMCPConnectorTools(unittest.IsolatedAsyncioTestCase):
             "list_mcp_servers", {}
         )
 
-        self.assertIsInstance(result, ToolResultSuccess)
+        self.assertIsInstance(result, SuccessfulToolResult)
         self.assertIn("已连接的MCP服务器 (2个)", result.content)
         self.assertIn("- server1", result.content)
         self.assertIn("- server2", result.content)
@@ -262,7 +262,7 @@ class TestMCPConnectorTools(unittest.IsolatedAsyncioTestCase):
             "list_mcp_servers", {}
         )
 
-        self.assertIsInstance(result, ToolResultSuccess)
+        self.assertIsInstance(result, SuccessfulToolResult)
         self.assertIn("当前没有已连接的MCP服务器", result.content)
 
 
@@ -286,7 +286,7 @@ class TestMCPSandbox(unittest.IsolatedAsyncioTestCase):
             {"name": "test_server", "command": "test.py"},
         )
 
-        self.assertIsInstance(result, ToolResultSuccess)
+        self.assertIsInstance(result, SuccessfulToolResult)
         mock_sandbox.wrap_argv.assert_called_once_with(["test.py"])
         mock_connect.assert_called_once_with("test_server", "sandbox-exec test.py")
 
@@ -301,7 +301,7 @@ class TestMCPSandbox(unittest.IsolatedAsyncioTestCase):
             "connect_mcp_server",
             {"name": "test_server", "command": "test.py"},
         )
-        self.assertIsInstance(result, ToolResultSuccess)
+        self.assertIsInstance(result, SuccessfulToolResult)
 
     async def test_disconnect_not_blocked_by_sandbox(self):
         self.registry.register_member(
@@ -310,7 +310,7 @@ class TestMCPSandbox(unittest.IsolatedAsyncioTestCase):
         result = await self.connector.connector_toolset.call_tool(
             "disconnect_mcp_server", {"name": "nonexistent"}
         )
-        self.assertIsInstance(result, ToolResultFailed)
+        self.assertIsInstance(result, FailedToolResult)
         self.assertNotIn("沙箱", result.content)
 
     async def test_list_not_blocked_by_sandbox(self):
@@ -320,7 +320,7 @@ class TestMCPSandbox(unittest.IsolatedAsyncioTestCase):
         result = await self.connector.connector_toolset.call_tool(
             "list_mcp_servers", {}
         )
-        self.assertIsInstance(result, ToolResultSuccess)
+        self.assertIsInstance(result, SuccessfulToolResult)
 
 
 if __name__ == "__main__":

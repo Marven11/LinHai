@@ -4,7 +4,7 @@ from typing import Dict, Optional, Any
 
 from linhai.registry import Registry
 from linhai.machine_control.http_message import HttpMessage, build_http_message
-from linhai.tool.base import ToolResultSuccess, ToolResultFailed
+from linhai.tool.base import SuccessfulToolResult, FailedToolResult
 from ..trojan.transport import TrojanTransport
 from ..trojan.shell_transport import setup_trojan_in_shell
 from .process import RemoteProcess
@@ -40,18 +40,18 @@ class PosixShellControl:
 
     async def call_tool(
         self, name: str, args: Dict[str, object]
-    ) -> ToolResultSuccess | ToolResultFailed:
+    ) -> SuccessfulToolResult | FailedToolResult:
         if self.transport is None:
-            return ToolResultFailed(content="未建立连接")
+            return FailedToolResult(content="未建立连接")
 
         response = await self.transport.send_request(name, args)
         result = response.get("result")
         if isinstance(result, dict) and "message" in result:
-            return ToolResultSuccess(content=str(result["message"]))
+            return SuccessfulToolResult(content=str(result["message"]))
         else:
-            return ToolResultSuccess(content=str(result))
+            return SuccessfulToolResult(content=str(result))
 
-    async def ping(self) -> ToolResultSuccess | ToolResultFailed:
+    async def ping(self) -> SuccessfulToolResult | FailedToolResult:
         return await self.call_tool("ping", {})
 
     async def disconnect(self) -> None:
@@ -73,7 +73,7 @@ class PosixShellControl:
         json_data: Optional[Dict[str, Any]] = None,
         proxy: Optional[str] = None,
         verify: Optional[bool] = None,
-    ) -> HttpMessage | ToolResultFailed:
+    ) -> HttpMessage | FailedToolResult:
         import base64 as _base64
 
         args: Dict[str, Any] = {
@@ -100,7 +100,7 @@ class PosixShellControl:
             args["verify"] = verify
 
         result = await self.call_tool("http_request", args)
-        if isinstance(result, ToolResultFailed):
+        if isinstance(result, FailedToolResult):
             return result
 
         resp_data = json.loads(result.content)
@@ -128,7 +128,7 @@ class PosixShellControl:
         if env is not None:
             args["env"] = env
         result = await self.call_tool("process_create", args)
-        if isinstance(result, ToolResultFailed):
+        if isinstance(result, FailedToolResult):
             return ProcessCreateResult(pid="", success=False, error=result.content)
 
         data = json.loads(result.content)
@@ -177,19 +177,19 @@ class PosixShellControl:
 
     async def change_directory(
         self, directory: str
-    ) -> ToolResultSuccess | ToolResultFailed:
+    ) -> SuccessfulToolResult | FailedToolResult:
         return await self.call_tool("change_directory", {"directory": directory})
 
     async def terminal_create(
         self, columns: int = 80, lines: int = 24
-    ) -> ToolResultSuccess | ToolResultFailed:
+    ) -> SuccessfulToolResult | FailedToolResult:
         return await self.call_tool(
             "terminal_create", {"columns": columns, "lines": lines}
         )
 
     async def terminal_send_keys(
         self, terminal_id: str, keys: list[str]
-    ) -> ToolResultSuccess | ToolResultFailed:
+    ) -> SuccessfulToolResult | FailedToolResult:
         return await self.call_tool(
             "terminal_send_keys", {"term_id": terminal_id, "keys": keys}
         )
@@ -200,7 +200,7 @@ class PosixShellControl:
         string: str,
         with_enter: bool = True,
         wait_seconds: float = 0.3,
-    ) -> ToolResultSuccess | ToolResultFailed:
+    ) -> SuccessfulToolResult | FailedToolResult:
         return await self.call_tool(
             "terminal_send_string",
             {
@@ -213,40 +213,40 @@ class PosixShellControl:
 
     async def terminal_read_screen(
         self, terminal_id: str
-    ) -> ToolResultSuccess | ToolResultFailed:
+    ) -> SuccessfulToolResult | FailedToolResult:
         result = await self.call_tool("terminal_read_screen", {"term_id": terminal_id})
-        if isinstance(result, ToolResultSuccess):
+        if isinstance(result, SuccessfulToolResult):
             import base64
 
             decoded_bytes = base64.b64decode(result.content)
             decoded_str = decoded_bytes.decode("utf-8", errors="replace")
-            return ToolResultSuccess(content=decoded_str)
+            return SuccessfulToolResult(content=decoded_str)
         return result
 
     async def terminal_close(
         self, terminal_id: str
-    ) -> ToolResultSuccess | ToolResultFailed:
+    ) -> SuccessfulToolResult | FailedToolResult:
         return await self.call_tool("terminal_close", {"term_id": terminal_id})
 
-    async def get_terminals(self) -> ToolResultSuccess | ToolResultFailed:
+    async def get_terminals(self) -> SuccessfulToolResult | FailedToolResult:
         result = await self.call_tool("terminal_list", {})
-        if isinstance(result, ToolResultSuccess):
-            return ToolResultSuccess(content=result.content)
+        if isinstance(result, SuccessfulToolResult):
+            return SuccessfulToolResult(content=result.content)
         else:
-            return ToolResultFailed(
+            return FailedToolResult(
                 content=f"获取终端列表失败: {result.content}",
             )
 
     async def read_file(
         self, filepath: str, show_line_numbers: bool = False
-    ) -> ToolResultSuccess | ToolResultFailed:
+    ) -> SuccessfulToolResult | FailedToolResult:
         return await self.call_tool(
             "read_file", {"filepath": filepath, "show_line_numbers": show_line_numbers}
         )
 
     async def write_file(
         self, filepath: str, content: str, override: bool = False
-    ) -> ToolResultSuccess | ToolResultFailed:
+    ) -> SuccessfulToolResult | FailedToolResult:
         return await self.call_tool(
             "write_file",
             {"filepath": filepath, "content": content, "override": override},
@@ -254,7 +254,7 @@ class PosixShellControl:
 
     async def replace_file_content(
         self, filepath: str, old: str, new: str, replace_times: Optional[int] = None
-    ) -> ToolResultSuccess | ToolResultFailed:
+    ) -> SuccessfulToolResult | FailedToolResult:
         params: Dict[str, Any] = {"filepath": filepath, "old": old, "new": new}
         if replace_times is not None:
             params["replace_times"] = replace_times
@@ -262,26 +262,26 @@ class PosixShellControl:
 
     async def list_files(
         self, dirpath: str, glob: bool = False
-    ) -> ToolResultSuccess | ToolResultFailed:
+    ) -> SuccessfulToolResult | FailedToolResult:
         if glob:
             raise RuntimeError("list_files的glob选项仅支持master_host")
         return await self.call_tool("list_files", {"dirpath": dirpath})
 
     async def get_absolute_path(
         self, path: str
-    ) -> ToolResultSuccess | ToolResultFailed:
+    ) -> SuccessfulToolResult | FailedToolResult:
         return await self.call_tool("get_absolute_path", {"path": path})
 
     async def read_file_with_sed(
         self, expression: str, filepath: str
-    ) -> ToolResultSuccess | ToolResultFailed:
+    ) -> SuccessfulToolResult | FailedToolResult:
         return await self.call_tool(
             "read_file_with_sed", {"expression": expression, "filepath": filepath}
         )
 
     async def upload_file_concurrent(
         self, data: bytes, remote_path: str
-    ) -> ToolResultSuccess | ToolResultFailed:
+    ) -> SuccessfulToolResult | FailedToolResult:
         import base64
         import math
 
@@ -289,8 +289,8 @@ class PosixShellControl:
         num_chunks = math.ceil(len(data) / chunk_size)
 
         temp_dir_result = await self.call_tool("create_temp_dir", {"prefix": "upload_"})
-        if isinstance(temp_dir_result, ToolResultFailed):
-            return ToolResultFailed(
+        if isinstance(temp_dir_result, FailedToolResult):
+            return FailedToolResult(
                 content=f"创建临时目录失败: {temp_dir_result.content}"
             )
         temp_dir = temp_dir_result.content
@@ -310,7 +310,7 @@ class PosixShellControl:
                         "filepath": chunk_path,
                     },
                 )
-                if isinstance(result, ToolResultFailed):
+                if isinstance(result, FailedToolResult):
                     raise RuntimeError(f"上传块失败: {result.content}")
                 return (chunk_index, chunk_path)
 
@@ -344,22 +344,22 @@ class PosixShellControl:
             "concatenate_files",
             {"filepaths": chunk_paths_sorted, "output_path": remote_path},
         )
-        if isinstance(concat_result, ToolResultFailed):
+        if isinstance(concat_result, FailedToolResult):
             await self.call_tool("remove_path", {"path": temp_dir})
             return concat_result
 
         await self.call_tool("remove_path", {"path": temp_dir})
-        return ToolResultSuccess(content=f"文件已上传: {remote_path}")
+        return SuccessfulToolResult(content=f"文件已上传: {remote_path}")
 
     async def download_file_concurrent(
         self, remote_path: str, local_path: str
-    ) -> ToolResultSuccess | ToolResultFailed:
+    ) -> SuccessfulToolResult | FailedToolResult:
         import base64
         import math
 
         size_result = await self.call_tool("get_file_size", {"filepath": remote_path})
-        if isinstance(size_result, ToolResultFailed):
-            return ToolResultFailed(content=f"获取文件大小失败: {size_result.content}")
+        if isinstance(size_result, FailedToolResult):
+            return FailedToolResult(content=f"获取文件大小失败: {size_result.content}")
 
         file_size = int(size_result.content)
 
@@ -381,7 +381,7 @@ class PosixShellControl:
                         "length": length,
                     },
                 )
-                if isinstance(result, ToolResultFailed):
+                if isinstance(result, FailedToolResult):
                     raise RuntimeError(f"下载块失败: {result.content}")
                 chunk_data = base64.b64decode(result.content)
                 if len(chunk_data) != length:
@@ -417,4 +417,4 @@ class PosixShellControl:
             for chunk_data in chunks:
                 f.write(chunk_data)
 
-        return ToolResultSuccess(content=f"文件已下载: {local_path}")
+        return SuccessfulToolResult(content=f"文件已下载: {local_path}")

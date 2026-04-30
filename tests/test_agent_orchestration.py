@@ -758,7 +758,7 @@ class TestAgentContextOrchestration(unittest.IsolatedAsyncioTestCase):
             with_secret=None,
         )
 
-        # 验证：不应返回ToolResultFailed（不阻止工具）
+        # 验证：不应返回FailedToolResult（不阻止工具）
         self.assertIsNone(result)
         # 验证：发送了UI提醒
         self.assertEqual(len(ui_log_calls), 1)
@@ -810,7 +810,7 @@ class TestAgentContextOrchestration(unittest.IsolatedAsyncioTestCase):
             with_secret=None,
         )
 
-        # 验证：不应返回ToolResultFailed（不阻止工具）
+        # 验证：不应返回FailedToolResult（不阻止工具）
         self.assertIsNone(result)
         # 验证：发送了UI提醒
         self.assertEqual(len(ui_log_calls), 1)
@@ -862,7 +862,7 @@ class TestAgentContextOrchestration(unittest.IsolatedAsyncioTestCase):
             with_secret=None,
         )
 
-        # 验证：不应返回ToolResultFailed
+        # 验证：不应返回FailedToolResult
         self.assertIsNone(result)
         # 验证：没有发送UI提醒
         self.assertEqual(len(ui_log_calls), 0)
@@ -912,7 +912,7 @@ class TestAgentContextOrchestration(unittest.IsolatedAsyncioTestCase):
             with_secret=None,
         )
 
-        # 验证：不应返回ToolResultFailed
+        # 验证：不应返回FailedToolResult
         self.assertIsNone(result)
         # 验证：没有发送UI提醒（因为缓存命中率低于5%被视为异常）
         self.assertEqual(len(ui_log_calls), 0)

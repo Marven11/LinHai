@@ -6,7 +6,7 @@ from typing import Any
 
 from linhai.agent.lifecycle import Lifecycle
 from linhai.config import ToolConfig, FileOperationRule
-from linhai.tool.base import ToolResultFailed
+from linhai.tool.base import FailedToolResult
 from linhai.registry import Registry
 
 
@@ -55,7 +55,7 @@ class FileOperationPermissionPlugin:
         tool_name: str,
         toolcall_arguments: dict[str, Any],
         with_secret: list[str] | None,
-    ) -> ToolResultFailed | None:
+    ) -> FailedToolResult | None:
         file_operations = {
             "read_file": "read",
             "write_file": "write",
@@ -69,7 +69,7 @@ class FileOperationPermissionPlugin:
             filepath = toolcall_arguments.get("filepath", "")
             if filepath:
                 if not self.check_permission(operation, filepath):
-                    return ToolResultFailed(
+                    return FailedToolResult(
                         content=f"文件操作被阻止: {operation} {filepath}"
                     )
         return None

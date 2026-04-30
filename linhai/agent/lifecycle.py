@@ -12,7 +12,7 @@ from linhai.base import Answer, Message
 if TYPE_CHECKING:
     from linhai.agent.messages import RuntimeMessage
     from linhai.base import LanguageModel
-from linhai.tool.base import ToolResultSuccess, ToolResultFailed
+from linhai.tool.base import SuccessfulToolResult, FailedToolResult
 from linhai.agent.callback_slot import (
     BroadcastSlot,
     ShortCircuitSlot,
@@ -95,7 +95,7 @@ BeforeAgentLoopCallback: TypeAlias = Callable[["Agent"], Awaitable[None]]
 
 BeforeToolCallCallback: TypeAlias = Callable[
     [str, dict, list[str] | None],
-    Awaitable[Union[ToolResultSuccess, ToolResultFailed, dict, None]],
+    Awaitable[Union[SuccessfulToolResult, FailedToolResult, dict, None]],
 ]
 
 BeforeAddNewMessageCallback: TypeAlias = Callable[
@@ -131,8 +131,8 @@ AfterSelectingLlmCallback: TypeAlias = Callable[
 ]
 
 
-def _is_tool_result(value: ToolResultSuccess | ToolResultFailed | dict) -> bool:
-    return isinstance(value, (ToolResultSuccess, ToolResultFailed))
+def _is_tool_result(value: SuccessfulToolResult | FailedToolResult | dict) -> bool:
+    return isinstance(value, (SuccessfulToolResult, FailedToolResult))
 
 
 class Lifecycle:

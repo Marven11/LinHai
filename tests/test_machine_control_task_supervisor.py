@@ -10,7 +10,7 @@ from linhai.machine_control.process import (
     ProcessWaitResult,
 )
 from linhai.registry import Registry
-from linhai.tool.base import ToolResultSuccess, ToolResultFailed
+from linhai.tool.base import SuccessfulToolResult, FailedToolResult
 
 
 class _FakeProcess:
@@ -152,19 +152,19 @@ class TestSshHostUploadWithTaskSupervisor(unittest.IsolatedAsyncioTestCase):
             nonlocal call_count
             call_count += 1
             if name == "create_temp_dir":
-                return ToolResultSuccess(content="/tmp/upload")
+                return SuccessfulToolResult(content="/tmp/upload")
             if name == "upload_chunk":
-                return ToolResultSuccess(content="ok")
+                return SuccessfulToolResult(content="ok")
             if name == "concatenate_files":
-                return ToolResultSuccess(content="done")
+                return SuccessfulToolResult(content="done")
             if name == "remove_path":
-                return ToolResultSuccess(content="removed")
-            return ToolResultFailed(content="unknown")
+                return SuccessfulToolResult(content="removed")
+            return FailedToolResult(content="unknown")
 
         control.call_tool = mock_call_tool
         data = b"x" * 100
         result = await control.upload_file_concurrent(data, "/remote/path")
-        self.assertIsInstance(result, ToolResultSuccess)
+        self.assertIsInstance(result, SuccessfulToolResult)
         self.assertGreater(call_count, 3)
 
     async def test_download_uses_task_supervisor(self):
@@ -183,16 +183,18 @@ class TestSshHostUploadWithTaskSupervisor(unittest.IsolatedAsyncioTestCase):
 
         async def mock_call_tool(name, args):
             if name == "get_file_size":
-                return ToolResultSuccess(content=str(len(test_data)))
+                return SuccessfulToolResult(content=str(len(test_data)))
             if name == "download_chunk":
-                return ToolResultSuccess(content=base64.b64encode(test_data).decode())
-            return ToolResultFailed(content="unknown")
+                return SuccessfulToolResult(
+                    content=base64.b64encode(test_data).decode()
+                )
+            return FailedToolResult(content="unknown")
 
         control.call_tool = mock_call_tool
         with tempfile.TemporaryDirectory() as tmpdir:
             dest = os.path.join(tmpdir, "out.bin")
             result = await control.download_file_concurrent("/remote/path", dest)
-            self.assertIsInstance(result, ToolResultSuccess)
+            self.assertIsInstance(result, SuccessfulToolResult)
             with open(dest, "rb") as f:
                 self.assertEqual(f.read(), test_data)
 
@@ -210,12 +212,12 @@ class TestSshHostUploadFailure(unittest.IsolatedAsyncioTestCase):
 
         async def mock_call_tool(name, args):
             if name == "create_temp_dir":
-                return ToolResultSuccess(content="/tmp/upload")
+                return SuccessfulToolResult(content="/tmp/upload")
             if name == "upload_chunk":
-                return ToolResultFailed(content="upload failed")
+                return FailedToolResult(content="upload failed")
             if name == "remove_path":
-                return ToolResultSuccess(content="removed")
-            return ToolResultFailed(content="unknown")
+                return SuccessfulToolResult(content="removed")
+            return FailedToolResult(content="unknown")
 
         control.call_tool = mock_call_tool
         with self.assertRaises(RuntimeError):

@@ -65,9 +65,9 @@ class TestSleepTool(unittest.IsolatedAsyncioTestCase):
         self.assertIsNone(agent.state_machine.sleeping_since)
         self.assertIsNone(agent.state_machine.sleeping_deadline)
 
-        from linhai.tool.base import ToolResultSuccess
+        from linhai.tool.base import SuccessfulToolResult
 
-        self.assertIsInstance(result, ToolResultSuccess)
+        self.assertIsInstance(result, SuccessfulToolResult)
         self.assertIn("睡眠完成", result.content)
 
 

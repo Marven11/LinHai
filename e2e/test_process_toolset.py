@@ -9,7 +9,7 @@ from linhai.machine_control.main import MachineControl
 from linhai.machine_control.tools import register_machine_control_tools
 from linhai.registry import Registry
 from linhai.sandbox import NoSandbox
-from linhai.tool.base import ToolResultSuccess, ToolResultFailed
+from linhai.tool.base import SuccessfulToolResult, FailedToolResult
 
 
 def _create_toolset():
@@ -21,12 +21,12 @@ def _create_toolset():
 
 
 def _tool_ok(result) -> str:
-    assert isinstance(result, ToolResultSuccess)
+    assert isinstance(result, SuccessfulToolResult)
     return result.content
 
 
 def _tool_fail(result) -> str:
-    assert isinstance(result, ToolResultFailed)
+    assert isinstance(result, FailedToolResult)
     return result.content
 
 
