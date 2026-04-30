@@ -109,6 +109,15 @@ class ThresholdInfo(TypedDict):
     usage_ratio: float
 
 
+class ToolCallDict(TypedDict):
+    """工具调用TypedDict，用于extract_tool_calls_with_errors的返回值。"""
+
+    name: str
+    arguments: dict
+    assert_success: NotRequired[bool]
+    with_secret: NotRequired[list[str]]
+
+
 class CumulativeTokenUsage(TypedDict):
     """累计token使用量TypedDict，用于TokenManager中的cumulative_token_usage。"""
 
@@ -132,4 +141,5 @@ __all__ = [
     "ChatCompletionContentPartTextParam",
     "ChatCompletionContentPartImageParam",
     "UserMultiModalMessage",
+    "ToolCallDict",
 ]

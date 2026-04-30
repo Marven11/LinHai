@@ -2,7 +2,8 @@
 
 import json
 from reprlib import Repr
-from typing import List, Dict, Any, Tuple
+from typing import Any, List, Tuple
+from linhai.type_hints import ToolCallDict
 import mistune
 
 repr_obj = Repr()
@@ -58,7 +59,7 @@ def extract_json_blocks(markdown_text: str) -> List[Any]:
     return json_blocks
 
 
-def extract_tool_calls(markdown_text: str) -> List[Dict[str, Any]]:
+def extract_tool_calls(markdown_text: str) -> List[ToolCallDict]:
     """
     从Markdown文本中提取JSON格式的工具调用
 
@@ -91,7 +92,7 @@ def _extract_json_error_context(error: json.JSONDecodeError, content: str) -> st
 
 def extract_tool_calls_with_errors(
     markdown_text: str, language: str = "json toolcall"
-) -> Tuple[List[Dict[str, Any]], List[str]]:
+) -> Tuple[List[ToolCallDict], List[str]]:
     """
     从Markdown文本中提取JSON格式的工具调用，并返回错误消息列表
 
@@ -106,8 +107,8 @@ def extract_tool_calls_with_errors(
     markdown = mistune.create_markdown(renderer=renderer)
     markdown(markdown_text)
 
-    tool_calls = []
-    errors = []
+    tool_calls: list[ToolCallDict] = []
+    errors: list[str] = []
 
     for i, block in enumerate(renderer.code_blocks):
         if block["language"].lower() == language.lower():
@@ -144,7 +145,15 @@ def extract_tool_calls_with_errors(
                     )
                     continue
 
-                tool_calls.append(data)
+                tc: ToolCallDict = {
+                    "name": data["name"],
+                    "arguments": data["arguments"],
+                }
+                if "assert_success" in data:
+                    tc["assert_success"] = data["assert_success"]
+                if "with_secret" in data:
+                    tc["with_secret"] = data["with_secret"]
+                tool_calls.append(tc)
             except json.JSONDecodeError as e:
                 context_str = _extract_json_error_context(e, block["content"])
                 error_message = (
