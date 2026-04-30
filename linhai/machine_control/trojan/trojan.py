@@ -41,8 +41,10 @@ TrojanResult = Union[TrojanSuccessResult, TrojanErrorResult]
 
 
 class Trojan:
-    def __init__(self):
+    def __init__(self, marker_hex: str):
         self.current_dir = os.getcwd()
+        self._marker_open = f"<linhai_trojanpy_{marker_hex}>"
+        self._marker_close = f"</linhai_trojanpy_{marker_hex}>"
         self.terminals: Dict[str, TerminalDict] = {}
         self._processes: Dict[str, asyncio.subprocess.Process] = {}
         self.stdout_lock = asyncio.Lock()
@@ -656,18 +658,15 @@ class Trojan:
             request_data, request_id = request
             method = request_data.get("method")
             params = request_data.get("params", {})
-            task = asyncio.get_running_loop().create_task(
+            task = asyncio.create_task(
                 self._handle_request(method, params, request_id)
             )
             self.active_tasks.add(task)
             task.add_done_callback(self._remove_task)
 
-    def _set_marker(self, marker_hex: str) -> None:
-        self._marker_open = f"<linhai_trojanpy_{marker_hex}>"
-        self._marker_close = f"</linhai_trojanpy_{marker_hex}>"
 
     async def read_input(self):
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
         reader = asyncio.StreamReader()
         protocol = asyncio.StreamReaderProtocol(reader)
         await loop.connect_read_pipe(lambda: protocol, sys.stdin)
@@ -720,14 +719,12 @@ def main():
         settings[3] = settings[3] & ~termios.ICANON & ~termios.ECHO
         termios.tcsetattr(fd, termios.TCSANOW, settings)
 
-    trojan = Trojan()
-    trojan._set_marker(marker_hex)
+    trojan = Trojan(marker_hex)
 
     async def _run():
-        loop = asyncio.get_running_loop()
-        reader_task = loop.create_task(trojan.read_input())
-        processor_task = loop.create_task(trojan.process_requests())
-        writer_task = loop.create_task(trojan.write_responses())
+        reader_task = asyncio.create_task(trojan.read_input())
+        processor_task = asyncio.create_task(trojan.process_requests())
+        writer_task = asyncio.create_task(trojan.write_responses())
         await asyncio.gather(
             reader_task, processor_task, writer_task, return_exceptions=True
         )
