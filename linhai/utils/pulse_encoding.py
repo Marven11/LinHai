@@ -11,7 +11,7 @@ class DecodeState(enum.Enum):
     COMPOSED = 2
 
 
-def encode(data: bytes, marker: bytes, max_length: int, text_only: bool) -> bytes:
+def encode(data: bytes, marker: bytes, max_length: int, text_only: bool) -> list[bytes]:
     if data.isascii() and data.decode("ascii").isprintable():
         text_only = False
     assert max_length > METADATA_MAX_LENGTH
@@ -23,12 +23,12 @@ def encode(data: bytes, marker: bytes, max_length: int, text_only: bool) -> byte
     slices = [data[i : i + step] for i in range(0, len(data), step)]
     if text_only:
         b64s = (base64.b64encode(b) for b in slices)
-        fractions = [b"B" + str(len(b64)).encode() + b" " + b64 for b64 in b64s] + [
-            b"X1 ;"
+        fractions = [
+            marker + b"B" + str(len(b64)).encode() + b" " + b64 for b64 in b64s
         ]
     else:
-        fractions = [b"R" + str(len(b)).encode() + b" " + b for b in slices] + [b"X1 ;"]
-    return marker + b"".join(fractions)
+        fractions = [marker + b"R" + str(len(b)).encode() + b" " + b for b in slices]
+    return fractions + [marker + b"X1 ;"]
 
 
 def decode(fraction: bytes) -> tuple[DecodeState, bytes, bytes]:
@@ -64,14 +64,15 @@ class PulseDecoder:
         stream = self.stream_remains + stream
         while stream:
             if self.is_waiting_marker:
-                if len(stream) <= len(self.marker) * 2:
+                if len(stream) <= len(self.marker):
                     break
                 pos = stream.find(self.marker)
                 if pos != -1:
                     stream = stream[pos + len(self.marker) :]
                     self.is_waiting_marker = False
                 else:
-                    stream = b""
+                    stream = stream[-len(self.marker):]
+                    break
             else:
                 state, decoded, remains = decode(stream)
                 stream = remains
@@ -79,9 +80,12 @@ class PulseDecoder:
                 if state == DecodeState.COMPOSED:
                     self.composed.append(self.composing)
                     self.composing = b""
-                    self.is_waiting_marker = True
+
                 if state == DecodeState.WAITING_DATA:
                     break
+                else:
+                    self.is_waiting_marker = True
+
         self.stream_remains = stream
 
     def emit_composed(self):
@@ -102,18 +106,29 @@ class PulseEncoder:
 
 def example():
     import json
+    import secrets
 
-    enc = PulseEncoder(b"<should_be_random>", 32, True)
-    mixed = (
-        b"111"
-        + enc.encode(json.dumps({"name": "litiansuo", "age": 24, "id": 1145141919810}).encode())
-        + b"222"
-        + enc.encode(b"litiansuo")
-        + b"333"
+    marker = secrets.token_bytes(16)
+
+    enc = PulseEncoder(marker, 32, True)
+    fractions = enc.encode(
+        json.dumps({"name": "litiansuo", "age": 24, "id": 1145141919810}).encode()
     )
-    dec = PulseDecoder(b"<should_be_random>")
-    for i in range(0, len(mixed), 10):
-        dec.comsume(mixed[i : i + 10])
+
+    mixed = [b for fraction in fractions for b in [secrets.token_bytes(128), fraction]]
+
+    sent = []
+    buffer = b""
+    for b in mixed:
+        buffer += b
+        if len(buffer) > 150:
+            sent.append(buffer[:150])
+            buffer = buffer[150:]
+    sent.append(buffer)
+
+    dec = PulseDecoder(marker)
+    for b in sent:
+        dec.comsume(b)
         for composed in dec.emit_composed():
             print(f"{composed=}")
 
