@@ -98,33 +98,6 @@ class ToolManager:
         """
         kwargs = tool_call.function_arguments
 
-        original_machine = None
-        machine_control = None
-        if tool_call.on_machine is not None:
-            from linhai.machine_control.main import MachineControl
-
-            machine_control = self.registry.get_member_typechecked(
-                "machine_control", MachineControl
-            )
-            if tool_call.on_machine not in machine_control.machines:
-                await self.registry.send_if_exists(
-                    "ui_log",
-                    UiNotice(
-                        level="ERROR", content=f"机器未找到: {tool_call.on_machine}"
-                    ),
-                )
-                failed_result = ToolResultFailed(
-                    content=f"机器未找到: {tool_call.on_machine}"
-                )
-                return ToolCallResultMessage(
-                    tool_name=tool_call.function_name,
-                    tool_index=tool_index,
-                    result=failed_result,
-                    toolcall_arguments=kwargs,
-                )
-            original_machine = machine_control.target_machine
-            machine_control.target_machine = tool_call.on_machine
-
         target_toolset = None
         for toolset in self.toolsets:
             if toolset.has_tool(tool_call.function_name):
@@ -225,9 +198,6 @@ class ToolManager:
                 return processed_result
 
             return failed_result
-        finally:
-            if machine_control is not None and original_machine is not None:
-                machine_control.target_machine = original_machine
 
     def register_lifecycle(self):
 

@@ -303,25 +303,6 @@ master_host为你所在的宿主机，你刚启动时默认控制宿主机. runt
 - 所有MCP工具
 - transfer_file工具
 
-
-你可以使用on_machine参数临时切换工具在哪一台机器上运行，例如：
-
-```json toolcall
-{"name": "switch_machine", "arguments": {...}}
-```
-
-当前在机器xxx上，但是我需要更新xxx，让我使用on_machine参数
-
-```json toolcall
-{"name": "write_file", "arguments": {...}, "on_machine": "master_host"}
-```
-
-好的，我已经更新了xxx，让我继续在机器xxx上运行命令
-
-```json toolcall
-{"name": "process_create", "arguments": {...}}
-```
-
 """,
         "en": """
 ## Multi-Machine Control System
@@ -333,25 +314,6 @@ master_host is the host machine where you are located. By default you control th
 All machine control tools run on your selected machine, except for:
 - All MCP tools
 - transfer_file tool
-
-
-You can use the on_machine parameter to temporarily switch which machine a tool runs on, for example:
-
-```json toolcall
-{"name": "switch_machine", "arguments": {...}}
-```
-
-Currently on machine xxx, but I need to update xxx, let me use the on_machine parameter
-
-```json toolcall
-{"name": "write_file", "arguments": {...}, "on_machine": "master_host"}
-```
-
-OK, I've updated xxx, let me continue running commands on machine xxx
-
-```json toolcall
-{"name": "process_create", "arguments": {...}}
-```
 
 """,
     }
