@@ -7,6 +7,7 @@ from linhai.tui.app import TUIApp
 from linhai.registry import Registry
 from linhai.config import TUIConfig
 from linhai.agent.main import Agent
+from linhai.sandbox import NoSandbox
 
 
 class TestTUITabs(unittest.TestCase):
@@ -60,6 +61,7 @@ class TestTUITabs(unittest.TestCase):
 
         mock_cli_args = argparse.Namespace(planning=False)
         registry.register_member("cli_args", mock_cli_args)
+        registry.register_member("process_sandbox", NoSandbox())
 
         app = TUIApp(
             registry=registry, tui_config=TUIConfig(), init_messages=[], init_files=[]
@@ -127,6 +129,7 @@ class TestTUITabs(unittest.TestCase):
 
         mock_cli_args = argparse.Namespace(planning=False)
         registry.register_member("cli_args", mock_cli_args)
+        registry.register_member("process_sandbox", NoSandbox())
 
         app = TUIApp(
             registry=registry, tui_config=TUIConfig(), init_messages=[], init_files=[]
