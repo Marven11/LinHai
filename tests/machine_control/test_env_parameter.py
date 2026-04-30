@@ -145,7 +145,7 @@ class TestPosixShellEnvParameter(unittest.IsolatedAsyncioTestCase):
 
 class TestTrojanEnvParameter(unittest.IsolatedAsyncioTestCase):
     async def test_create_process_passes_env(self):
-        trojan = Trojan()
+        trojan = Trojan(marker_hex="aabb")
         with patch("asyncio.create_subprocess_exec") as mock_create:
             mock_process = AsyncMock()
             mock_process.pid = 88888
@@ -162,7 +162,7 @@ class TestTrojanEnvParameter(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(mock_create.call_args.kwargs.get("env"), env)
 
     async def test_create_process_env_none(self):
-        trojan = Trojan()
+        trojan = Trojan(marker_hex="aabb")
         with patch("asyncio.create_subprocess_exec") as mock_create:
             mock_process = AsyncMock()
             mock_process.pid = 88889
