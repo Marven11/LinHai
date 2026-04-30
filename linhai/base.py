@@ -7,7 +7,6 @@ from typing import (
     Sequence,
     Protocol,
     AsyncIterator,
-    TypedDict,
     runtime_checkable,
 )
 
@@ -342,13 +341,13 @@ class AnswerToken(BaseModel):
     content: str
 
 
-class OpenAiToolCallToken(TypedDict):
+class OpenAiToolCallToken(BaseModel):
     """OpenAI原生工具调用的token表示。"""
 
     idx: int
-    id: str | None
-    name: str | None
-    args: str | None
+    id: str | None = None
+    name: str | None = None
+    args: str | None = None
 
 
 class AnswerTokenUsage(BaseModel):

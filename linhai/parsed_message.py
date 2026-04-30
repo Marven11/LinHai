@@ -211,13 +211,13 @@ class ParsedAnswer:
             await self.segment_queue.put(self.current_segment)
 
     async def _process_openai_toolcall_token(self, token: OpenAiToolCallToken) -> None:
-        idx = token["idx"]
+        idx = token.idx
         segment = self._openai_toolcall_segments.get(idx)
         if segment is None:
             segment = OpenAiToolCallSegment(
                 segment_type="openai_toolcall",
                 idx=idx,
-                id=token["id"],
+                id=token.id,
                 raw="",
                 is_finished=False,
                 is_corrupted=False,
@@ -227,12 +227,12 @@ class ParsedAnswer:
             self._openai_toolcall_segments[idx] = segment
             await self.segment_queue.put(segment)
             await self.lifecycle.after_segment.trigger(self, segment)
-        if token["id"] is not None:
-            segment["id"] = token["id"]
-        if token["name"] is not None:
-            segment["tool_name"] = token["name"]
-        if token["args"] is not None:
-            segment["raw"] += token["args"]
+        if token.id is not None:
+            segment["id"] = token.id
+        if token.name is not None:
+            segment["tool_name"] = token.name
+        if token.args is not None:
+            segment["raw"] += token.args
             segment["markdown_representation"] = segment["raw"]
         await self.lifecycle.after_segment_update.trigger(self, segment)
 
@@ -251,7 +251,7 @@ class ParsedAnswer:
         async for token in self._answer:
             if self.interrupted:
                 break
-            if isinstance(token, dict):
+            if isinstance(token, OpenAiToolCallToken):
                 await self._process_openai_toolcall_token(token)
                 continue
             reasoning_content = token.reasoning_content
