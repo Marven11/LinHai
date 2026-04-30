@@ -520,6 +520,13 @@ class OpenAi:
 
         if self.tools:
             params["tools"] = self.tools
+        elif not self._custom_toolcall_format:
+            from linhai.tool.main import ToolManager
+
+            tool_manager = self.registry.get_member_typechecked(
+                "tool_manager", ToolManager
+            )
+            params["tools"] = tool_manager.get_tools_info()
 
         if self.compatibility == "minimax":
             response = await self.openai.chat.completions.create(**params)
