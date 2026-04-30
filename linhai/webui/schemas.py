@@ -23,8 +23,22 @@ class WebuiToolCallSegment(TypedDict):
     tool_name: str
 
 
+class WebuiOpenAiToolCallSegment(TypedDict):
+    segment_type: Literal["openai_toolcall"]
+    idx: int
+    id: str | None
+    raw: str
+    is_finished: bool
+    is_corrupted: bool
+    markdown_representation: str
+    tool_name: str
+
+
 WebuiSegmentType = Union[
-    WebuiNormalSegment, WebuiReasoningSegment, WebuiToolCallSegment
+    WebuiNormalSegment,
+    WebuiReasoningSegment,
+    WebuiToolCallSegment,
+    WebuiOpenAiToolCallSegment,
 ]
 
 

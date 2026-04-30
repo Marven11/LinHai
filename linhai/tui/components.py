@@ -18,8 +18,8 @@ from textual.widgets.markdown import MarkdownBlock
 from linhai.sandbox import NoSandbox, ProcessSandboxProtocol
 from linhai.utils.i18n import t
 from linhai.parsed_message import (
-    Segment,
     ToolCallSegment,
+    OpenAiToolCallSegment,
     NormalSegment,
     ReasoningSegment,
     ParsedAnswer,
@@ -45,6 +45,11 @@ def _syntax_or_text(content: str, lexer: str, theme: str | None) -> Syntax | Tex
             word_wrap=True,
         )
     return Text(content)
+
+
+def _simplify_openai_toolcall(tool_name: str, raw: str) -> str:
+    full_json = f'{{"name":"{tool_name}","arguments":{raw}}}'
+    return parse_and_simplify_toolcall(full_json)
 
 
 class MarkdownParagraphWithoutNewLine(MarkdownBlock):
@@ -348,7 +353,7 @@ class ToolCallWidget(Static):
     def __init__(
         self,
         theme: str | None,
-        segment: ToolCallSegment,
+        segment: ToolCallSegment | OpenAiToolCallSegment,
         get_refresh_interval: Callable[[], float],
     ):
         super().__init__()
@@ -422,7 +427,11 @@ class ToolCallWidget(Static):
         )
         simplified = BAD_TOOLCALL
         if not self._segment["is_corrupted"]:
-            simplified = parse_and_simplify_toolcall(self._segment["raw"])
+            if self._segment["segment_type"] == "openai_toolcall":
+                tool_name = self._segment["tool_name"] or "unknown"
+                simplified = _simplify_openai_toolcall(tool_name, self._segment["raw"])
+            else:
+                simplified = parse_and_simplify_toolcall(self._segment["raw"])
         self.update(
             _syntax_or_text(
                 simplified,
@@ -763,15 +772,27 @@ class MessageWidget(Static):
             if i > 0:
                 self._content.mount(SpaceWidget())
             segment_type = segment_data["segment_type"]
-            if segment_type == "toolcall":
-                seg = ToolCallSegment(
-                    segment_type="toolcall",
-                    raw=segment_data["raw"],
-                    is_finished=segment_data["is_finished"],
-                    is_corrupted=segment_data["is_corrupted"],
-                    markdown_representation=segment_data["markdown_representation"],
-                    tool_name=segment_data["tool_name"],
-                )
+            if segment_type in ("toolcall", "openai_toolcall"):
+                if segment_type == "toolcall":
+                    seg = ToolCallSegment(
+                        segment_type="toolcall",
+                        raw=segment_data["raw"],
+                        is_finished=segment_data["is_finished"],
+                        is_corrupted=segment_data["is_corrupted"],
+                        markdown_representation=segment_data["markdown_representation"],
+                        tool_name=segment_data["tool_name"],
+                    )
+                else:
+                    seg = OpenAiToolCallSegment(
+                        segment_type="openai_toolcall",
+                        idx=segment_data["idx"],
+                        id=segment_data["id"],
+                        raw=segment_data["raw"],
+                        is_finished=segment_data["is_finished"],
+                        is_corrupted=segment_data["is_corrupted"],
+                        markdown_representation=segment_data["markdown_representation"],
+                        tool_name=segment_data["tool_name"],
+                    )
                 widget = ToolCallWidget(
                     theme=self.theme,
                     segment=seg,
@@ -830,7 +851,10 @@ class MessageWidget(Static):
                 else:
                     self._content.mount(SpaceWidget())
 
-            if segment["segment_type"] == "toolcall":
+            if (
+                segment["segment_type"] == "toolcall"
+                or segment["segment_type"] == "openai_toolcall"
+            ):
                 widget = ToolCallWidget(
                     theme=self.theme,
                     segment=segment,
