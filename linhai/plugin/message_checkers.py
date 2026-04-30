@@ -166,14 +166,10 @@ class VolcanoDeepseekFixPlugin(Plugin):
         full_response = parsed_answer.get_message().get_content() or ""
         agent = self.registry.get_member_typechecked("agent", Agent)
 
-        positions = []
-        start = 0
-        while True:
-            pos = full_response.find(self.ABNORMAL_MARKER, start)
-            if pos == -1:
-                break
-            positions.append(pos)
-            start = pos + 1
+        positions = [
+            m.start()
+            for m in re.finditer(re.escape(self.ABNORMAL_MARKER), full_response)
+        ]
 
         if not positions:
             return
