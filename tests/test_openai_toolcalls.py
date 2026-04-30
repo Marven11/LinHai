@@ -2,7 +2,7 @@ import unittest
 import json
 from unittest.mock import MagicMock, AsyncMock
 
-from linhai.base import AssistantMessage
+from linhai.base import AssistantMessage, OpenAiToolResultMessage
 from linhai.type_hints import FunctionCall, OpenAiToolCall
 from linhai.llm import OpenAiAnswer, MinimaxAnswer
 from linhai.registry import Registry
@@ -198,6 +198,39 @@ class TestMinimaxAnswerGetToolCalls(unittest.TestCase):
         self.assertIsInstance(msg, AssistantMessage)
         self.assertIsNotNone(msg.tool_calls)
         self.assertEqual(msg.tool_calls[0]["id"], "tc_3")
+
+
+class TestOpenAiToolResultMessage(unittest.TestCase):
+    def test_basic_construction(self):
+        msg = OpenAiToolResultMessage(tool_call_id="call_abc", content="42")
+        self.assertEqual(msg.tool_call_id, "call_abc")
+        self.assertEqual(msg.content, "42")
+        self.assertEqual(msg.get_content(), "42")
+
+    def test_to_llm_message(self):
+        msg = OpenAiToolResultMessage(tool_call_id="call_xyz", content="result text")
+        llm_msg = msg.to_llm_message()
+        self.assertEqual(llm_msg["role"], "tool")
+        self.assertEqual(llm_msg["tool_call_id"], "call_xyz")
+        self.assertEqual(llm_msg["content"], "result text")
+
+    def test_repr(self):
+        msg = OpenAiToolResultMessage(tool_call_id="call_1", content="ok")
+        r = repr(msg)
+        self.assertIn("call_1", r)
+        self.assertIn("ok", r)
+
+    def test_to_json_from_json_roundtrip(self):
+        msg = OpenAiToolResultMessage(tool_call_id="call_99", content="success")
+        json_str = msg.to_json()
+        data = json.loads(json_str)
+        self.assertEqual(data["role"], "tool")
+        self.assertEqual(data["tool_call_id"], "call_99")
+        self.assertEqual(data["content"], "success")
+
+        restored = OpenAiToolResultMessage.from_json(json_str, registry=MagicMock())
+        self.assertEqual(restored.tool_call_id, "call_99")
+        self.assertEqual(restored.content, "success")
 
 
 if __name__ == "__main__":

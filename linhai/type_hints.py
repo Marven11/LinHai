@@ -103,8 +103,16 @@ class AssistantMessage(TypedDict):
     reasoning_content: NotRequired[str]
 
 
+class ToolResultMsg(TypedDict):
+    """Tool result message for OpenAI native tool calling."""
+
+    role: Required[Literal["tool"]]
+    tool_call_id: Required[str]
+    content: Required[str]
+
+
 LanguageModelMessage: TypeAlias = Union[
-    SystemMessage, UserMessage, AssistantMessage, UserMultiModalMessage
+    SystemMessage, UserMessage, AssistantMessage, UserMultiModalMessage, ToolResultMsg
 ]
 
 
@@ -150,4 +158,5 @@ __all__ = [
     "ChatCompletionContentPartImageParam",
     "UserMultiModalMessage",
     "ToolCallDict",
+    "ToolResultMsg",
 ]

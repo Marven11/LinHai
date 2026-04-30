@@ -20,6 +20,7 @@ from linhai.type_hints import (
     OpenAiToolCall,
     UserMessage as UserMsgType,
     AssistantMessage as AsstMsgType,
+    ToolResultMsg,
 )
 
 import linhai
@@ -308,6 +309,41 @@ class AssistantMessage:
         )
         msg.tool_calls = data.get("tool_calls")
         return msg
+
+
+class OpenAiToolResultMessage:
+    """OpenAI原生工具调用结果消息，用于在多轮对话中传递工具执行结果。"""
+
+    def __init__(self, tool_call_id: str, content: str):
+        self.tool_call_id = tool_call_id
+        self.content = content
+
+    def to_llm_message(self) -> LanguageModelMessage:
+        return ToolResultMsg(
+            role="tool",
+            tool_call_id=self.tool_call_id,
+            content=self.content,
+        )
+
+    def get_content(self) -> str:
+        return self.content
+
+    def __repr__(self) -> str:
+        return f"OpenAiToolResultMessage(tool_call_id={self.tool_call_id!r}, content={self.content!r})"
+
+    def to_json(self) -> str:
+        return json.dumps(
+            {
+                "role": "tool",
+                "tool_call_id": self.tool_call_id,
+                "content": self.content,
+            }
+        )
+
+    @classmethod
+    def from_json(cls, json_str: str, registry: "linhai.registry.Registry"):
+        data = json.loads(json_str)
+        return cls(tool_call_id=data["tool_call_id"], content=data["content"])
 
 
 class ToolCallMessage:
