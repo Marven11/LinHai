@@ -7,6 +7,8 @@ import signal
 import time
 import base64
 import fcntl
+import math
+import enum
 import platform
 import asyncio
 import tempfile
@@ -40,11 +42,113 @@ class TrojanErrorResult(TypedDict):
 TrojanResult = Union[TrojanSuccessResult, TrojanErrorResult]
 
 
+METADATA_MAX_LENGTH = 22
+
+
+class DecodeState(enum.Enum):
+    WAITING_DATA = 0
+    COMPOSING = 1
+    COMPOSED = 2
+
+
+def encode(data: bytes, marker: bytes, max_length: int, text_only: bool) -> list[bytes]:
+    if data.isascii() and data.decode("ascii").isprintable():
+        text_only = False
+    assert max_length > METADATA_MAX_LENGTH
+    step = (
+        max_length - METADATA_MAX_LENGTH
+        if not text_only
+        else math.floor((max_length - 3) / 4 * 3) - METADATA_MAX_LENGTH
+    )
+    slices = [data[i : i + step] for i in range(0, len(data), step)]
+    if text_only:
+        b64s = (base64.b64encode(b) for b in slices)
+        fractions = [
+            marker + b"B" + str(len(b64)).encode() + b" " + b64 for b64 in b64s
+        ]
+    else:
+        fractions = [marker + b"R" + str(len(b)).encode() + b" " + b for b in slices]
+    return fractions + [marker + b"X1 ;"]
+
+
+def decode(fraction: bytes) -> tuple[DecodeState, bytes, bytes]:
+    if len(fraction) <= METADATA_MAX_LENGTH and b" " not in fraction:
+        return DecodeState.WAITING_DATA, b"", fraction
+
+    metadata, data = fraction.split(b" ", maxsplit=1)
+    action, length_str = metadata[0:1], metadata[1:].decode("ascii")
+    if not length_str:
+        return DecodeState.WAITING_DATA, b"", fraction
+    length = int(length_str)
+    if len(data) < length:
+        return DecodeState.WAITING_DATA, b"", fraction
+    if action == b"R":
+        return DecodeState.COMPOSING, data[:length], data[length:]
+    if action == b"B":
+        return DecodeState.COMPOSING, base64.b64decode(data[:length]), data[length:]
+    if action == b"X":
+        return DecodeState.COMPOSED, b"", data[length:]
+    else:
+        raise RuntimeError(f"Malformed data: {metadata=} {data=} ")
+
+
+class PulseDecoder:
+    def __init__(self, marker: bytes):
+        self.is_waiting_marker = True
+        self.marker = marker
+        self.composed: list[bytes] = []
+        self.composing = b""
+        self.stream_remains = b""
+
+    def comsume(self, stream: bytes):
+        stream = self.stream_remains + stream
+        while stream:
+            if self.is_waiting_marker:
+                if len(stream) <= len(self.marker):
+                    break
+                pos = stream.find(self.marker)
+                if pos != -1:
+                    stream = stream[pos + len(self.marker) :]
+                    self.is_waiting_marker = False
+                else:
+                    stream = stream[-len(self.marker) :]
+                    break
+            else:
+                state, decoded, remains = decode(stream)
+                stream = remains
+                self.composing += decoded
+                if state == DecodeState.COMPOSED:
+                    self.composed.append(self.composing)
+                    self.composing = b""
+
+                if state == DecodeState.WAITING_DATA:
+                    break
+                else:
+                    self.is_waiting_marker = True
+
+        self.stream_remains = stream
+
+    def emit_composed(self):
+        result = self.composed
+        self.composed = []
+        return result
+
+
+class PulseEncoder:
+    def __init__(self, marker: bytes, max_length: int, text_only: bool):
+        self.marker = marker
+        self.max_length = max_length
+        self.text_only = text_only
+
+    def encode(self, data: bytes):
+        return encode(data, self.marker, self.max_length, self.text_only)
+
+
 class Trojan:
-    def __init__(self, marker_hex: str):
+    def __init__(self, marker_bytes: bytes, pulse_max_length: int = 4096):
         self.current_dir = os.getcwd()
-        self._marker_open = f"<linhai_trojanpy_{marker_hex}>"
-        self._marker_close = f"</linhai_trojanpy_{marker_hex}>"
+        self._pulse_decoder = PulseDecoder(marker_bytes)
+        self._pulse_encoder = PulseEncoder(marker_bytes, pulse_max_length, False)
         self.terminals: Dict[str, TerminalDict] = {}
         self._processes: Dict[str, asyncio.subprocess.Process] = {}
         self.stdout_lock = asyncio.Lock()
@@ -658,12 +762,9 @@ class Trojan:
             request_data, request_id = request
             method = request_data.get("method")
             params = request_data.get("params", {})
-            task = asyncio.create_task(
-                self._handle_request(method, params, request_id)
-            )
+            task = asyncio.create_task(self._handle_request(method, params, request_id))
             self.active_tasks.add(task)
             task.add_done_callback(self._remove_task)
-
 
     async def read_input(self):
         loop = asyncio.get_running_loop()
@@ -671,28 +772,14 @@ class Trojan:
         protocol = asyncio.StreamReaderProtocol(reader)
         await loop.connect_read_pipe(lambda: protocol, sys.stdin)
 
-        buf = b""
         while True:
             chunk = await reader.read(4096)
             if not chunk:
                 await self.request_queue.put(None)
                 break
-            buf += chunk
-            while True:
-                start_idx = buf.find(self._marker_open.encode())
-                if start_idx == -1:
-                    if len(buf) > len(self._marker_open):
-                        buf = buf[-len(self._marker_open) :]
-                    break
-                close_idx = buf.find(self._marker_close.encode(), start_idx)
-                if close_idx == -1:
-                    if len(buf) - start_idx > 1024 * 1024:
-                        buf = buf[start_idx:]
-                    break
-                json_start = start_idx + len(self._marker_open)
-                json_bytes = buf[json_start:close_idx]
-                buf = buf[close_idx + len(self._marker_close) :]
-                request = json.loads(json_bytes.decode("utf-8", errors="replace"))
+            self._pulse_decoder.comsume(chunk)
+            for composed in self._pulse_decoder.emit_composed():
+                request = json.loads(composed.decode("utf-8", errors="replace"))
                 request_id = request.get("id")
                 await self.request_queue.put((request, request_id))
 
@@ -702,9 +789,10 @@ class Trojan:
             if response is None:
                 break
             async with self.stdout_lock:
-                data = f"{self._marker_open}{json.dumps(response)}{self._marker_close}"
-                sys.stdout.write(data)
-                sys.stdout.flush()
+                fractions = self._pulse_encoder.encode(json.dumps(response).encode())
+                for fraction in fractions:
+                    sys.stdout.buffer.write(fraction)
+                sys.stdout.buffer.flush()
 
 
 def main():
@@ -713,13 +801,15 @@ def main():
         print("Usage: trojan.py <4-hex-marker>", file=sys.stderr)
         sys.exit(1)
 
+    marker_bytes = f"<linhai_pulse_{marker_hex}>".encode()
+
     if sys.stdin.isatty():
         fd = sys.stdin.fileno()
         settings = termios.tcgetattr(fd)
         settings[3] = settings[3] & ~termios.ICANON & ~termios.ECHO
         termios.tcsetattr(fd, termios.TCSANOW, settings)
 
-    trojan = Trojan(marker_hex)
+    trojan = Trojan(marker_bytes)
 
     async def _run():
         reader_task = asyncio.create_task(trojan.read_input())
