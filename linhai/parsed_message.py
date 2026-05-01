@@ -5,7 +5,7 @@ import re
 from .base import Answer, Message, OpenAiToolCallToken
 from .agent.lifecycle import Lifecycle
 from .markdown_parser import extract_tool_calls_with_errors
-from linhai.type_hints import ToolCallDict
+from linhai.type_hints import ToolCallDict, OpenAiToolCall
 from .utils.streamjson import StreamJsonParser, Value, ValuePiece
 from .utils.common import BAD_TOOLCALL, guess_content_type
 
@@ -391,3 +391,7 @@ class ParsedAnswer:
         full_response = self._answer.get_current_content()
         tool_calls, errors = extract_tool_calls_with_errors(full_response)
         return tool_calls, errors
+
+    def get_openai_toolcalls(self) -> list[OpenAiToolCall] | None:
+        """获取OpenAI原生工具调用列表。"""
+        return self._answer.get_openai_toolcalls()

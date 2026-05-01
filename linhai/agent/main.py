@@ -238,26 +238,36 @@ class Agent:
         message = parsed_answer.get_message()
         await self.message_processor.add_new_message(message)
 
-        tool_calls, errors = parsed_answer.extract_tool_calls_with_errors()
+        current_llm = self.llm_manager.get_current_llm()
+        if not current_llm.get_custom_toolcall_format():
+            openai_toolcalls = parsed_answer.get_openai_toolcalls()
+            if openai_toolcalls:
+                self.toolcall_processor.start_new_tool_call_round()
+                await self.toolcall_processor.call_openai_tools(openai_toolcalls)
+            await self.lifecycle.after_message_generation.trigger(parsed_answer, [])
+        else:
+            tool_calls, errors = parsed_answer.extract_tool_calls_with_errors()
 
-        for error in errors:
-            await self.message_processor.add_new_message(RuntimeMessage(error))
+            for error in errors:
+                await self.message_processor.add_new_message(RuntimeMessage(error))
 
-        self.toolcall_processor.start_new_tool_call_round()
+            self.toolcall_processor.start_new_tool_call_round()
 
-        for i, call in enumerate(tool_calls, start=1):
-            if "name" in call and "arguments" in call:
-                assert_success = call.get("assert_success", True)
-                with_secret = call.get("with_secret", None)
-                tool_call = ToolCallMessage(
-                    function_name=call["name"],
-                    function_arguments=call["arguments"],
-                    assert_success=assert_success,
-                    with_secret=with_secret,
-                )
-                await self.toolcall_processor.call_tool(tool_call, tool_index=i)
+            for i, call in enumerate(tool_calls, start=1):
+                if "name" in call and "arguments" in call:
+                    assert_success = call.get("assert_success", True)
+                    with_secret = call.get("with_secret", None)
+                    tool_call = ToolCallMessage(
+                        function_name=call["name"],
+                        function_arguments=call["arguments"],
+                        assert_success=assert_success,
+                        with_secret=with_secret,
+                    )
+                    await self.toolcall_processor.call_tool(tool_call, tool_index=i)
 
-        await self.lifecycle.after_message_generation.trigger(parsed_answer, tool_calls)
+            await self.lifecycle.after_message_generation.trigger(
+                parsed_answer, tool_calls
+            )
 
         if self.toolcall_processor.early_return:
             return await self.generate_response()

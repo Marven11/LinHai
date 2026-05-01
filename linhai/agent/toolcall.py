@@ -1,10 +1,15 @@
 """工具调用处理模块，负责工具注册、调用和结果管理。"""
 
+import json
 import time
 from pathlib import Path
 from typing import cast
 
-from linhai.base import ToolCallMessage, Message
+from linhai.base import (
+    OpenAiToolResultMessage,
+    ToolCallMessage,
+    Message,
+)
 from linhai.llm_manager import LlmManager
 from linhai.registry import Registry
 from linhai.tool.base import (
@@ -16,6 +21,7 @@ from linhai.tool.base import (
     ToolResult,
 )
 from linhai.tool.main import ToolManager
+from linhai.type_hints import OpenAiToolCall
 from linhai.utils.tokenizer import count_tokens, get_cl100k_base_tokenizer
 from linhai.utils.i18n import t
 
@@ -23,6 +29,8 @@ from .lifecycle import Lifecycle
 from .message import AgentMessage
 from .messages import RuntimeMessage
 from .state_machine import AgentStateMachine
+
+EARLY_RETURN_SKIP_MESSAGE = "工具调用被跳过（本轮工具调用中有工具执行失败）"
 
 
 class AgentToolcall:
@@ -404,3 +412,135 @@ class AgentToolcall:
         )
         if state_machine.state == "waiting_user":
             state_machine.transition_to_working()
+
+    async def call_openai_tools(self, openai_tool_calls: list[OpenAiToolCall]) -> None:
+        """处理OpenAI原生格式的工具调用列表。
+
+        遍历所有OpenAI工具调用，调用对应工具并将结果作为
+        OpenAiToolResultMessage添加到消息列表。
+        当early_return为True时，为剩余工具调用添加跳过消息。
+        """
+        for i, tc in enumerate(openai_tool_calls, start=1):
+            if self.early_return:
+                result_msg = OpenAiToolResultMessage(
+                    tool_call_id=tc["id"],
+                    content=EARLY_RETURN_SKIP_MESSAGE,
+                )
+                message_processor = self.registry.get_member_typechecked(
+                    "agent_message", AgentMessage
+                )
+                await message_processor.add_new_message(result_msg)
+                continue
+
+            arguments = json.loads(tc["function"]["arguments"])
+
+            tool_call = ToolCallMessage(
+                function_name=tc["function"]["name"],
+                function_arguments=arguments,
+                assert_success=True,
+                with_secret=None,
+            )
+
+            should_early_return = await self._call_openai_tool(tool_call, tc["id"], i)
+            if should_early_return:
+                self.early_return = True
+
+    async def _call_openai_tool(
+        self,
+        tool_call: ToolCallMessage,
+        tool_call_id: str,
+        tool_index: int,
+    ) -> bool:
+        """调用单个OpenAI工具并返回是否需要early_return。
+
+        Args:
+            tool_call: 工具调用消息
+            tool_call_id: OpenAI工具调用ID
+            tool_index: 工具调用索引
+
+        Returns:
+            bool: 是否需要early_return
+        """
+        state_machine = self.registry.get_member_typechecked(
+            "state_machine", AgentStateMachine
+        )
+        if state_machine.state == "waiting_user":
+            state_machine.transition_to_working()
+
+        lifecycle = self.registry.get_member_typechecked("lifecycle", Lifecycle)
+        arguments = tool_call.function_arguments
+
+        beforecbs_result = await lifecycle.before_tool_call.trigger(
+            tool_call.function_name,
+            arguments,
+            tool_call.with_secret,
+        )
+        if isinstance(beforecbs_result, FailedToolResult):
+            result_msg = OpenAiToolResultMessage(
+                tool_call_id=tool_call_id,
+                content=beforecbs_result.content,
+            )
+            message_processor = self.registry.get_member_typechecked(
+                "agent_message", AgentMessage
+            )
+            await lifecycle.after_toolcall.trigger(
+                tool_name=tool_call.function_name,
+                tool_index=tool_index,
+                status="failed",
+                message=RuntimeMessage(beforecbs_result.content),
+                toolcall_arguments=arguments,
+                with_secret=tool_call.with_secret,
+                is_tool_failed_duplicated_error=False,
+            )
+            await message_processor.add_new_message(result_msg)
+            return True
+        elif isinstance(beforecbs_result, dict):
+            arguments = beforecbs_result
+            tool_call.function_arguments = arguments
+
+        tool_manager = self.registry.get_member_typechecked("tool_manager", ToolManager)
+        message_processor = self.registry.get_member_typechecked(
+            "agent_message", AgentMessage
+        )
+
+        tool_result = await tool_manager.process_tool_call(tool_call, tool_index)
+
+        if isinstance(tool_result, ToolCallResultMessage):
+            result_content = tool_result.result.to_llm_content()
+            if not isinstance(result_content, str):
+                result_content = str(result_content)
+            is_failed = isinstance(tool_result.result, FailedToolResult)
+        else:
+            result_content = tool_result.get_content() or ""
+            is_failed = False
+
+        if result_content:
+            token_count = count_tokens(result_content)
+            single_tool_limit = self.max_token_limit // 3
+            if token_count > single_tool_limit:
+                result_content = f"工具输出过长（{token_count} tokens，超过{single_tool_limit} tokens限制）"
+            elif self.current_round_token_count + token_count > self.max_token_limit:
+                result_content = f"当前轮次token总数已达限制（已使用{self.current_round_token_count} tokens）"
+            else:
+                self.current_round_token_count += token_count
+
+        await lifecycle.after_toolcall.trigger(
+            tool_name=tool_call.function_name,
+            tool_index=tool_index,
+            status="failed" if is_failed else "success",
+            message=RuntimeMessage(result_content),
+            toolcall_arguments=tool_call.function_arguments,
+            with_secret=tool_call.with_secret,
+            is_tool_failed_duplicated_error=False,
+        )
+
+        result_msg = OpenAiToolResultMessage(
+            tool_call_id=tool_call_id,
+            content=result_content,
+        )
+        await message_processor.add_new_message(result_msg)
+
+        if state_machine.state == "waiting_user":
+            state_machine.transition_to_working()
+
+        return is_failed
