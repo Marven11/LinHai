@@ -11,12 +11,13 @@ from typing import Literal
 
 import math
 
-from linhai.base import EstimateToken, LanguageModelMessage, Message
+from linhai.base import EstimateToken, LanguageModelMessage, Message, register_message
 
 if TYPE_CHECKING:
     from linhai.registry import Registry
 
 
+@register_message
 class TelegramMessage(Message):
     """Telegram消息，用于表示来自telegram的消息。"""
 
@@ -69,6 +70,7 @@ class TelegramMessage(Message):
         return f"TelegramMessage(chat_id={self.chat_id}, message_id={self.message_id})"
 
 
+@register_message
 class TelegramStickerMessage(Message):
     """Telegram表情包消息类，在内存中保存图片bytes数据。"""
 

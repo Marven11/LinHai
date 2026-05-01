@@ -10,7 +10,7 @@ from io import BytesIO
 
 from typing import TYPE_CHECKING
 
-from linhai.base import Message
+from linhai.base import Message, register_message
 from linhai.agent.lifecycle import Lifecycle
 from linhai.type_hints import (
     LanguageModelMessage,
@@ -30,6 +30,7 @@ if TYPE_CHECKING:
     from linhai.machine_control import MachineControl
 
 
+@register_message
 class ImageDisplayMessage(Message):
 
     def __init__(

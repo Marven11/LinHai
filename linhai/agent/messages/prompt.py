@@ -1,9 +1,10 @@
 import json
 import linhai
 from pathlib import Path
-from linhai.base import LanguageModelMessage, Message
+from linhai.base import LanguageModelMessage, Message, register_message
 
 
+@register_message
 class GlobalPrompt(Message):
 
     def __init__(self, filepath: Path):
@@ -38,6 +39,7 @@ class GlobalPrompt(Message):
         return cls(filepath=Path(data["filepath"]))
 
 
+@register_message
 class PathPrompt(Message):
 
     def __init__(self, filepath: Path):
@@ -65,6 +67,7 @@ class PathPrompt(Message):
         return cls(filepath=Path(data["filepath"]))
 
 
+@register_message
 class ChecklistMessage(Message):
 
     def __init__(self, filepath: Path):

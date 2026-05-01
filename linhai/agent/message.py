@@ -9,7 +9,13 @@ from linhai.agent.conversation import save_context
 from linhai.type_hints import ChatCompletionContentPartTextParam
 
 
-from linhai.base import Message, LanguageModelMessage, SystemMessage
+from linhai.base import (
+    Message,
+    LanguageModelMessage,
+    SystemMessage,
+    MESSAGE_CLASS_REGISTRY,
+    register_message,
+)
 from .messages import (
     RuntimeMessage,
     GlobalPrompt,
@@ -32,6 +38,7 @@ class NotificationMessageEntry(TypedDict):
     sort_value: int
 
 
+@register_message
 class ExplicitCacheMessage(Message):
     def __init__(self, text: str):
         self.text = text
@@ -55,21 +62,6 @@ class ExplicitCacheMessage(Message):
         _ = registry
         data = json.loads(json_str)
         return cls(text=data["text"])
-
-
-MESSAGE_CLASS_REGISTRY: dict[str, type[Message]] = {
-    "RuntimeMessage": RuntimeMessage,
-    "GlobalPrompt": GlobalPrompt,
-    "PathPrompt": PathPrompt,
-    "ChecklistMessage": ChecklistMessage,
-    "UserMessage": UserMessage,
-    "AssistantMessage": AssistantMessage,
-    "DynamicFileContentMessage": DynamicFileContentMessage,
-    "PreviousReasoningMessage": PreviousReasoningMessage,
-    "SpoofedReasoningMessage": SpoofedReasoningMessage,
-    "MessagesListSummerizeMessage": MessagesListSummerizeMessage,
-    "ExplicitCacheMessage": ExplicitCacheMessage,
-}
 
 
 class AgentMessage:
@@ -450,7 +442,17 @@ class AgentMessage:
             "notification_messages": notification_data,
         }
 
+    @staticmethod
+    def _ensure_message_modules_imported() -> None:
+        import linhai.telegram
+        import linhai.multimodal
+        import linhai.rss
+        from linhai.tool import base as tool_base
+
+        _ = (linhai.telegram, linhai.multimodal, linhai.rss, tool_base)
+
     def restore_from(self, data: dict) -> None:
+        self._ensure_message_modules_imported()
         self.pinned_messages = self._restore_messages(data["pinned_messages"])
         self.messages = self._restore_messages(data["messages"])
         self.notification_messages = {}

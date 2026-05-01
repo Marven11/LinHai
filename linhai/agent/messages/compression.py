@@ -1,11 +1,12 @@
 import json
 
 import linhai
-from linhai.base import LanguageModelMessage, Message
+from linhai.base import LanguageModelMessage, Message, register_message
 
 from linhai.prompt import COMPRESS_RANGE_PROMPT
 
 
+@register_message
 class MessagesListSummerizeMessage(Message):
 
     def __init__(

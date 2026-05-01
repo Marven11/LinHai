@@ -4,8 +4,13 @@ from tempfile import TemporaryDirectory
 from pathlib import Path
 
 from linhai.registry import Registry
-from linhai.base import SystemMessage, UserMessage, AssistantMessage
-from linhai.agent.message import AgentMessage, MESSAGE_CLASS_REGISTRY
+from linhai.base import (
+    SystemMessage,
+    UserMessage,
+    AssistantMessage,
+    MESSAGE_CLASS_REGISTRY,
+)
+from linhai.agent.message import AgentMessage
 from linhai.agent.messages import RuntimeMessage
 from linhai.agent.savable_state import SavableState
 

@@ -1,9 +1,10 @@
 import json
 
 import linhai
-from linhai.base import LanguageModelMessage, Message
+from linhai.base import LanguageModelMessage, Message, register_message
 
 
+@register_message
 class PreviousReasoningMessage(Message):
 
     def __init__(self, reasoning_contents: list[str]):
@@ -34,6 +35,7 @@ class PreviousReasoningMessage(Message):
         return cls(reasoning_contents=data["reasoning_contents"])
 
 
+@register_message
 class SpoofedReasoningMessage(Message):
 
     def __init__(self, reasoning_contents: list[str]):

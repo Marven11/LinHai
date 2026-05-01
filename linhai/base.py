@@ -70,6 +70,15 @@ class EstimateToken(Protocol):
         raise NotImplementedError()
 
 
+MESSAGE_CLASS_REGISTRY: dict[str, type] = {}
+
+
+def register_message(cls):
+    MESSAGE_CLASS_REGISTRY[cls.__name__] = cls
+    return cls
+
+
+@register_message
 class SystemMessage:
     """系统消息类，用于表示系统角色消息。"""
 
@@ -224,6 +233,7 @@ class SystemMessage:
         self.examples_items = data["examples_items"]
 
 
+@register_message
 class UserMessage:
     """用户消息类，用于表示用户角色消息。"""
 
@@ -257,6 +267,7 @@ class UserMessage:
         return cls(message=data["message"], name=data.get("name"))
 
 
+@register_message
 class AssistantMessage:
     """助理消息类，用于表示助理角色消息，支持reasoning content。"""
 
@@ -311,6 +322,7 @@ class AssistantMessage:
         return msg
 
 
+@register_message
 class OpenAiToolResultMessage:
     """OpenAI原生工具调用结果消息，用于在多轮对话中传递工具执行结果。"""
 

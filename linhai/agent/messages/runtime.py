@@ -1,11 +1,12 @@
 import json
 
 import linhai
-from linhai.base import LanguageModelMessage, Message
+from linhai.base import LanguageModelMessage, Message, register_message
 
 WAITING_USER_MARKER = "#LINHAI_WAITING_USER"
 
 
+@register_message
 class RuntimeMessage(Message):
 
     def __init__(self, message: str):

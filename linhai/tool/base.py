@@ -20,7 +20,7 @@ from linhai.type_hints import (
     ChatCompletionContentPartTextParam,
     ChatCompletionContentPartImageParam,
 )
-from linhai.base import Message
+from linhai.base import Message, register_message
 import linhai
 
 
@@ -292,6 +292,7 @@ def _get_file_content_info(result: ToolResult) -> str | None:
     return None
 
 
+@register_message
 class ToolCallResultMessage(Message):
 
     def __init__(

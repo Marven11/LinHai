@@ -6,7 +6,7 @@ from typing import List, TYPE_CHECKING
 import feedparser
 import httpx
 
-from linhai.base import LanguageModelMessage, Message
+from linhai.base import LanguageModelMessage, Message, register_message
 from linhai.utils.common import UiNotice
 
 if TYPE_CHECKING:
@@ -16,6 +16,7 @@ if TYPE_CHECKING:
 from linhai.agent.state_machine import AgentStateMachine
 
 
+@register_message
 class RssMessage(Message):
     """RSS消息，用于表示单个RSS条目。"""
 

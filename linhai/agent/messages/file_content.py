@@ -2,9 +2,10 @@ import json
 from pathlib import Path
 
 import linhai
-from linhai.base import LanguageModelMessage, Message
+from linhai.base import LanguageModelMessage, Message, register_message
 
 
+@register_message
 class DynamicFileContentMessage(Message):
 
     def __init__(self, filepath: str, show_line_numbers: bool):
