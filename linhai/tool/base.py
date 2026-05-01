@@ -37,6 +37,16 @@ class Tool(TypedDict):
     func: Callable[..., "ToolResult | Awaitable[ToolResult]"]
 
 
+_PYTHON_TYPE_TO_JSON_SCHEMA = {
+    "str": "string",
+    "int": "integer",
+    "float": "number",
+    "bool": "boolean",
+    "list": "array",
+    "dict": "object",
+}
+
+
 def to_tools_info(tools: dict[str, Tool]) -> list[dict]:
     tool_info_list = []
     for tool in tools.values():
@@ -48,11 +58,17 @@ def to_tools_info(tools: dict[str, Tool]) -> list[dict]:
         }
 
         for arg_name, arg_info in tool["args"].items():
-
-            properties[arg_name] = {
-                "description": arg_info["desc"],
-                "type": arg_info["type"],
-            }
+            arg_type = arg_info["type"]
+            if isinstance(arg_type, dict):
+                prop = dict(arg_type)
+                prop["description"] = arg_info["desc"]
+            else:
+                json_type = _PYTHON_TYPE_TO_JSON_SCHEMA.get(arg_type, arg_type)
+                prop = {
+                    "description": arg_info["desc"],
+                    "type": json_type,
+                }
+            properties[arg_name] = prop
 
         tool_info = {
             "type": "function",
