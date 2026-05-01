@@ -183,6 +183,8 @@ async def agent_websocket(websocket: WebSocket, agent_id: str):
         async def receive_segments():
             while True:
                 segment = await parsed_answer.segment_queue.get()
+                if segment is None:
+                    break
                 session.add_segment_to_agent_message(agent_idx, segment)
                 content = parsed_answer._answer.get_current_content()
                 session.update_agent_message_content(agent_idx, content)
