@@ -331,7 +331,7 @@ class Trojan:
                 if not chunk:
                     break
                 content.extend(chunk)
-                await asyncio.sleep(.1)
+                await asyncio.sleep(0.1)
         text_content = content.decode("utf-8")
         if show_line_numbers:
             lines = text_content.splitlines()
@@ -810,6 +810,7 @@ def main():
         fd = sys.stdin.fileno()
         settings = termios.tcgetattr(fd)
         settings[3] = settings[3] & ~termios.ICANON & ~termios.ECHO
+        settings[1] = settings[1] & ~termios.OPOST
         termios.tcsetattr(fd, termios.TCSANOW, settings)
 
     trojan = Trojan(marker_bytes)

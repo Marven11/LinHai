@@ -28,7 +28,7 @@ def _is_pty_process(process: Process) -> bool:
 async def _disable_pty_echo(process: Process) -> None:
     if not _is_pty_process(process):
         return
-    await process.stdio_write("stty -echo", with_enter=True)
+    await process.stdio_write("stty -echo -icanon -opost", with_enter=True)
     await asyncio.sleep(0.3)
     await process.stdio_read(0.5)
 
