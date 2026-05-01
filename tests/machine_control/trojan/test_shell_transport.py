@@ -9,6 +9,7 @@ from linhai.machine_control.trojan.shell_transport import (
     _is_pty_process,
     _disable_pty_echo,
     _upload_trojan_chunked,
+    _split_marker_for_echo,
 )
 from linhai.machine_control.process import (
     ProcessKillResult,
@@ -169,6 +170,27 @@ class TestSetupTrojanInShell(unittest.TestCase):
                 self.assertIsNone(result)
 
         self.loop.run_until_complete(test())
+
+
+class TestSplitMarkerForEcho(unittest.TestCase):
+
+    def test_split_marker_command_does_not_contain_full_marker(self):
+        marker = "<linhai_cmd_a1b2>"
+        result = _split_marker_for_echo(marker)
+        self.assertNotIn(marker, result)
+
+    def test_split_marker_output_is_correct(self):
+        marker = "<linhai_cmd_a1b2>"
+        result = _split_marker_for_echo(marker)
+        self.assertIn('""', result)
+        halves = result.split('""')
+        self.assertEqual("".join(halves), marker)
+
+    def test_split_marker_close_tag(self):
+        marker = "</linhai_cmd_a1b2>"
+        result = _split_marker_for_echo(marker)
+        self.assertNotIn(marker, result)
+        self.assertEqual("".join(result.split('""')), marker)
 
 
 class TestIsPtyProcess(unittest.TestCase):

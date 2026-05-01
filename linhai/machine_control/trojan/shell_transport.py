@@ -16,6 +16,11 @@ def _strip_ansi_and_cr(text: str) -> str:
     return Text.from_ansi(text).plain.replace("\r", "")
 
 
+def _split_marker_for_echo(marker: str) -> str:
+    mid = len(marker) // 2
+    return marker[:mid] + '""' + marker[mid:]
+
+
 def _is_pty_process(process: Process) -> bool:
     return isinstance(process, LocalPtyProcess)
 
@@ -35,10 +40,13 @@ async def _execute_in_shell(
     marker_open = f"<linhai_cmd_{marker_hex}>"
     marker_close = f"</linhai_cmd_{marker_hex}>"
 
+    marker_open_echo = _split_marker_for_echo(marker_open)
+    marker_close_echo = _split_marker_for_echo(marker_close)
+
     full_command = (
-        f"echo '{marker_open}'; "
+        f'echo "{marker_open_echo}"; '
         f"{{ {command}; }} 2>&1; "
-        f'RC=$?; echo "${{RC}}{marker_close}"'
+        f'RC=$?; echo "${{RC}}{marker_close_echo}"'
     )
 
     write_result = await process.stdio_write(full_command, with_enter=True)
