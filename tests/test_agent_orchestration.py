@@ -536,38 +536,6 @@ class TestAgentContextOrchestration(unittest.IsolatedAsyncioTestCase):
         )
         self.assertIn(binary_msg, cleanable)
 
-    def test_toolset_conflict_with_parameter(self):
-        """测试工具集的conflict_with参数。"""
-        toolset = self.orchestration.get_context_cleaning_toolset()
-        tools = toolset.get_tools()
-
-        # 检查context_forget_large_message
-        large_message_tool = tools.get("context_forget_large_message")
-        self.assertIsNotNone(large_message_tool)
-        self.assertIn("conflict_with", large_message_tool)
-        self.assertEqual(
-            set(large_message_tool["conflict_with"]),
-            {"context_forget_range_step1", "context_forget_range_step2"},
-        )
-
-        # 检查context_forget_range_step1
-        step1_tool = tools.get("context_forget_range_step1")
-        self.assertIsNotNone(step1_tool)
-        self.assertIn("conflict_with", step1_tool)
-        self.assertEqual(
-            set(step1_tool["conflict_with"]),
-            {"context_forget_large_message", "context_forget_range_step2"},
-        )
-
-        # 检查context_forget_range_step2
-        step2_tool = tools.get("context_forget_range_step2")
-        self.assertIsNotNone(step2_tool)
-        self.assertIn("conflict_with", step2_tool)
-        self.assertEqual(
-            set(step2_tool["conflict_with"]),
-            {"context_forget_large_message", "context_forget_range_step1"},
-        )
-
     async def test_consecutive_red_block_notification_not_shows_after_two_blocks(
         self,
     ):

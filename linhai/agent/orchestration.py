@@ -417,7 +417,6 @@ class AgentContextOrchestration:
             ),
             args={},
             required_args=[],
-            conflict_with=["context_forget_range_step1", "context_forget_range_step2"],
         )
         async def context_forget_large_message_tool() -> (
             SuccessfulToolResult | FailedToolResult
@@ -440,10 +439,6 @@ class AgentContextOrchestration:
             ),
             args={},
             required_args=[],
-            conflict_with=[
-                "context_forget_large_message",
-                "context_forget_range_step2",
-            ],
         )
         async def context_forget_range_step1_tool() -> (
             SuccessfulToolResult | FailedToolResult
@@ -495,10 +490,6 @@ class AgentContextOrchestration:
                 ),
             },
             required_args=["range_clean_id", "start_id", "end_id", "description"],
-            conflict_with=[
-                "context_forget_large_message",
-                "context_forget_range_step1",
-            ],
         )
         async def context_forget_range_step2_tool(
             range_clean_id: str, start_id: int, end_id: int, description: str

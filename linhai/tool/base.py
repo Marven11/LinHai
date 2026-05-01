@@ -42,7 +42,6 @@ class Tool(TypedDict):
     args: dict[str, ToolArgInfo]
     required: list[str]
     func: Callable[..., "ToolResult | Awaitable[ToolResult]"]
-    conflict_with: list[str]
 
 
 def to_tools_info(tools: dict[str, Tool]) -> list[dict]:
@@ -92,7 +91,6 @@ class ToolSet:
         desc: str,
         args: dict[str, ToolArgInfo],
         required_args: list[str],
-        conflict_with: list[str] | None = None,
     ):
 
         def _wraps(
@@ -112,7 +110,6 @@ class ToolSet:
                 "desc": desc,
                 "args": args,
                 "required": required_args,
-                "conflict_with": conflict_with or [],
             }
             return f
 

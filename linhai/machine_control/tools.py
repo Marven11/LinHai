@@ -123,7 +123,6 @@ def register_machine_control_tools(machine_control: "MachineControl") -> ToolSet
             ),
         },
         required_args=["machine_id", "pid"],
-        conflict_with=None,
     )
     async def connect_posix_shell_as_machine_tool(
         machine_id: str,
@@ -154,7 +153,6 @@ def register_machine_control_tools(machine_control: "MachineControl") -> ToolSet
             ),
         },
         required_args=["name"],
-        conflict_with=None,
     )
     async def connect_remote_config_tool(
         name: str,
@@ -193,7 +191,6 @@ def register_machine_control_tools(machine_control: "MachineControl") -> ToolSet
             ),
         },
         required_args=["machine_id", "session_type", "connection_args"],
-        conflict_with=None,
     )
     async def connect_ether_ghost_machine_tool(
         machine_id: str,
@@ -329,7 +326,6 @@ def register_machine_control_tools(machine_control: "MachineControl") -> ToolSet
             ),
         },
         required_args=["method", "url"],
-        conflict_with=None,
     )
     async def http_request_tool(
         method: str,
@@ -373,7 +369,6 @@ def register_machine_control_tools(machine_control: "MachineControl") -> ToolSet
             )
         },
         required_args=["directory"],
-        conflict_with=None,
     )
     async def change_directory_tool(
         directory: str,
@@ -428,7 +423,6 @@ def register_machine_control_tools(machine_control: "MachineControl") -> ToolSet
             ),
         },
         required_args=["argv"],
-        conflict_with=None,
     )
     async def process_create_tool(
         argv: list[str],
@@ -471,7 +465,6 @@ def register_machine_control_tools(machine_control: "MachineControl") -> ToolSet
             ),
         },
         required_args=["pid", "content", "with_enter"],
-        conflict_with=None,
     )
     async def process_stdio_write_tool(
         pid: str, content: str, with_enter: bool
@@ -508,7 +501,6 @@ def register_machine_control_tools(machine_control: "MachineControl") -> ToolSet
             ),
         },
         required_args=["pid"],
-        conflict_with=None,
     )
     async def process_stdio_read_tool(
         pid: str, timeout: float = 60.0
@@ -556,7 +548,6 @@ def register_machine_control_tools(machine_control: "MachineControl") -> ToolSet
             ),
         },
         required_args=["pid", "timeout"],
-        conflict_with=None,
     )
     async def process_wait_tool(
         pid: str, timeout: float
@@ -595,7 +586,6 @@ def register_machine_control_tools(machine_control: "MachineControl") -> ToolSet
             ),
         },
         required_args=["pid"],
-        conflict_with=None,
     )
     async def process_kill_tool(
         pid: str, graceful: bool = True
@@ -632,11 +622,6 @@ def register_machine_control_tools(machine_control: "MachineControl") -> ToolSet
             ),
         },
         required_args=[],
-        conflict_with=[
-            "terminal_send_keys",
-            "terminal_send_string",
-            "terminal_read_screen",
-        ],
     )
     async def create_terminal_tool(
         columns: int = 80, lines: int = 24
@@ -667,7 +652,6 @@ def register_machine_control_tools(machine_control: "MachineControl") -> ToolSet
             ),
         },
         required_args=["terminal_id", "keys"],
-        conflict_with=["terminal_create"],
     )
     async def send_keys_to_terminal_tool(
         terminal_id: str, keys: list[str]
@@ -705,7 +689,6 @@ def register_machine_control_tools(machine_control: "MachineControl") -> ToolSet
             ),
         },
         required_args=["terminal_id", "string", "with_enter"],
-        conflict_with=["terminal_create"],
     )
     async def send_string_to_terminal_tool(
         terminal_id: str, string: str, with_enter: bool, wait_seconds: float = 0.3
@@ -729,7 +712,6 @@ def register_machine_control_tools(machine_control: "MachineControl") -> ToolSet
             )
         },
         required_args=["terminal_id"],
-        conflict_with=["terminal_create"],
     )
     async def read_terminal_screen_tool(
         terminal_id: str,
@@ -746,7 +728,6 @@ def register_machine_control_tools(machine_control: "MachineControl") -> ToolSet
             )
         },
         required_args=["terminal_id"],
-        conflict_with=None,
     )
     async def close_terminal_tool(
         terminal_id: str,
@@ -772,7 +753,6 @@ def register_machine_control_tools(machine_control: "MachineControl") -> ToolSet
             ),
         },
         required_args=["filepath"],
-        conflict_with=[],
     )
     async def read_file_tool(
         filepath: str, show_line_numbers: bool = False
@@ -806,7 +786,6 @@ def register_machine_control_tools(machine_control: "MachineControl") -> ToolSet
             ),
         },
         required_args=["filepath", "content"],
-        conflict_with=[],
     )
     async def write_file_tool(
         filepath: str, content: str, override: bool = False
@@ -844,7 +823,6 @@ def register_machine_control_tools(machine_control: "MachineControl") -> ToolSet
             ),
         },
         required_args=["filepath", "old", "new"],
-        conflict_with=[],
     )
     async def replace_file_content_tool(
         filepath: str, old: str, new: str, replace_times: Optional[int] = None
@@ -883,7 +861,6 @@ def register_machine_control_tools(machine_control: "MachineControl") -> ToolSet
             ),
         },
         required_args=["dirpath"],
-        conflict_with=None,
     )
     async def list_files_tool(
         dirpath: str, glob: bool = False
@@ -903,7 +880,6 @@ def register_machine_control_tools(machine_control: "MachineControl") -> ToolSet
             )
         },
         required_args=["path"],
-        conflict_with=None,
     )
     async def get_absolute_path_tool(
         path: str,
@@ -934,7 +910,6 @@ def register_machine_control_tools(machine_control: "MachineControl") -> ToolSet
             ),
         },
         required_args=["expression", "filepath"],
-        conflict_with=[],
     )
     async def read_file_with_sed_tool(
         expression: str, filepath: str
@@ -972,7 +947,6 @@ def register_machine_control_tools(machine_control: "MachineControl") -> ToolSet
             "to_filepath",
             "to_machine",
         ],
-        conflict_with=None,
     )
     async def transfer_file_tool(
         from_filepath: str,

@@ -15,7 +15,6 @@ from linhai.tool.base import (
     ToolSet,
 )
 from linhai.tool.main import ToolManager
-from linhai.utils.common import UiNotice
 from linhai.utils.tokenizer import count_tokens, get_cl100k_base_tokenizer
 from linhai.utils.i18n import t
 
@@ -33,7 +32,6 @@ class AgentToolcall:
     ):
         self.registry = registry
 
-        self.called_tools_in_round: list[str] = []
         self.early_return = False
         self.current_round_token_count = 0
         self.compress_tool_called_in_last_response = False
@@ -47,42 +45,6 @@ class AgentToolcall:
             self.max_token_limit = int(max_toolcall_token_in_round * token_limit)
         else:
             self.max_token_limit = max_toolcall_token_in_round
-
-    def _check_tool_conflict(self, tool_name: str) -> str | None:
-        """检查工具调用冲突，返回冲突工具的名字，没有冲突返回None
-
-        冲突规则：conflict_with是有向的。
-        如果工具A在其conflict_with列表中包含工具B，那么在一个消息内，如果已经调用了工具B，就不能再调用工具A。
-        这代表工具A不能在工具B之后调用，但工具B可以在工具A之后调用（除非工具B也标记了与工具A冲突）。
-        因此，只需要检查一个方向：当前工具的conflict_with是否包含已调用工具。
-        不需要检查已调用工具的conflict_with是否包含当前工具，因为那表示已调用工具不能在当前工具之后调用，
-        但当前工具是在已调用工具之后调用，所以是允许的。
-
-        Args:
-            tool_name: 要调用的工具名称
-
-        Returns:
-            str | None: 冲突工具的名字，没有冲突返回None
-        """
-
-        tool_def = None
-        tool_manager = self.registry.get_member_typechecked("tool_manager", ToolManager)
-        for toolset in tool_manager.toolsets:
-            if toolset.has_tool(tool_name):
-                tool_def = toolset.get_tools()[tool_name]
-                break
-
-        if not tool_def:
-            return None
-
-        conflict_with = tool_def["conflict_with"]
-        if conflict_with is None:
-            conflict_with = []
-        for called_tool in self.called_tools_in_round:
-            if called_tool in conflict_with:
-                return called_tool
-
-        return None
 
     def calculate_llm_toolset(self) -> ToolSet:
         """计算并返回包含LLM和虚拟工具的toolset."""
@@ -253,8 +215,7 @@ class AgentToolcall:
         )
 
     def start_new_tool_call_round(self):
-        """开始新一轮工具调用，清空已调用工具记录"""
-        self.called_tools_in_round = []
+        """开始新一轮工具调用"""
         self.early_return = False
         self.current_round_token_count = 0
 
@@ -276,40 +237,6 @@ class AgentToolcall:
             state_machine.transition_to_working()
         if self.early_return:
             return
-
-        conflict_tool = self._check_tool_conflict(tool_call.function_name)
-        if conflict_tool:
-            conflict_msg = RuntimeMessage(
-                f"工具调用冲突: {tool_call.function_name} 与 {conflict_tool} 存在冲突，已阻止调用，剩余工具调用已忽略"
-            )
-
-            await self.registry.send_if_exists(
-                "ui_log",
-                UiNotice(
-                    level="ERROR",
-                    content=f"工具调用冲突: {tool_call.function_name} 与 {conflict_tool}",
-                ),
-            )
-
-            lifecycle = self.registry.get_member_typechecked("lifecycle", Lifecycle)
-            await lifecycle.after_toolcall.trigger(
-                tool_name=tool_call.function_name,
-                tool_index=0,
-                status="failed",
-                message=conflict_msg,
-                toolcall_arguments=tool_call.function_arguments,
-                with_secret=tool_call.with_secret,
-                is_tool_failed_duplicated_error=True,
-            )
-
-            message_processor = self.registry.get_member_typechecked(
-                "agent_message", AgentMessage
-            )
-            await message_processor.add_new_message(conflict_msg)
-            self.early_return = True
-            return True
-
-        self.called_tools_in_round.append(tool_call.function_name)
 
         compress_tools = [
             "context_forget_range_step1",

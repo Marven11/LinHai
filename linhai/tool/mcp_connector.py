@@ -175,9 +175,6 @@ class MCPConnector:
                 ),
             },
             required_args=["name", "command"],
-            conflict_with=[
-                "list_mcp_servers",
-            ],
         )
         async def connect_mcp_server(name: str, command: str):
             sandbox = self.registry.get_member_typechecked(

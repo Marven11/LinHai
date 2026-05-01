@@ -253,75 +253,12 @@ class TestAgentToolcall(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(self.mock_tool_manager.process_tool_call.call_count, 3)
 
-    async def test_tool_conflict_detection(self):
-        """测试工具冲突检测。"""
-
-        self.mock_agent.registry.send_if_exists = AsyncMock()
-
-        from linhai.tool.base import ToolSet, ToolArgInfo
-
-        toolset1 = ToolSet()
-        toolset2 = ToolSet()
-
-        @toolset1.register_tool(
-            name="tool_a",
-            desc="工具A",
-            args={},
-            required_args=[],
-            conflict_with=["tool_b"],
-        )
-        def tool_a():
-            return "a"
-
-        @toolset2.register_tool(
-            name="tool_b",
-            desc="工具B",
-            args={},
-            required_args=[],
-            conflict_with=["tool_a"],
-        )
-        def tool_b():
-            return "b"
-
-        self.mock_tool_manager.toolsets = [toolset1, toolset2]
-        self.mock_tool_manager.has_tool = lambda name: name in ["tool_a", "tool_b"]
-        self.mock_tool_manager.get_tools = lambda: {
-            **toolset1.get_tools(),
-            **toolset2.get_tools(),
-        }
-
-        tool_call_a = ToolCallMessage(
-            function_name="tool_a",
-            function_arguments={},
-            assert_success=True,
-            with_secret=None,
-        )
-        mock_result_a = Mock()
-        mock_result_a.get_content = Mock(return_value="result a")
-        self.mock_tool_manager.process_tool_call = AsyncMock(return_value=mock_result_a)
-
-        result_a = await self.toolcall_processor.call_tool(tool_call_a, tool_index=1)
-        self.assertFalse(result_a)
-
-        tool_call_b = ToolCallMessage(
-            function_name="tool_b",
-            function_arguments={},
-            assert_success=True,
-            with_secret=None,
-        )
-
-        result_b = await self.toolcall_processor.call_tool(tool_call_b, tool_index=2)
-        self.assertTrue(result_b)  # 冲突导致早期返回
-        self.assertTrue(self.toolcall_processor.early_return)
-
     async def test_start_new_tool_call_round(self):
         """测试开始新一轮工具调用。"""
-        self.toolcall_processor.called_tools_in_round = ["tool1"]
         self.toolcall_processor.early_return = True
 
         self.toolcall_processor.start_new_tool_call_round()
 
-        self.assertEqual(self.toolcall_processor.called_tools_in_round, [])
         self.assertFalse(self.toolcall_processor.early_return)
 
     async def test_tool_index_increment_and_passing(self):
