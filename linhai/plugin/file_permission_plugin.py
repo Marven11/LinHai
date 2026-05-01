@@ -61,6 +61,7 @@ class FileOperationPermissionPlugin:
             "write_file": "write",
             "replace_file_content": "write",
             "list_files": "read",
+            "list_files_glob": "read",
             "read_file_with_sed": "read",
         }
 

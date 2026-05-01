@@ -337,6 +337,49 @@ class TestMasterHostControl(unittest.IsolatedAsyncioTestCase):
             result = await self.host_control.list_files("subdir")
             self.assertIsInstance(result, SuccessfulToolResult)
 
+    async def test_list_files_no_glob_param(self):
+        """测试list_files不再接受glob参数"""
+        import tempfile
+        import os
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            self.host_control._cwd = tmpdir
+            result = await self.host_control.list_files(tmpdir)
+            import inspect
+
+            sig = inspect.signature(self.host_control.list_files)
+            self.assertNotIn("glob", sig.parameters)
+
+    async def test_list_files_glob_uses_cwd(self):
+        """测试list_files_glob使用_cwd作为基准目录"""
+        import tempfile
+        import os
+        from linhai.tool.base import SuccessfulToolResult
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            os.makedirs(os.path.join(tmpdir, "src"))
+            with open(os.path.join(tmpdir, "src", "main.py"), "w") as f:
+                f.write("print('hello')")
+            with open(os.path.join(tmpdir, "src", "util.py"), "w") as f:
+                f.write("pass")
+            self.host_control._cwd = tmpdir
+            result = await self.host_control.list_files_glob("src/**/*.py")
+            self.assertIsInstance(result, SuccessfulToolResult)
+            self.assertIn("main.py", result.content)
+            self.assertIn("util.py", result.content)
+
+    async def test_list_files_glob_no_match(self):
+        """测试list_files_glob无匹配结果"""
+        import tempfile
+        import os
+        from linhai.tool.base import SuccessfulToolResult
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            self.host_control._cwd = tmpdir
+            result = await self.host_control.list_files_glob("**/*.xyz")
+            self.assertIsInstance(result, SuccessfulToolResult)
+            self.assertIn(tmpdir, result.content)
+
     async def test_get_absolute_path_resolves_cwd(self):
         """测试get_absolute_path使用_cwd解析相对路径"""
         import tempfile

@@ -369,12 +369,13 @@ class BashHostControl:
     ) -> SuccessfulToolResult | FailedToolResult:
         return await _replace_file_content(self, filepath, old, new, replace_times)
 
-    async def list_files(
-        self, dirpath: str, glob: bool = False
-    ) -> SuccessfulToolResult | FailedToolResult:
-        if glob:
-            raise RuntimeError("list_files的glob选项仅支持master_host")
+    async def list_files(self, dirpath: str) -> SuccessfulToolResult | FailedToolResult:
         return await _list_files(self, dirpath)
+
+    async def list_files_glob(
+        self, pattern: str
+    ) -> SuccessfulToolResult | FailedToolResult:
+        return FailedToolResult(content="list_files_glob仅支持master_host")
 
     async def get_absolute_path(
         self, path: str

@@ -298,13 +298,14 @@ class MasterHostControl:
             replace_file_content, str(resolved), old, new, replace_times
         )
 
-    async def list_files(
-        self, dirpath: str, glob: bool = False
-    ) -> SuccessfulToolResult | FailedToolResult:
-        if glob:
-            return await asyncio.to_thread(list_files_glob, self._cwd, dirpath)
+    async def list_files(self, dirpath: str) -> SuccessfulToolResult | FailedToolResult:
         resolved = self._resolve_path(dirpath)
         return await asyncio.to_thread(list_files, str(resolved))
+
+    async def list_files_glob(
+        self, pattern: str
+    ) -> SuccessfulToolResult | FailedToolResult:
+        return await asyncio.to_thread(list_files_glob, self._cwd, pattern)
 
     async def get_absolute_path(
         self, path: str

@@ -74,7 +74,11 @@ class HostControl(Protocol):
     ) -> SuccessfulToolResult | FailedToolResult: ...
 
     async def list_files(
-        self, dirpath: str, glob: bool = False
+        self, dirpath: str
+    ) -> SuccessfulToolResult | FailedToolResult: ...
+
+    async def list_files_glob(
+        self, pattern: str
     ) -> SuccessfulToolResult | FailedToolResult: ...
 
     async def get_absolute_path(

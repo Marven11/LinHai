@@ -365,9 +365,7 @@ class Trojan:
         Path(filepath).write_text(new_content, encoding="utf-8")
         return {"message": f"已替换{count}次"}
 
-    async def list_files(self, dirpath: str, glob: bool = False):
-        if glob:
-            raise RuntimeError("list_files的glob选项仅支持master_host")
+    async def list_files(self, dirpath: str):
         path = Path(dirpath)
         if not path.exists():
             return {"error": f"路径不存在: {dirpath}"}
@@ -382,6 +380,9 @@ class Trojan:
             size = f" ({item['size']}B)" if not item["is_dir"] else ""
             lines.append(f"{dir_mark} {item['name']}{size}")
         return {"message": "\n".join(lines)}
+
+    async def list_files_glob(self, pattern: str):
+        return {"error": "list_files_glob仅支持master_host"}
 
     async def get_absolute_path(self, path):
         abs_path = Path(path).absolute()

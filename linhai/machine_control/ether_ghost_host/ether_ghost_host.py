@@ -240,11 +240,7 @@ class EtherGhostMachineControl(HostControl):
             return SuccessfulToolResult(content="文件内容已替换")
         return FailedToolResult(content="替换文件内容失败")
 
-    async def list_files(
-        self, dirpath: str, glob: bool = False
-    ) -> SuccessfulToolResult | FailedToolResult:
-        if glob:
-            raise RuntimeError("list_files的glob选项仅支持master_host")
+    async def list_files(self, dirpath: str) -> SuccessfulToolResult | FailedToolResult:
         if self.session is None:
             return FailedToolResult(content="Session未初始化")
 
@@ -261,6 +257,11 @@ class EtherGhostMachineControl(HostControl):
                 prefix = "-"
             lines.append(f"{prefix}{entry.permission} {entry.filesize:8d} {entry.name}")
         return SuccessfulToolResult(content="\n".join(lines))
+
+    async def list_files_glob(
+        self, pattern: str
+    ) -> SuccessfulToolResult | FailedToolResult:
+        return FailedToolResult(content="list_files_glob仅支持master_host")
 
     async def get_absolute_path(
         self, path: str
