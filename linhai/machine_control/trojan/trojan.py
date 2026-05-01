@@ -331,7 +331,7 @@ class Trojan:
                 if not chunk:
                     break
                 content.extend(chunk)
-                await asyncio.sleep(0)
+                await asyncio.sleep(.1)
         text_content = content.decode("utf-8")
         if show_line_numbers:
             lines = text_content.splitlines()
@@ -507,6 +507,7 @@ class Trojan:
                 if not chunk:
                     break
                 data += chunk
+                await asyncio.sleep(0)
             except BlockingIOError:
                 break
 
@@ -587,6 +588,7 @@ class Trojan:
                         if not chunk:
                             break
                         outfile.write(chunk)
+                        await asyncio.sleep(0)
         return {"message": f"文件已拼接: {output_path}"}
 
     async def create_temp_dir(self, prefix: str = "temp") -> TrojanResult:
@@ -773,6 +775,7 @@ class Trojan:
         await loop.connect_read_pipe(lambda: protocol, sys.stdin)
 
         while True:
+            await asyncio.sleep(0.1)
             chunk = await reader.read(4096)
             if not chunk:
                 await self.request_queue.put(None)

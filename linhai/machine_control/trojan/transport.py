@@ -104,6 +104,7 @@ class TrojanTransport:
                         future = self._pending_futures.pop(response_id, None)
                         if future is not None and not future.done():
                             future.set_result(response)
+            await asyncio.sleep(0.1)
             result = await self._process.stdio_read(1.0)
             if not result.success or (
                 not result.stdout and result.exit_note is not None
