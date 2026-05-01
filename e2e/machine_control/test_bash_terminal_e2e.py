@@ -15,8 +15,7 @@ class TestBashTerminalE2E(unittest.IsolatedAsyncioTestCase):
         self,
     ) -> tuple[_AsyncioProcessAdapter, asyncio.subprocess.Process]:
         bash_path = shutil.which("bash") or shutil.which("sh")
-        if bash_path is None:
-            self.skipTest("bash/sh not found")
+        assert bash_path is not None, "bash/sh not found in PATH"
         process = await asyncio.create_subprocess_exec(
             bash_path,
             "-s",
@@ -45,8 +44,7 @@ class TestBashTerminalE2E(unittest.IsolatedAsyncioTestCase):
         await process.wait()
 
     async def test_terminal_create_and_send_string(self):
-        if shutil.which("tmux") is None:
-            self.skipTest("tmux not found")
+        assert shutil.which("tmux") is not None, "tmux not found in PATH"
         control, adapter, process = await self._create_control()
         try:
             result = await control.terminal_create(columns=80, lines=24)
@@ -73,8 +71,7 @@ class TestBashTerminalE2E(unittest.IsolatedAsyncioTestCase):
             await self._cleanup(process)
 
     async def test_terminal_send_keys(self):
-        if shutil.which("tmux") is None:
-            self.skipTest("tmux not found")
+        assert shutil.which("tmux") is not None, "tmux not found in PATH"
         control, adapter, process = await self._create_control()
         try:
             result = await control.terminal_create()
@@ -97,8 +94,7 @@ class TestBashTerminalE2E(unittest.IsolatedAsyncioTestCase):
             await self._cleanup(process)
 
     async def test_terminal_get_terminals(self):
-        if shutil.which("tmux") is None:
-            self.skipTest("tmux not found")
+        assert shutil.which("tmux") is not None, "tmux not found in PATH"
         control, adapter, process = await self._create_control()
         try:
             empty = await control.get_terminals()
@@ -121,8 +117,7 @@ class TestBashTerminalE2E(unittest.IsolatedAsyncioTestCase):
         control, adapter, process = await self._create_control()
         try:
             rc, _, _ = await control.execute_raw("mv /usr/bin/tmux /usr/bin/tmux_bak")
-            if rc != 0:
-                self.skipTest("cannot hide tmux")
+            assert rc == 0, "cannot hide tmux for test setup"
             try:
                 result = await control.terminal_create()
                 self.assertNotIsInstance(result, SuccessfulToolResult)
