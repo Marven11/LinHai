@@ -14,7 +14,8 @@ class TestBashHostControlE2E(unittest.IsolatedAsyncioTestCase):
         self,
     ) -> tuple[_AsyncioProcessAdapter, asyncio.subprocess.Process]:
         bash_path = shutil.which("bash") or shutil.which("sh")
-        assert bash_path is not None, "bash/sh not found in PATH"
+        if bash_path is None:
+            self.skipTest("bash/sh not found")
         process = await asyncio.create_subprocess_exec(
             bash_path,
             "-s",

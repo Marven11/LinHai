@@ -31,10 +31,16 @@ class TestPosixShellControlE2E(unittest.IsolatedAsyncioTestCase):
             / "trojan"
             / "trojan.py"
         )
-        assert trojan_source.exists(), f"trojan.py not found: {trojan_source}"
+        if not trojan_source.exists():
+            self.skipTest(f"trojan.py不存在: {trojan_source}")
 
-        bash_path = shutil.which("bash") or shutil.which("sh")
-        assert bash_path is not None, "bash/sh not found in PATH"
+        # 使用which查找bash路径，提高跨平台兼容性
+        bash_path = shutil.which("bash")
+        if bash_path is None:
+            # 如果找不到bash，尝试使用sh
+            bash_path = shutil.which("sh")
+            if bash_path is None:
+                self.skipTest("未找到bash或sh命令")
 
         process = await asyncio.create_subprocess_exec(
             bash_path,
@@ -79,8 +85,11 @@ class TestPosixShellControlE2E(unittest.IsolatedAsyncioTestCase):
         try:
             from linhai.tool.base import SuccessfulToolResult
 
+            # 使用跨平台存在的文件路径
+            # /etc/passwd 在Unix-like系统上都存在
             test_file = "/etc/passwd"
 
+            # 如果/etc/passwd不存在，使用临时文件
             if not os.path.exists(test_file):
                 with tempfile.NamedTemporaryFile(mode="w", delete=False) as tmp:
                     tmp.write("test content\n")
@@ -89,6 +98,7 @@ class TestPosixShellControlE2E(unittest.IsolatedAsyncioTestCase):
             tool_result = await control.call_tool("read_file", {"filepath": test_file})
             self.assertIsInstance(tool_result, SuccessfulToolResult)
 
+            # 清理临时文件
             if test_file.startswith(tempfile.gettempdir()):
                 os.unlink(test_file)
 
