@@ -3,7 +3,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Optional
 
 from linhai.agent.lifecycle import Lifecycle
-from linhai.agent.messages import RuntimeMessage, FileContentMessage
+from linhai.agent.messages import RuntimeMessage
 from linhai.agent.state_machine import AgentStateMachine
 from linhai.registry import Registry
 from linhai.plugin.message_checkers import Plugin
@@ -71,12 +71,15 @@ class ClawPlugin(Plugin):
             file_path = self.claw_dir / filename
             if file_path.exists():
                 content = file_path.read_text(encoding="utf-8").strip()
+                formatted = (
+                    "<<file_content>>\n<<message>>"
+                    "以下是文件的完整内容，不要重复读取！<<message>>"
+                    f"<<filepath>>{str(file_path)!r}<<filepath>>\n"
+                    f"<<content>>{content}<<content>>\n"
+                    "<<file_content>>"
+                )
                 await agent.message_processor.add_pinned_message(
-                    FileContentMessage(
-                        filepath=str(file_path),
-                        content=content,
-                        show_line_numbers=False,
-                    )
+                    RuntimeMessage(formatted)
                 )
 
     def _initialize_claw_files(self) -> None:

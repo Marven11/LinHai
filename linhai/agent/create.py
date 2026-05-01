@@ -597,8 +597,7 @@ async def _create_pinned_messages(context: "AgentBuildContext") -> list[Message]
             pinned_messages.append(UserMessage(msg))
 
     if context["file"]:
-        from linhai.agent.messages import FileContentMessage
-        from linhai.multimodal import load_image
+        from linhai.multimodal import load_image_as_message
 
         _IMAGE_EXTENSIONS = frozenset(
             {".png", ".jpg", ".jpeg", ".gif", ".bmp", ".webp", ".tiff", ".tif", ".ico"}
@@ -607,16 +606,28 @@ async def _create_pinned_messages(context: "AgentBuildContext") -> list[Message]
         for file_path in context["file"]:
             if file_path.suffix.lower() in _IMAGE_EXTENSIONS:
                 pinned_messages.append(
-                    await load_image(str(file_path), context["registry"], "raw")
+                    await load_image_as_message(
+                        str(file_path), context["registry"], "raw"
+                    )
                 )
             else:
+                from linhai.tool.base import (
+                    ToolCallResultMessage,
+                    FileContentToolResult,
+                )
+
                 with open(file_path, "r", encoding="utf-8") as f:
                     content = f.read().strip()
                     pinned_messages.append(
-                        FileContentMessage(
-                            filepath=str(file_path),
-                            content=content,
-                            show_line_numbers=False,
+                        ToolCallResultMessage(
+                            tool_name="read_file",
+                            tool_index=0,
+                            result=FileContentToolResult(
+                                filepath=str(file_path),
+                                content=content,
+                                show_line_numbers=False,
+                            ),
+                            toolcall_arguments={},
                         )
                     )
 

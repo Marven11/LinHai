@@ -9,7 +9,8 @@ from typing import cast
 from unittest.mock import Mock, patch
 
 from linhai.agent.create import _create_pinned_messages, AgentBuildContext
-from linhai.agent.messages import RuntimeMessage, FileContentMessage
+from linhai.agent.messages import RuntimeMessage
+from linhai.tool.base import ToolCallResultMessage, FileContentToolResult
 from linhai.config import AVAILABLE_TOOLSETS
 from linhai.plugin.claw import ClawPlugin
 
@@ -140,11 +141,20 @@ class TestClawPinnedMessages(unittest.TestCase):
         )
 
         file_content_found = any(
-            isinstance(msg, FileContentMessage) for msg in messages
+            (
+                isinstance(msg, ToolCallResultMessage)
+                and isinstance(msg.result, FileContentToolResult)
+                for msg in messages
+            )
         )
         self.assertFalse(file_content_found, "claw文件内容现在由插件添加")
 
-        file_msgs = [msg for msg in messages if isinstance(msg, FileContentMessage)]
+        file_msgs = [
+            msg
+            for msg in messages
+            if isinstance(msg, ToolCallResultMessage)
+            and isinstance(msg.result, FileContentToolResult)
+        ]
         self.assertEqual(len(file_msgs), 0, f"应有0个文件消息，实际{len(file_msgs)}")
 
     def test_claw_content_not_added_when_claw_but_dir_not_exists(self):

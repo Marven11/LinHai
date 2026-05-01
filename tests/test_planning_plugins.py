@@ -479,12 +479,17 @@ class TestDesignMdReminderPlugin(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(call_args[1]["source"], "planning_design_reminder")
 
     async def test_no_notification_when_design_present(self):
-        from linhai.agent.messages import FileContentMessage
+        from linhai.tool.base import ToolCallResultMessage, FileContentToolResult
 
-        design_msg = FileContentMessage(
-            filepath=str(self.design_file),
-            content="# Design\n",
-            show_line_numbers=False,
+        design_msg = ToolCallResultMessage(
+            tool_name="read_file",
+            tool_index=0,
+            result=FileContentToolResult(
+                filepath=str(self.design_file),
+                content="# Design\n",
+                show_line_numbers=False,
+            ),
+            toolcall_arguments={},
         )
         self.mock_agent.message_processor.get_messages.return_value = [
             self.mock_planning_message,
@@ -500,12 +505,17 @@ class TestDesignMdReminderPlugin(unittest.IsolatedAsyncioTestCase):
         self.plugin._design_notification_active = True
         self.plugin._design_reminded = False
 
-        from linhai.agent.messages import FileContentMessage
+        from linhai.tool.base import ToolCallResultMessage, FileContentToolResult
 
-        design_msg = FileContentMessage(
-            filepath=str(self.design_file),
-            content="# Design\nUpdated\n",
-            show_line_numbers=False,
+        design_msg = ToolCallResultMessage(
+            tool_name="read_file",
+            tool_index=0,
+            result=FileContentToolResult(
+                filepath=str(self.design_file),
+                content="# Design\nUpdated\n",
+                show_line_numbers=False,
+            ),
+            toolcall_arguments={},
         )
         self.mock_agent.message_processor.get_messages.return_value = [
             self.mock_planning_message,
@@ -527,12 +537,17 @@ class TestDesignMdReminderPlugin(unittest.IsolatedAsyncioTestCase):
         self.plugin._design_notification_active = True
         self.plugin._design_reminded = True
 
-        from linhai.agent.messages import FileContentMessage
+        from linhai.tool.base import ToolCallResultMessage, FileContentToolResult
 
-        design_msg = FileContentMessage(
-            filepath=str(self.design_file),
-            content="# Design\nUpdated\n",
-            show_line_numbers=False,
+        design_msg = ToolCallResultMessage(
+            tool_name="read_file",
+            tool_index=0,
+            result=FileContentToolResult(
+                filepath=str(self.design_file),
+                content="# Design\nUpdated\n",
+                show_line_numbers=False,
+            ),
+            toolcall_arguments={},
         )
         self.mock_agent.message_processor.get_messages.return_value = [
             self.mock_planning_message,

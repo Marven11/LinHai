@@ -9,10 +9,10 @@ import argparse
 from linhai.agent.create import _create_pinned_messages, AgentBuildContext
 from linhai.registry import Registry
 from linhai.base import SystemMessage, UserMessage
+from linhai.tool.base import ToolCallResultMessage, FileContentToolResult
 from linhai.agent.messages import (
     GlobalPrompt,
     PathPrompt,
-    FileContentMessage,
     ChecklistMessage,
     RuntimeMessage,
 )
@@ -158,8 +158,8 @@ class TestPinnedMessages(unittest.IsolatedAsyncioTestCase):
             self.assertIsInstance(pinned_messages[0], SystemMessage)
             self.assertIsInstance(pinned_messages[1], RuntimeMessage)
             self.assertIsInstance(pinned_messages[2], GlobalPrompt)
-            self.assertIsInstance(pinned_messages[3], FileContentMessage)
-            self.assertEqual(pinned_messages[3].content, "File content")
+            self.assertIsInstance(pinned_messages[3], ToolCallResultMessage)
+            self.assertEqual(pinned_messages[3].result.content, "File content")
         finally:
             temp_file_path.unlink()
 
@@ -353,10 +353,10 @@ class TestPinnedMessages(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(mock_message_processor.insert_message.call_count, 2)
 
     async def test_pinned_messages_with_image_file(self):
-        """测试通过-f参数添加图像文件时创建ImageMessage。"""
+        """测试通过-f参数添加图像文件时创建ImageDisplayMessage。"""
         import tempfile
         from PIL import Image
-        from linhai.multimodal import ImageMessage
+        from linhai.multimodal import ImageDisplayMessage
 
         with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as f:
             img = Image.new("RGB", (10, 10), color="red")
@@ -370,7 +370,9 @@ class TestPinnedMessages(unittest.IsolatedAsyncioTestCase):
 
             pinned_messages = await _create_pinned_messages(context)
 
-            image_messages = [m for m in pinned_messages if isinstance(m, ImageMessage)]
+            image_messages = [
+                m for m in pinned_messages if isinstance(m, ImageDisplayMessage)
+            ]
             self.assertEqual(len(image_messages), 1)
             self.assertEqual(image_messages[0].filename, image_path.name)
             self.assertEqual(image_messages[0].width, 10)
@@ -383,7 +385,7 @@ class TestPinnedMessages(unittest.IsolatedAsyncioTestCase):
         """测试-f参数同时传入文本文件和图像文件。"""
         import tempfile
         from PIL import Image
-        from linhai.multimodal import ImageMessage
+        from linhai.multimodal import ImageDisplayMessage
 
         with tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False) as f:
             f.write("Text content")
@@ -402,11 +404,16 @@ class TestPinnedMessages(unittest.IsolatedAsyncioTestCase):
             pinned_messages = await _create_pinned_messages(context)
 
             file_messages = [
-                m for m in pinned_messages if isinstance(m, FileContentMessage)
+                m
+                for m in pinned_messages
+                if isinstance(m, ToolCallResultMessage)
+                and isinstance(m.result, FileContentToolResult)
             ]
-            image_messages = [m for m in pinned_messages if isinstance(m, ImageMessage)]
+            image_messages = [
+                m for m in pinned_messages if isinstance(m, ImageDisplayMessage)
+            ]
             self.assertEqual(len(file_messages), 1)
-            self.assertEqual(file_messages[0].content, "Text content")
+            self.assertEqual(file_messages[0].result.content, "Text content")
             self.assertEqual(len(image_messages), 1)
             self.assertEqual(image_messages[0].width, 20)
             self.assertEqual(image_messages[0].height, 30)

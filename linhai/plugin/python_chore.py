@@ -8,11 +8,11 @@ from typing import TYPE_CHECKING, Literal, Union
 from linhai.agent import Agent
 from linhai.agent.lifecycle import Lifecycle
 from linhai.agent.messages import (
-    FileContentMessage,
     GlobalPrompt,
     PathPrompt,
     RuntimeMessage,
 )
+from linhai.tool.base import ToolCallResultMessage, FileContentToolResult
 from linhai.base import Message, SystemMessage, UserMessage
 from linhai.machine_control import MachineControl
 from linhai.registry import Registry
@@ -42,10 +42,8 @@ def _read_file_content(filepath: str) -> str | None:
 
 
 def _get_context_contents(agent: "linhai_agent") -> list[str]:
-    """从上下文消息中获取文本内容，用于过滤外部指定的注释。"""
     checked_types = (
         UserMessage,
-        FileContentMessage,
         GlobalPrompt,
         PathPrompt,
         SystemMessage,
@@ -56,6 +54,10 @@ def _get_context_contents(agent: "linhai_agent") -> list[str]:
             content = msg.get_content()
             if content is not None:
                 contents.append(content)
+        elif isinstance(msg, ToolCallResultMessage) and isinstance(
+            msg.result, FileContentToolResult
+        ):
+            contents.append(msg.result.content)
     return contents
 
 

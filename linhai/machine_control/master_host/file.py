@@ -10,10 +10,10 @@ import time
 
 import pathspec
 
-from linhai.agent.messages import FileContentMessage
 from linhai.tool.base import (
     SuccessfulToolResult,
     FailedToolResult,
+    FileContentToolResult,
 )
 from linhai.utils.tokenizer import count_tokens
 
@@ -118,7 +118,7 @@ def validate_file_for_sed(file_path: Path) -> str:
 
 def read_file(
     filepath: str, show_line_numbers: bool = False
-) -> FileContentMessage | FailedToolResult:
+) -> FileContentToolResult | FailedToolResult:
     """读取文件内容。
 
     Args:
@@ -138,7 +138,7 @@ def read_file(
     except OSError as exc:
         return FailedToolResult(content=f"发生错误: {exc!r}")
 
-    return FileContentMessage(
+    return FileContentToolResult(
         filepath=file_path.as_posix(),
         content=content,
         show_line_numbers=show_line_numbers,

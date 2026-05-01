@@ -15,7 +15,7 @@ from typing import (
     TYPE_CHECKING,
 )
 
-from linhai.agent.messages import FileContentMessage
+from linhai.tool.base import ToolCallResultMessage, FileContentToolResult
 
 if TYPE_CHECKING:
     from linhai.agent.main import Agent as linhai_agent
@@ -61,10 +61,12 @@ async def is_already_read(agent: "linhai_agent", filepath: str) -> bool:
 
     latest_message = None
     for msg in reversed(list(agent.message_processor.get_messages())):
-        if isinstance(msg, FileContentMessage):
+        if isinstance(msg, ToolCallResultMessage) and isinstance(
+            msg.result, FileContentToolResult
+        ):
             try:
-                if Path(msg.filepath).resolve() == abs_path:
-                    latest_message = msg
+                if Path(msg.result.filepath).resolve() == abs_path:
+                    latest_message = msg.result
                     break
             except (OSError, ValueError):
                 continue

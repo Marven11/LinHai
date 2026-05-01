@@ -6,7 +6,11 @@ import pathlib
 import shlex
 from typing import Any, Dict, Optional, Union
 
-from linhai.agent.messages import FileContentMessage
+from linhai.tool.base import (
+    SuccessfulToolResult,
+    FailedToolResult,
+    FileContentToolResult,
+)
 from linhai.machine_control.http_message import HttpMessage
 from linhai.machine_control.process import (
     Process,
@@ -352,7 +356,7 @@ class BashHostControl:
 
     async def read_file(
         self, filepath: str, show_line_numbers: bool = False
-    ) -> SuccessfulToolResult | FailedToolResult | FileContentMessage:
+    ) -> SuccessfulToolResult | FailedToolResult | FileContentToolResult:
         return await _read_file(self, filepath, show_line_numbers)
 
     async def write_file(

@@ -5,7 +5,8 @@ from os import access, R_OK
 
 from linhai.agent import Agent
 from linhai.agent.lifecycle import Lifecycle
-from linhai.agent.messages import RuntimeMessage, FileContentMessage
+from linhai.agent.messages import RuntimeMessage
+from linhai.tool.base import ToolCallResultMessage, FileContentToolResult
 from linhai.agent.state_machine import AgentStateMachine
 from linhai.agent.planning import PlanningPromptMessage
 from linhai.registry import Registry
@@ -280,8 +281,10 @@ class DesignMdReminderPlugin(Plugin):
 
         design_resolved = (planning_folder / "DESIGN.md").resolve()
         for msg in messages:
-            if isinstance(msg, FileContentMessage):
-                if Path(msg.filepath).resolve() == design_resolved:
+            if isinstance(msg, ToolCallResultMessage) and isinstance(
+                msg.result, FileContentToolResult
+            ):
+                if Path(msg.result.filepath).resolve() == design_resolved:
                     return True
         return False
 

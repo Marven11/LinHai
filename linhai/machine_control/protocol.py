@@ -1,7 +1,10 @@
 from typing import Dict, Optional, Protocol, Union, Any
 from linhai.machine_control.http_message import HttpMessage
-from linhai.agent.messages import FileContentMessage
-from linhai.tool.base import SuccessfulToolResult, FailedToolResult
+from linhai.tool.base import (
+    SuccessfulToolResult,
+    FailedToolResult,
+    FileContentToolResult,
+)
 from .process import Process, ProcessCreateResult
 
 
@@ -60,7 +63,7 @@ class HostControl(Protocol):
 
     async def read_file(
         self, filepath: str, show_line_numbers: bool = False
-    ) -> Union[SuccessfulToolResult, FailedToolResult, FileContentMessage]: ...
+    ) -> Union[SuccessfulToolResult, FailedToolResult, FileContentToolResult]: ...
 
     async def write_file(
         self, filepath: str, content: str, override: bool = False

@@ -4,7 +4,8 @@ import unittest
 from unittest.mock import MagicMock, AsyncMock, patch
 from pathlib import Path
 from linhai.plugin import UnnecessaryRunCommandPlugin
-from linhai.agent.messages import RuntimeMessage, FileContentMessage
+from linhai.agent.messages import RuntimeMessage
+from linhai.tool.base import ToolCallResultMessage
 from linhai.base import ToolCallMessage
 
 
@@ -110,7 +111,7 @@ class TestUnnecessaryRunCommandPlugin(unittest.IsolatedAsyncioTestCase):
 
     async def test_after_toolcall_read_file_tracking(self):
         """测试已读取文件跟踪。"""
-        mock_file_msg = MagicMock(spec=FileContentMessage)
+        mock_file_msg = MagicMock(spec=ToolCallResultMessage)
         mock_file_msg.filepath = "/path/to/read.txt"
 
         self.agent.message_processor.get_messages.return_value = [mock_file_msg]
@@ -141,7 +142,7 @@ class TestUnnecessaryRunCommandPlugin(unittest.IsolatedAsyncioTestCase):
 
     async def test_after_toolcall_read_file_relative_path(self):
         """测试相对路径的已读取文件跟踪。"""
-        mock_file_msg = MagicMock(spec=FileContentMessage)
+        mock_file_msg = MagicMock(spec=ToolCallResultMessage)
         mock_file_msg.filepath = "test.txt"
 
         self.agent.message_processor.get_messages.return_value = [mock_file_msg]
@@ -170,7 +171,7 @@ class TestUnnecessaryRunCommandPlugin(unittest.IsolatedAsyncioTestCase):
 
     async def test_after_toolcall_tail_command(self):
         """测试tail命令拦截。"""
-        mock_file_msg = MagicMock(spec=FileContentMessage)
+        mock_file_msg = MagicMock(spec=ToolCallResultMessage)
         mock_file_msg.filepath = "/path/to/read.txt"
 
         self.agent.message_processor.get_messages.return_value = [mock_file_msg]
@@ -201,7 +202,7 @@ class TestUnnecessaryRunCommandPlugin(unittest.IsolatedAsyncioTestCase):
 
     async def test_after_toolcall_head_command(self):
         """测试head命令拦截。"""
-        mock_file_msg = MagicMock(spec=FileContentMessage)
+        mock_file_msg = MagicMock(spec=ToolCallResultMessage)
         mock_file_msg.filepath = "/path/to/read.txt"
 
         self.agent.message_processor.get_messages.return_value = [mock_file_msg]
@@ -232,7 +233,7 @@ class TestUnnecessaryRunCommandPlugin(unittest.IsolatedAsyncioTestCase):
 
     async def test_after_toolcall_awk_command(self):
         """测试awk命令拦截。"""
-        mock_file_msg = MagicMock(spec=FileContentMessage)
+        mock_file_msg = MagicMock(spec=ToolCallResultMessage)
         mock_file_msg.filepath = "/path/to/read.txt"
 
         self.agent.message_processor.get_messages.return_value = [mock_file_msg]
@@ -263,7 +264,7 @@ class TestUnnecessaryRunCommandPlugin(unittest.IsolatedAsyncioTestCase):
 
     async def test_after_toolcall_rg_command(self):
         """测试rg命令拦截。"""
-        mock_file_msg = MagicMock(spec=FileContentMessage)
+        mock_file_msg = MagicMock(spec=ToolCallResultMessage)
         mock_file_msg.filepath = "/path/to/read.txt"
 
         self.agent.message_processor.get_messages.return_value = [mock_file_msg]

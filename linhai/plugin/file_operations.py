@@ -9,10 +9,9 @@ import time
 from linhai.agent import Agent
 from linhai.agent.lifecycle import Lifecycle
 from linhai.agent.messages import (
-    FileContentMessage,
     RuntimeMessage,
 )
-from linhai.tool.base import ToolCallResultMessage
+from linhai.tool.base import ToolCallResultMessage, FileContentToolResult
 from linhai.registry import Registry
 from linhai.machine_control import MachineControl
 from linhai.utils.common import UiNotice
@@ -85,11 +84,16 @@ class DuplicateFileReadPlugin(Plugin):
 
         recent_file_messages = []
         for msg in reversed(list(agent.message_processor.get_messages())):
-            if not isinstance(msg, FileContentMessage):
+            if not (
+                isinstance(msg, ToolCallResultMessage)
+                and isinstance(msg.result, FileContentToolResult)
+            ):
                 continue
             try:
-                if str(Path(msg.filepath).resolve()) == str(Path(filepath).resolve()):
-                    recent_file_messages.append(msg)
+                if str(Path(msg.result.filepath).resolve()) == str(
+                    Path(filepath).resolve()
+                ):
+                    recent_file_messages.append(msg.result)
             except (OSError, ValueError):
                 continue
 
@@ -98,10 +102,14 @@ class DuplicateFileReadPlugin(Plugin):
 
             if message is None:
                 return None
-            assert isinstance(message, FileContentMessage)
-            actual_content = message.get_content()
+            if not (
+                isinstance(message, ToolCallResultMessage)
+                and isinstance(message.result, FileContentToolResult)
+            ):
+                return None
+            actual_content = message.result.to_llm_content()
 
-            if message == latest_message:
+            if message.result == latest_message:
                 self.counter += 1
                 if self.counter == 1:
                     await self.registry.send_if_exists(

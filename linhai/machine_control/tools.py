@@ -2,11 +2,11 @@ from __future__ import annotations
 
 import json
 from typing import TYPE_CHECKING, Dict, Optional, Union, Any
-from linhai.agent.messages import FileContentMessage
 from linhai.tool.base import (
     ToolArgInfo,
     SuccessfulToolResult,
     FailedToolResult,
+    FileContentToolResult,
     ToolSet,
 )
 from rich.text import Text
@@ -756,7 +756,7 @@ def register_machine_control_tools(machine_control: "MachineControl") -> ToolSet
     )
     async def read_file_tool(
         filepath: str, show_line_numbers: bool = False
-    ) -> Union[SuccessfulToolResult, FailedToolResult, FileContentMessage]:
+    ) -> Union[SuccessfulToolResult, FailedToolResult, FileContentToolResult]:
         host_control = machine_control.machines[machine_control.target_machine]
         return await host_control.read_file(filepath, show_line_numbers)
 

@@ -9,8 +9,11 @@ from pathlib import Path
 from typing import Optional
 
 from linhai.machine_control.http_message import HttpMessage
-from linhai.tool.base import SuccessfulToolResult, FailedToolResult
-from linhai.agent.messages import FileContentMessage
+from linhai.tool.base import (
+    SuccessfulToolResult,
+    FailedToolResult,
+    FileContentToolResult,
+)
 from linhai.registry import Registry
 from linhai.sandbox import ProcessSandboxProtocol
 from linhai.machine_control.process import (
@@ -277,7 +280,7 @@ class MasterHostControl:
 
     async def read_file(
         self, filepath: str, show_line_numbers: bool = False
-    ) -> FileContentMessage | FailedToolResult:
+    ) -> FileContentToolResult | FailedToolResult:
         resolved = self._resolve_path(filepath)
         return await asyncio.to_thread(read_file, str(resolved), show_line_numbers)
 

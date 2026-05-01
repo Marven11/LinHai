@@ -1,8 +1,3 @@
-"""多模态支持模块。
-
-包含ImageMessage消息类，load_image工具，以及动态工具集管理。
-"""
-
 from __future__ import annotations
 import base64
 import json
@@ -24,13 +19,18 @@ from linhai.type_hints import (
 )
 from linhai.registry import Registry
 from linhai.utils.i18n import t
+from linhai.tool.base import (
+    ToolSet,
+    ToolArgInfo,
+    FailedToolResult,
+    ImageToolResult,
+)
 
 if TYPE_CHECKING:
     from linhai.machine_control import MachineControl
 
 
-class ImageMessage(Message):
-    """图片消息类，在内存中保存图片bytes数据。"""
+class ImageDisplayMessage(Message):
 
     def __init__(
         self,
@@ -42,17 +42,6 @@ class ImageMessage(Message):
         height: int,
         quality: Literal["compressed", "raw"] = "raw",
     ):
-        """初始化图片消息。
-
-        Args:
-            image_bytes: 图片的二进制数据
-            mime_type: 图片的MIME类型
-            filename: 原始文件名（可选，None表示未知）
-            registry: Registry实例（用于动态获取LLM支持状态）
-            width: 图片宽度
-            height: 图片高度
-            quality: 图片质量，"compressed"表示压缩图像，"raw"表示原始图像（默认）
-        """
         self.image_bytes = image_bytes
         self.mime_type = mime_type
         self.filename = filename
@@ -62,31 +51,16 @@ class ImageMessage(Message):
         self.height = height
 
     def to_data_url(self) -> str:
-        """生成data URL格式的图片URL。"""
         base64_data = base64.b64encode(self.image_bytes).decode("utf-8")
         return f"data:{self.mime_type};base64,{base64_data}"
 
     def save_to_temp_file(self) -> Path:
-        """将图片保存到临时文件，返回文件路径。"""
         suffix = Path(self.filename).suffix if self.filename else ".png"
         with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as f:
             f.write(self.image_bytes)
             return Path(f.name)
 
     def to_llm_message(self) -> LanguageModelMessage:
-        """转换为LLM消息格式。
-
-        动态检查当前LLM是否支持图像，如果支持则返回image_url格式，
-        否则保存到临时文件并返回文本消息。
-
-        严格按照_current_llm_supports_image的方法获取LLM支持状态：
-        - 通过self.registry获取agent
-        - 调用agent.get_current_model()获取当前llm
-        - 调用llm.support_image()获取支持状态
-
-        Returns:
-            LanguageModelMessage: 转换后的消息
-        """
         from linhai.agent.main import Agent
 
         agent = self.registry.get_member_typechecked("agent", Agent)
@@ -105,24 +79,18 @@ class ImageMessage(Message):
             temp_path = self.save_to_temp_file()
             estimated_tokens = self.estimated_tokens()
             quality_desc = "原始分辨率" if self.quality == "raw" else "压缩后"
-            content = f"<<image>><<message>>你不支持查看图片，图片内容已经自动转储到以下路径，用其他适当的方式间接查看这张图片（{quality_desc}，估算token用量: {estimated_tokens}）<<message>><<filepath>>{temp_path}<<filepath>><<image>>"
+            content = (
+                f"<<image>><<message>>你不支持查看图片，图片内容已经自动转储到以下路径，"
+                f"用其他适当的方式间接查看这张图片（{quality_desc}，估算token用量: {estimated_tokens}）"
+                f"<<message>><<filepath>>{temp_path}<<filepath>><<image>>"
+            )
             return {"role": "user", "content": content}
 
     def get_content(self) -> None:
         return None
 
-    def to_llm_content(
-        self,
-    ) -> list[ChatCompletionContentPartTextParam | ChatCompletionContentPartImageParam]:
-        return [
-            ChatCompletionContentPartImageParam(
-                type="image_url",
-                image_url={"url": self.to_data_url()},
-            )
-        ]
-
     def __repr__(self) -> str:
-        return f"ImageMessage(size={len(self.image_bytes)} bytes, mime_type={self.mime_type}, quality={self.quality}, width={self.width}, height={self.height})"
+        return f"ImageDisplayMessage(size={len(self.image_bytes)} bytes, mime_type={self.mime_type}, quality={self.quality}, width={self.width}, height={self.height})"
 
     def estimated_tokens(self) -> int:
         import math
@@ -132,7 +100,6 @@ class ImageMessage(Message):
         return tokens_h * tokens_w
 
     def to_json(self) -> str:
-        """转换为JSON字符串。"""
         data = {
             "image_bytes": base64.b64encode(self.image_bytes).decode("utf-8"),
             "mime_type": self.mime_type,
@@ -144,8 +111,7 @@ class ImageMessage(Message):
         return json.dumps(data)
 
     @classmethod
-    def from_json(cls, json_str: str, registry: Registry) -> "ImageMessage":
-        """从JSON字符串创建ImageMessage实例。"""
+    def from_json(cls, json_str: str, registry: Registry) -> "ImageDisplayMessage":
         data = json.loads(json_str)
         image_bytes = base64.b64decode(data["image_bytes"])
         return cls(
@@ -159,29 +125,11 @@ class ImageMessage(Message):
         )
 
 
-async def load_image(
+async def _load_image_impl(
     image_filepath: str,
-    registry: Registry,
     quality: Literal["compressed", "raw"],
     machine_control: "MachineControl | None" = None,
-) -> ImageMessage:
-    """加载图片文件并返回ImageMessage。
-
-    Args:
-        image_filepath: 图片文件路径
-        registry: Registry实例（用于动态获取LLM支持状态）
-        quality: 图片质量，"compressed"表示压缩图像，"raw"表示原始图像（默认）
-        machine_control: MachineControl实例（可选，用于支持远程机器读取）
-
-    Returns:
-        ImageMessage: 包含图片数据的消息对象
-
-    Raises:
-        FileNotFoundError: 图片文件不存在
-        ValueError: 图像文件损坏或格式不支持
-    """
-    from linhai.tool.base import FailedToolResult
-
+) -> tuple[bytes, str, str | None, int, int]:
     temp_path: Path | None = None
     if machine_control is not None and machine_control.target_machine != "master_host":
         suffix = Path(image_filepath).suffix or ".png"
@@ -255,45 +203,62 @@ async def load_image(
                 mime_type = "image/jpeg"
             image_bytes = buffer.getvalue()
 
-    result = ImageMessage(
+    if temp_path is not None:
+        os.unlink(temp_path)
+    return image_bytes, mime_type, Path(image_filepath).name, width, height
+
+
+async def load_image(
+    image_filepath: str,
+    registry: Registry,
+    quality: Literal["compressed", "raw"],
+    machine_control: "MachineControl | None" = None,
+) -> ImageToolResult:
+    """Load image from image_filepath and return ImageToolResult."""
+    image_bytes, mime_type, filename, width, height = await _load_image_impl(
+        image_filepath, quality, machine_control
+    )
+    return ImageToolResult(
+        image_bytes_b64=base64.b64encode(image_bytes).decode("utf-8"),
+        mime_type=mime_type,
+        filename=filename,
+        quality=quality,
+        width=width,
+        height=height,
+    )
+
+
+async def load_image_as_message(
+    image_filepath: str,
+    registry: Registry,
+    quality: Literal["compressed", "raw"],
+    machine_control: "MachineControl | None" = None,
+) -> ImageDisplayMessage:
+    image_bytes, mime_type, filename, width, height = await _load_image_impl(
+        image_filepath, quality, machine_control
+    )
+    return ImageDisplayMessage(
         image_bytes=image_bytes,
         mime_type=mime_type,
-        filename=Path(image_filepath).name,
+        filename=filename,
         registry=registry,
         quality=quality,
         width=width,
         height=height,
     )
-    if temp_path is not None:
-        os.unlink(temp_path)
-    return result
-
-
-from linhai.tool.base import ToolSet, ToolArgInfo
 
 
 class MultimodalToolsetManager:
-    """多模态工具集管理器，根据当前LLM配置动态调整工具集。
-
-    设计原则：
-    - 创建一个ToolSet用于存放load_image工具
-    - 在初始化时添加到ToolManager
-    - 根据LLM配置动态添加/移除工具，而不是整个ToolSet
-    """
 
     def __init__(self, registry: Registry):
-        """初始化多模态工具集管理器。"""
         self.registry = registry
         self.registry.register_member("multimodal_toolset_manager", self)
-
         self.toolset = ToolSet()
 
     def register_lifecycle(self, lifecycle: Lifecycle) -> None:
-        """注册生命周期回调，在Agent创建完成后调用。"""
         lifecycle.before_message_generation.register(self._update_tool_availability)
 
     async def _update_tool_availability(self) -> None:
-        """根据当前LLM配置添加或移除load_image工具。"""
         should_have = self._current_llm_supports_image()
         has_tool = self.toolset.has_tool("load_image")
 
@@ -333,7 +298,7 @@ class MultimodalToolsetManager:
             )
             async def _load_image(
                 image_filepath, quality: Literal["compressed", "raw"] = "raw"
-            ) -> ImageMessage:
+            ) -> ImageToolResult:
                 from linhai.machine_control import MachineControl
 
                 machine_control: MachineControl | None = None
@@ -362,7 +327,6 @@ class MultimodalToolsetManager:
             )
 
     def _current_llm_supports_image(self) -> bool:
-        """检查当前LLM是否支持图像。"""
         from linhai.agent.main import Agent
 
         agent = self.registry.get_member_typechecked("agent", Agent)

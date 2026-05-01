@@ -8,8 +8,11 @@ from typing import Dict, Any
 from linhai.machine_control.ether_ghost_host.ether_ghost_host import (
     EtherGhostMachineControl,
 )
-from linhai.tool.base import SuccessfulToolResult, FailedToolResult
-from linhai.agent.messages import FileContentMessage
+from linhai.tool.base import (
+    SuccessfulToolResult,
+    FailedToolResult,
+    FileContentToolResult,
+)
 
 
 class TestEtherGhostMachineControl(unittest.IsolatedAsyncioTestCase):

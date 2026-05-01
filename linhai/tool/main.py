@@ -19,6 +19,7 @@ from linhai.tool.base import (
     SuccessfulToolResult,
     FailedToolResult,
     ToolResult,
+    FileContentToolResult,
 )
 from linhai.tool.mcp_connector import MCPConnector
 from linhai.utils.common import UiNotice
@@ -143,8 +144,6 @@ class ToolManager:
 
             if isinstance(result, ToolResult):
                 tool_result = result
-            elif isinstance(result, Message):
-                return result
             else:
                 tool_result = SuccessfulToolResult(content=str(result))
 

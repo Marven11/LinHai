@@ -10,7 +10,7 @@ from linhai.tool.base import ToolCallResultMessage
 from linhai.tool.base import SuccessfulToolResult, FailedToolResult
 from linhai.tool.main import ToolManager
 from linhai.token_manager import TokenManager
-from linhai.multimodal import ImageMessage
+from linhai.multimodal import ImageDisplayMessage
 
 
 class TestLargeMessageMarking(unittest.IsolatedAsyncioTestCase):

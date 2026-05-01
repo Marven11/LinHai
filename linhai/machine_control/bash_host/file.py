@@ -4,8 +4,11 @@ import base64
 import shlex
 from typing import TYPE_CHECKING, Optional
 
-from linhai.agent.messages import FileContentMessage
-from linhai.tool.base import SuccessfulToolResult, FailedToolResult
+from linhai.tool.base import (
+    SuccessfulToolResult,
+    FailedToolResult,
+    FileContentToolResult,
+)
 
 if TYPE_CHECKING:
     from .bash_host import BashHostControl
@@ -44,7 +47,7 @@ async def _check_file_size(host: BashHostControl, filepath: str) -> str:
 
 async def read_file(
     host: BashHostControl, filepath: str, show_line_numbers: bool = False
-) -> FileContentMessage | FailedToolResult:
+) -> FileContentToolResult | FailedToolResult:
     error = await _check_file_readable(host, filepath)
     if error:
         return FailedToolResult(content=error)
@@ -60,7 +63,7 @@ async def read_file(
 
     decoded = base64.b64decode(stdout.strip()) if stdout.strip() else b""
     content = decoded.decode("utf-8", errors="replace")
-    return FileContentMessage(
+    return FileContentToolResult(
         filepath=filepath, content=content, show_line_numbers=show_line_numbers
     )
 

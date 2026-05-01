@@ -6,11 +6,11 @@ from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock
 
 from linhai.agent.messages import (
-    FileContentMessage,
     GlobalPrompt,
     PathPrompt,
     RuntimeMessage,
 )
+from linhai.tool.base import ToolCallResultMessage, FileContentToolResult
 from linhai.base import AssistantMessage, SystemMessage, UserMessage
 from linhai.plugin.python_chore import (
     PythonCommentCheckerPlugin,
@@ -50,7 +50,14 @@ class TestGetContextContents(unittest.TestCase):
 
     def test_extracts_file_content_message(self):
         agent = MagicMock()
-        msg = FileContentMessage("test.py", "x = 1  # existing", False)
+        msg = ToolCallResultMessage(
+            tool_name="read_file",
+            tool_index=0,
+            result=FileContentToolResult(
+                filepath="test.py", content="x = 1  # existing", show_line_numbers=False
+            ),
+            toolcall_arguments={},
+        )
         agent.message_processor.get_messages.return_value = [msg]
         contents = _get_context_contents(agent)
         self.assertEqual(len(contents), 1)
@@ -146,7 +153,14 @@ class TestMultilineStringNotComment(_BasePluginTest):
 
 class TestPreservedCommentsNoWarning(_BasePluginTest):
     async def test_no_warn_when_comment_in_file_content(self):
-        file_msg = FileContentMessage("test.py", "x = 1  # existing", False)
+        file_msg = ToolCallResultMessage(
+            tool_name="read_file",
+            tool_index=0,
+            result=FileContentToolResult(
+                filepath="test.py", content="x = 1  # existing", show_line_numbers=False
+            ),
+            toolcall_arguments={},
+        )
         self.agent.message_processor.get_messages.return_value = [file_msg]
 
         result = await self._call_after_toolcall(

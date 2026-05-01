@@ -43,7 +43,7 @@ class Message(Protocol):
         """获取消息的文本内容。
 
         返回str或None：如果消息的content是简单的字符串则返回该字符串；
-        如果content不是简单字符串（如ImageMessage的图片内容）则返回None。
+        如果content不是简单字符串（如图片内容）则返回None。
         """
         raise NotImplementedError()
 

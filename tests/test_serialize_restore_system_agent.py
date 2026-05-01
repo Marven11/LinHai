@@ -146,7 +146,7 @@ class TestMessageClassRegistry(unittest.TestCase):
             "RuntimeMessage",
             "UserMessage",
             "AssistantMessage",
-            "FileContentMessage",
+            "DynamicFileContentMessage",
             "ExplicitCacheMessage",
         ]:
             self.assertIn(name, MESSAGE_CLASS_REGISTRY)

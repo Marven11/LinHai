@@ -6,8 +6,11 @@ from pathlib import Path
 from typing import Dict, Optional, Any, Union
 
 from linhai.machine_control.http_message import HttpMessage, build_http_message
-from linhai.tool.base import SuccessfulToolResult, FailedToolResult
-from linhai.agent.messages import FileContentMessage
+from linhai.tool.base import (
+    SuccessfulToolResult,
+    FailedToolResult,
+    FileContentToolResult,
+)
 from ..protocol import HostControl
 from ..process import Process, ProcessCreateResult
 
@@ -179,7 +182,7 @@ class EtherGhostMachineControl(HostControl):
 
     async def read_file(
         self, filepath: str, show_line_numbers: bool = False
-    ) -> Union[SuccessfulToolResult, FailedToolResult, FileContentMessage]:
+    ) -> Union[SuccessfulToolResult, FailedToolResult, FileContentToolResult]:
         if self.session is None:
             return FailedToolResult(content="Session未初始化")
 
@@ -192,7 +195,7 @@ class EtherGhostMachineControl(HostControl):
                 for i, line in enumerate(lines):
                     numbered_lines.append(f"{i+1:4d}: {line}")
                 content = "".join(numbered_lines)
-        return FileContentMessage(
+        return FileContentToolResult(
             filepath=filepath,
             content=content,
             show_line_numbers=show_line_numbers,

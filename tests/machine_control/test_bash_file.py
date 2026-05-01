@@ -3,7 +3,11 @@ import base64
 import unittest
 from unittest.mock import AsyncMock, Mock
 
-from linhai.agent.messages import FileContentMessage
+from linhai.tool.base import (
+    SuccessfulToolResult,
+    FailedToolResult,
+    FileContentToolResult,
+)
 from linhai.machine_control.bash_host.bash_host import BashHostControl
 from linhai.machine_control.bash_host.file import (
     MAX_FILE_SIZE,
@@ -77,7 +81,7 @@ class TestReadFile(unittest.TestCase):
                 (0, _b64(content), ""),
             ]
             result = await read_file(host, "/some/file")
-            self.assertIsInstance(result, FileContentMessage)
+            self.assertIsInstance(result, FileContentToolResult)
             self.assertEqual(result.content, content)
 
         self.loop.run_until_complete(test())

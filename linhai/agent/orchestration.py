@@ -17,7 +17,7 @@ from linhai.agent.workflow import (
 from .lifecycle import Lifecycle
 from linhai.base import ToolCallMessage, Answer
 from linhai.tool.base import ToolCallResultMessage
-from linhai.multimodal import ImageMessage
+from linhai.multimodal import ImageDisplayMessage
 from linhai.utils.tokenizer import count_tokens
 from linhai.registry import Registry
 from linhai.tool.base import (
@@ -518,12 +518,12 @@ class AgentContextOrchestration:
     async def _before_add_new_message(self, message: "Message") -> None:
         """在添加新消息前检查是否为大消息。"""
         from linhai.base import AssistantMessage
-        from linhai.multimodal import ImageMessage
+        from linhai.multimodal import ImageDisplayMessage
 
         if isinstance(message, AssistantMessage):
             return
 
-        if isinstance(message, ImageMessage):
+        if isinstance(message, ImageDisplayMessage):
             self.large_messages.add(message)
         else:
             content = message.get_content()
@@ -542,14 +542,14 @@ class AgentContextOrchestration:
     async def _after_conversation_restore(self) -> None:
         """对话恢复后重新计算大消息列表。"""
         from linhai.base import AssistantMessage
-        from linhai.multimodal import ImageMessage
+        from linhai.multimodal import ImageDisplayMessage
 
         self.large_messages = set()
         self.cleaned_messages = {}
         for msg in self.agent_message.get_messages():
             if isinstance(msg, AssistantMessage):
                 continue
-            if isinstance(msg, ImageMessage):
+            if isinstance(msg, ImageDisplayMessage):
                 self.large_messages.add(msg)
             else:
                 content = msg.get_content()

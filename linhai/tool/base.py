@@ -1,8 +1,3 @@
-"""工具基础模块。
-
-包含工具定义、注册和调用相关的基类和函数。
-"""
-
 from typing import (
     TypedDict,
     Callable,
@@ -15,6 +10,8 @@ from typing import (
 import json
 import tempfile
 import reprlib
+import hashlib
+from pathlib import Path
 
 from pydantic import BaseModel
 
@@ -28,15 +25,11 @@ import linhai
 
 
 class ToolArgInfo(TypedDict):
-    """工具参数信息"""
-
     desc: str
     type: str | dict[str, Any]
 
 
 class Tool(TypedDict):
-    """工具定义"""
-
     name: str
     desc: str
     args: dict[str, ToolArgInfo]
@@ -45,13 +38,6 @@ class Tool(TypedDict):
 
 
 def to_tools_info(tools: dict[str, Tool]) -> list[dict]:
-    """获取所有工具的信息列表
-
-    返回格式符合OpenAI工具调用规范
-
-    Returns:
-        工具信息字典列表
-    """
     tool_info_list = []
     for tool in tools.values():
         properties: dict[str, Any] = {}
@@ -96,14 +82,6 @@ class ToolSet:
         def _wraps(
             f: Callable[..., "ToolResult | Awaitable[ToolResult]"],
         ) -> Callable[..., "ToolResult | Awaitable[ToolResult]"]:
-            """实际装饰器
-
-            Args:
-                f: 被装饰的工具函数
-
-            Returns:
-                装饰后的函数
-            """
             self.tools[name] = {
                 "name": name,
                 "func": f,
@@ -123,15 +101,6 @@ class ToolSet:
         return self.tools[name]["func"]
 
     def call_tool(self, name: str, args: dict[str, Any]) -> Any:
-        """调用指定工具
-
-        Args:
-            name: 工具名称
-            args: 工具参数
-
-        Returns:
-            工具执行结果
-        """
         return self.get_tool(name)(**args)
 
     def get_tools(self):
@@ -141,7 +110,6 @@ class ToolSet:
         return name in self.tools
 
     def add_toolset(self, toolset: "ToolSet") -> None:
-        """将另一个ToolSet中的所有工具添加到当前ToolSet中。"""
         for tool_name, tool in toolset.tools.items():
             if tool_name in self.tools:
                 raise ValueError(f"Tool {tool_name} already exists in this ToolSet")
@@ -153,41 +121,178 @@ ToolResultContent = (
 )
 
 
+TOOL_RESULT_REGISTRY: dict[str, type] = {}
+
+
+def register_tool_result(cls):
+    TOOL_RESULT_REGISTRY[cls.__name__] = cls
+    return cls
+
+
+def tool_result_from_json(json_str: str) -> "ToolResult":
+    data = json.loads(json_str)
+    type_name = data.get("type")
+    cls = TOOL_RESULT_REGISTRY.get(type_name)
+    if cls is None:
+        raise RuntimeError(f"Unknown ToolResult type: {type_name}")
+    return cls.from_json(json_str)
+
+
 @runtime_checkable
 class ToolResult(Protocol):
-    """工具结果协议，定义工具返回值的接口。"""
-
     def to_llm_content(self) -> ToolResultContent:
-        """转换为应插入LLM消息content字段的内容。"""
+        raise NotImplementedError()
+
+    def to_json(self) -> str:
+        raise NotImplementedError()
+
+    @classmethod
+    def from_json(cls, json_str: str) -> "ToolResult":
         raise NotImplementedError()
 
 
+@register_tool_result
 class SuccessfulToolResult(BaseModel):
-    """工具成功结果"""
-
     content: str
 
     def to_llm_content(self) -> str:
         return self.content
 
     def to_json(self) -> str:
-        return self.model_dump_json()
+        return json.dumps({"type": "SuccessfulToolResult", "content": self.content})
+
+    @classmethod
+    def from_json(cls, json_str: str) -> "SuccessfulToolResult":
+        data = json.loads(json_str)
+        return cls(content=data["content"])
 
 
+@register_tool_result
 class FailedToolResult(BaseModel):
-    """工具失败结果"""
-
     content: str
 
     def to_llm_content(self) -> str:
         return self.content
 
     def to_json(self) -> str:
-        return self.model_dump_json()
+        return json.dumps({"type": "FailedToolResult", "content": self.content})
+
+    @classmethod
+    def from_json(cls, json_str: str) -> "FailedToolResult":
+        data = json.loads(json_str)
+        return cls(content=data["content"])
+
+
+@register_tool_result
+class FileContentToolResult(BaseModel):
+    filepath: str
+    content: str
+    show_line_numbers: bool
+
+    def to_llm_content(self) -> str:
+        if self.show_line_numbers:
+            lines = self.content.splitlines()
+            numbered_lines = [f"{i+1}: {line}" for i, line in enumerate(lines)]
+            formatted_content = "\n".join(numbered_lines)
+        else:
+            formatted_content = self.content
+        return (
+            "<<file_content>>\n<<message>>"
+            "以下是文件的完整内容，不要重复读取！<<message>>"
+            f"<<filepath>>{self.filepath!r}<<filepath>>\n"
+            f"<<content>>{formatted_content}<<content>>\n"
+            "<<file_content>>"
+        )
+
+    def to_json(self) -> str:
+        return json.dumps(
+            {
+                "type": "FileContentToolResult",
+                "filepath": self.filepath,
+                "content": self.content,
+                "show_line_numbers": self.show_line_numbers,
+            }
+        )
+
+    @classmethod
+    def from_json(cls, json_str: str) -> "FileContentToolResult":
+        data = json.loads(json_str)
+        return cls(
+            filepath=data["filepath"],
+            content=data["content"],
+            show_line_numbers=data["show_line_numbers"],
+        )
+
+    def __eq__(self, other) -> bool:
+        if not isinstance(other, FileContentToolResult):
+            return False
+        return (
+            self.content == other.content
+            and Path(self.filepath).resolve() == Path(other.filepath).resolve()
+            and self.show_line_numbers == other.show_line_numbers
+        )
+
+    def __hash__(self) -> int:
+        return hash((Path(self.filepath).resolve(), hash(self.content)))
+
+
+@register_tool_result
+class ImageToolResult(BaseModel):
+    image_bytes_b64: str
+    mime_type: str
+    filename: str | None
+    quality: str
+    width: int
+    height: int
+
+    def to_llm_content(
+        self,
+    ) -> list[ChatCompletionContentPartTextParam | ChatCompletionContentPartImageParam]:
+        return [
+            ChatCompletionContentPartImageParam(
+                type="image_url",
+                image_url={
+                    "url": f"data:{self.mime_type};base64,{self.image_bytes_b64}"
+                },
+            )
+        ]
+
+    def to_json(self) -> str:
+        return json.dumps(
+            {
+                "type": "ImageToolResult",
+                "image_bytes_b64": self.image_bytes_b64,
+                "mime_type": self.mime_type,
+                "filename": self.filename,
+                "quality": self.quality,
+                "width": self.width,
+                "height": self.height,
+            }
+        )
+
+    @classmethod
+    def from_json(cls, json_str: str) -> "ImageToolResult":
+        data = json.loads(json_str)
+        return cls(
+            image_bytes_b64=data["image_bytes_b64"],
+            mime_type=data["mime_type"],
+            filename=data.get("filename"),
+            quality=data.get("quality", "raw"),
+            width=data.get("width", 0),
+            height=data.get("height", 0),
+        )
+
+
+def _get_file_content_info(result: ToolResult) -> str | None:
+    if isinstance(result, FileContentToolResult):
+        return result.content
+    llm_content = result.to_llm_content()
+    if isinstance(llm_content, str):
+        return llm_content
+    return None
 
 
 class ToolCallResultMessage(Message):
-    """工具调用结果消息，包装ToolResult"""
 
     def __init__(
         self,
@@ -202,13 +307,43 @@ class ToolCallResultMessage(Message):
         self.toolcall_arguments = toolcall_arguments
 
     def to_llm_message(self) -> LanguageModelMessage:
-        return {"role": "user", "content": self.get_content()}
+        llm_content = self.result.to_llm_content()
+        if isinstance(llm_content, list):
+            content_parts = []
+            if isinstance(self.result, FailedToolResult):
+                status = (
+                    "错误：工具执行失败，你需要缓慢且仔细地反思并总结："
+                    "1. 失败的原因 2. 用户的需求 3. 你弄错了什么"
+                    " 4. 如何正确完成用户的需求 5. 如何避免工具失败"
+                )
+            else:
+                status = "工具执行成功"
+            prefix_parts = [
+                "<<tool>>",
+                f"<<name>>{self.tool_name}<<name>>",
+                f"<<index>>{self.tool_index}<<index>>",
+            ]
+            if isinstance(self.result, FailedToolResult) and self.toolcall_arguments:
+                r = reprlib.Repr()
+                r.maxstring = 100
+                argument_repr = r.repr(self.toolcall_arguments)
+                prefix_parts.append(
+                    f"<<toolcall_argument>>{argument_repr}<<toolcall_argument>>"
+                )
+            prefix_parts.append(f"<<message>>{status}<<message>>")
+            content_parts.append({"type": "text", "text": "\n".join(prefix_parts)})
+            content_parts.extend(llm_content)
+            content_parts.append({"type": "text", "text": "<<tool>>"})
+            return {"role": "user", "content": content_parts}
+        else:
+            return {"role": "user", "content": self.get_content()}
 
     def get_content(self) -> str:
         if isinstance(self.result, FailedToolResult):
             status = (
                 "错误：工具执行失败，你需要缓慢且仔细地反思并总结："
-                "1. 失败的原因 2. 用户的需求 3. 你弄错了什么 4. 如何正确完成用户的需求 5. 如何避免工具失败"
+                "1. 失败的原因 2. 用户的需求 3. 你弄错了什么"
+                " 4. 如何正确完成用户的需求 5. 如何避免工具失败"
             )
         else:
             status = "工具执行成功"
@@ -241,32 +376,18 @@ class ToolCallResultMessage(Message):
         return "\n".join(content_parts)
 
     def to_json(self) -> str:
-        content = (
-            self.result.content
-            if isinstance(self.result, (SuccessfulToolResult, FailedToolResult))
-            else str(self.result.to_llm_content())
-        )
         data = {
             "tool_name": self.tool_name,
             "tool_index": self.tool_index,
-            "result": {
-                "type": (
-                    "failed" if isinstance(self.result, FailedToolResult) else "success"
-                ),
-                "content": content,
-            },
+            "result": self.result.to_json(),
             "toolcall_arguments": self.toolcall_arguments,
-            "content": content,
         }
         return json.dumps(data)
 
     @classmethod
     def from_json(cls, json_str: str, registry: "linhai.registry.Registry"):
         data = json.loads(json_str)
-        if data["result"]["type"] == "success":
-            result = SuccessfulToolResult(content=data["result"]["content"])
-        else:
-            result = FailedToolResult(content=data["result"]["content"])
+        result = tool_result_from_json(data["result"])
         return cls(
             tool_name=data["tool_name"],
             tool_index=data["tool_index"],

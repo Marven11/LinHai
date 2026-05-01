@@ -13,6 +13,7 @@ from linhai.tool.base import (
     SuccessfulToolResult,
     FailedToolResult,
     ToolSet,
+    ToolResult,
 )
 from linhai.tool.main import ToolManager
 from linhai.utils.tokenizer import count_tokens, get_cl100k_base_tokenizer
@@ -299,7 +300,14 @@ class AgentToolcall:
             with_secret=tool_call.with_secret,
             is_tool_failed_duplicated_error=False,
         )
-        if isinstance(callback_result, Message):
+        if isinstance(callback_result, ToolResult):
+            replaced_tool_result = ToolCallResultMessage(
+                tool_name=tool_call.function_name,
+                tool_index=tool_index,
+                result=callback_result,
+                toolcall_arguments=tool_call.function_arguments,
+            )
+        elif isinstance(callback_result, Message):
             replaced_tool_result = callback_result
 
         return replaced_tool_result

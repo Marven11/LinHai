@@ -8,20 +8,21 @@ from pathlib import Path
 from unittest import TestCase
 from unittest.mock import MagicMock, patch
 
-from linhai.multimodal import ImageMessage, load_image
+from linhai.multimodal import ImageDisplayMessage, load_image
+from linhai.tool.base import ImageToolResult
 
 
-class TestImageMessage(TestCase):
-    """Test ImageMessage class."""
+class TestImageDisplayMessage(TestCase):
+    """Test ImageDisplayMessage class."""
 
     def setUp(self):
         """Set up test fixtures."""
         self.mock_registry = MagicMock()
 
     def test_init(self):
-        """Test ImageMessage initialization."""
+        """Test ImageDisplayMessage initialization."""
         image_bytes = b"fake_image_data"
-        msg = ImageMessage(
+        msg = ImageDisplayMessage(
             image_bytes=image_bytes,
             mime_type="image/jpeg",
             filename="test.jpg",
@@ -37,7 +38,7 @@ class TestImageMessage(TestCase):
     def test_to_base64(self):
         """Test converting to base64."""
         image_bytes = b"test_data"
-        msg = ImageMessage(
+        msg = ImageDisplayMessage(
             image_bytes=image_bytes,
             mime_type="image/png",
             filename=None,
@@ -51,7 +52,7 @@ class TestImageMessage(TestCase):
     def test_to_data_url(self):
         """Test generating data URL."""
         image_bytes = b"test_data"
-        msg = ImageMessage(
+        msg = ImageDisplayMessage(
             image_bytes=image_bytes,
             mime_type="image/png",
             filename=None,
@@ -66,7 +67,7 @@ class TestImageMessage(TestCase):
     def test_save_to_temp_file(self):
         """Test saving to temporary file."""
         image_bytes = b"fake_image_data"
-        msg = ImageMessage(
+        msg = ImageDisplayMessage(
             image_bytes=image_bytes,
             mime_type="image/png",
             filename="test.png",
@@ -82,7 +83,7 @@ class TestImageMessage(TestCase):
     def test_repr(self):
         """Test string representation."""
         image_bytes = b"test"
-        msg = ImageMessage(
+        msg = ImageDisplayMessage(
             image_bytes=image_bytes,
             mime_type="image/gif",
             filename=None,
@@ -91,13 +92,13 @@ class TestImageMessage(TestCase):
             height=100,
         )
         repr_str = repr(msg)
-        self.assertIn("ImageMessage", repr_str)
+        self.assertIn("ImageDisplayMessage", repr_str)
         self.assertIn("4 bytes", repr_str)
 
     def test_to_json(self):
         """Test serialization to JSON."""
         image_bytes = b"test_data"
-        msg = ImageMessage(
+        msg = ImageDisplayMessage(
             image_bytes=image_bytes,
             mime_type="image/webp",
             filename="test.webp",
@@ -117,7 +118,7 @@ class TestImageMessage(TestCase):
     def test_from_json(self):
         """Test deserialization from JSON."""
         image_bytes = b"test_data"
-        original = ImageMessage(
+        original = ImageDisplayMessage(
             image_bytes=image_bytes,
             mime_type="image/bmp",
             filename="test.bmp",
@@ -128,7 +129,7 @@ class TestImageMessage(TestCase):
         json_str = original.to_json()
 
         mock_registry = MagicMock()
-        restored = ImageMessage.from_json(json_str, mock_registry)
+        restored = ImageDisplayMessage.from_json(json_str, mock_registry)
 
         self.assertEqual(restored.image_bytes, image_bytes)
         self.assertEqual(restored.mime_type, "image/bmp")
@@ -162,7 +163,7 @@ class TestLoadImage(TestCase):
             result = asyncio.run(
                 load_image(temp_path, self.mock_registry, quality="raw")
             )
-            self.assertIsInstance(result, ImageMessage)
+            self.assertIsInstance(result, ImageToolResult)
             self.assertEqual(result.mime_type, "image/png")
             self.assertEqual(result.filename, Path(temp_path).name)
         finally:
@@ -249,8 +250,8 @@ class TestLoadImage(TestCase):
             Path(temp_path).unlink()
 
 
-class TestImageMessageToLlmMessage(TestCase):
-    """Test ImageMessage.to_llm_message method."""
+class TestImageDisplayMessageToLlmMessage(TestCase):
+    """Test ImageDisplayMessage.to_llm_message method."""
 
     def setUp(self):
         """Set up test fixtures."""
@@ -266,7 +267,7 @@ class TestImageMessageToLlmMessage(TestCase):
     def test_to_llm_message_with_supported_llm(self):
         """Test conversion when LLM supports images."""
         image_bytes = b"fake_image"
-        msg = ImageMessage(
+        msg = ImageDisplayMessage(
             image_bytes=image_bytes,
             mime_type="image/png",
             filename=None,
@@ -286,7 +287,7 @@ class TestImageMessageToLlmMessage(TestCase):
         self.mock_llm.support_image = MagicMock(return_value=False)
 
         image_bytes = b"fake_image"
-        msg = ImageMessage(
+        msg = ImageDisplayMessage(
             image_bytes=image_bytes,
             mime_type="image/png",
             filename=None,
