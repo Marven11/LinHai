@@ -151,7 +151,6 @@ class Trojan:
         self._pulse_encoder = PulseEncoder(marker_bytes, pulse_max_length, False)
         self.terminals: Dict[str, TerminalDict] = {}
         self._processes: Dict[str, asyncio.subprocess.Process] = {}
-        self._finished_processes: Dict[str, dict] = {}
         self.stdout_lock = asyncio.Lock()
         self.request_queue = asyncio.Queue()
         self.response_queue = asyncio.Queue()
@@ -191,15 +190,17 @@ class Trojan:
 
             stdout_str = stdout_data.decode("utf-8", errors="replace")
             stderr_str = stderr_data.decode("utf-8", errors="replace")
-            result = {
-                "pid": pid,
-                "returncode": process.returncode,
-                "stdout": stdout_str,
-                "stderr": stderr_str,
-            }
-            self._finished_processes[pid] = result
             del self._processes[pid]
-            return {"message": json.dumps(result)}
+            return {
+                "message": json.dumps(
+                    {
+                        "pid": pid,
+                        "returncode": process.returncode,
+                        "stdout": stdout_str,
+                        "stderr": stderr_str,
+                    }
+                )
+            }
         else:
             return {
                 "message": json.dumps(
@@ -250,8 +251,6 @@ class Trojan:
         return stdout_str, stderr_str, timeout_msg, exit_note
 
     async def process_stdio_write(self, pid, content, with_enter=False):
-        if pid in self._finished_processes:
-            return {"error": f"进程已退出: {pid}"}
         assert pid in self._processes, f"进程不存在: {pid}"
         process = self._processes[pid]
         assert process.stdin is not None, "进程没有stdin管道"
@@ -262,8 +261,6 @@ class Trojan:
         return {"message": f"已向进程 {pid} 写入 {len(content)} 字节"}
 
     async def process_stdio_read(self, pid, timeout=60.0):
-        if pid in self._finished_processes:
-            return {"error": f"进程已退出: {pid}"}
         assert pid in self._processes, f"进程不存在: {pid}"
         process = self._processes[pid]
         stdout_str, stderr_str, timeout_msg, exit_note = await self._read_process_stdio(
@@ -282,8 +279,6 @@ class Trojan:
         return {"message": json.dumps(result_data)}
 
     async def process_wait(self, pid, timeout):
-        if pid in self._finished_processes:
-            return {"message": json.dumps(self._finished_processes[pid])}
         assert pid in self._processes, f"进程不存在: {pid}"
         process = self._processes[pid]
         try:
@@ -297,15 +292,17 @@ class Trojan:
             stderr_data = await process.stderr.read()
         stdout_str = stdout_data.decode("utf-8", errors="replace")
         stderr_str = stderr_data.decode("utf-8", errors="replace")
-        result = {
-            "pid": pid,
-            "returncode": process.returncode,
-            "stdout": stdout_str,
-            "stderr": stderr_str,
-        }
-        self._finished_processes[pid] = result
         del self._processes[pid]
-        return {"message": json.dumps(result)}
+        return {
+            "message": json.dumps(
+                {
+                    "pid": pid,
+                    "returncode": process.returncode,
+                    "stdout": stdout_str,
+                    "stderr": stderr_str,
+                }
+            )
+        }
 
     async def process_kill(self, pid, graceful=True):
         assert pid in self._processes, f"进程不存在: {pid}"
@@ -318,7 +315,6 @@ class Trojan:
             await asyncio.wait_for(process.wait(), timeout=5)
         except asyncio.TimeoutError:
             return {"error": f"杀死进程 {pid} 超时"}
-        self._finished_processes[pid] = {"pid": pid, "returncode": process.returncode}
         del self._processes[pid]
         return {"message": f"进程 {pid} 已被杀死"}
 
