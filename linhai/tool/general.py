@@ -12,8 +12,6 @@ import quickjs
 import chardet
 import httpx
 from bs4 import BeautifulSoup
-from selenium.webdriver.firefox.options import Options as FirefoxOptions
-from selenium.webdriver.firefox.webdriver import WebDriver as Firefox
 
 from linhai.tool.base import (
     utils_tools,
@@ -55,12 +53,27 @@ def analyze_content(content_type: str, content: bytes) -> tuple[bool, Optional[s
     return False, encoding
 
 
-def _download_with_selenium(url: str) -> str:
-    """使用selenium下载网页内容"""
-    options = FirefoxOptions()
-    with Firefox(options=options) as driver:
-        driver.get(url)
-        return driver.page_source
+def _download_with_chromium(url: str) -> str:
+    chromium_path = shutil.which("chromium")
+    if chromium_path is None:
+        raise RuntimeError("chromium未安装，请先安装chromium")
+    result = subprocess.run(
+        [
+            chromium_path,
+            "--headless",
+            "--no-sandbox",
+            "--disable-gpu",
+            "--virtual-time-budget=8000",
+            "--dump-dom",
+            url,
+        ],
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+    if result.returncode != 0:
+        raise RuntimeError(f"chromium下载失败: {result.stderr}")
+    return result.stdout
 
 
 def _download_with_httpx(url: str) -> str:
@@ -95,8 +108,8 @@ def _download_with_httpx(url: str) -> str:
         "http_downloader": ToolArgInfo(
             desc=t(
                 {
-                    "zh_CN": "HTML下载器，必须指定'selenium'或'httpx'",
-                    "en": "HTML downloader, must be 'selenium' or 'httpx'",
+                    "zh_CN": "HTML下载器，必须指定'chromium'或'httpx'",
+                    "en": "HTML downloader, must be 'chromium' or 'httpx'",
                 }
             ),
             type="str",
@@ -106,9 +119,9 @@ def _download_with_httpx(url: str) -> str:
 )
 def fetch_webpage(url: str, http_downloader: str):
 
-    if http_downloader not in ("selenium", "httpx"):
+    if http_downloader not in ("chromium", "httpx"):
         return FailedToolResult(
-            content=f"错误: http_downloader参数只能是'selenium'或'httpx'，得到'{http_downloader}'"
+            content=f"错误: http_downloader参数只能是'chromium'或'httpx'，得到'{http_downloader}'"
         )
 
     with tempfile.NamedTemporaryFile(suffix=".md", delete=True) as file:
@@ -119,7 +132,7 @@ def fetch_webpage(url: str, http_downloader: str):
         if http_downloader == "httpx":
             html_content = _download_with_httpx(url)
         else:
-            html_content = _download_with_selenium(url)
+            html_content = _download_with_chromium(url)
 
         soup = BeautifulSoup(html_content, "html.parser")
         for a in soup.find_all("a", href=True):

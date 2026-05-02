@@ -81,7 +81,6 @@
             beautifulsoup4
             mistune
             textual
-            selenium
             mcp
             pyte
             pydantic
@@ -104,7 +103,7 @@
             pyproject = true;
 
             nativeBuildInputs = [ pkgs.installShellFiles ];
-            buildInputs = [ pkgs.tmux ];
+            buildInputs = [ pkgs.tmux pkgs.chromium ];
 
             build-system = [
               hatchling

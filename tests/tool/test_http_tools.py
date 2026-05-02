@@ -20,22 +20,21 @@ class TestFetchWebpageTool(unittest.TestCase):
             args={
                 "url": ToolArgInfo(desc="目标网页URL", type="str"),
                 "http_downloader": ToolArgInfo(
-                    desc="HTML下载器，必须指定'selenium'或'httpx'",
+                    desc="HTML下载器，必须指定'chromium'或'httpx'",
                     type="str",
                 ),
             },
             required_args=["url", "http_downloader"],
         )(fetch_webpage)
 
-    @unittest.mock.patch("linhai.tool.general.Firefox")
-    @unittest.mock.patch("linhai.tool.general.shutil.which")
     @unittest.mock.patch("linhai.tool.general.subprocess.run")
-    def test_fetch_webpage_success(self, mock_subprocess, mock_which, mock_driver):
+    @unittest.mock.patch("linhai.tool.general.shutil.which")
+    def test_fetch_webpage_success(self, mock_which, mock_subprocess):
         """测试fetch_webpage工具成功转换网页为Markdown"""
-        mock_which.return_value = "/usr/bin/pandoc"
-
-        mock_driver_instance = mock_driver.return_value.__enter__.return_value
-        mock_driver_instance.page_source = """
+        mock_which.side_effect = lambda x: (
+            "/usr/bin/chromium" if x == "chromium" else "/usr/bin/pandoc"
+        )
+        html = """
         <html>
         <body>
             <h1>测试标题</h1>
@@ -50,6 +49,9 @@ class TestFetchWebpageTool(unittest.TestCase):
         </body>
         </html>
         """
+        mock_subprocess.return_value = unittest.mock.Mock(
+            returncode=0, stdout=html, stderr=""
+        )
 
         with tempfile.NamedTemporaryFile(
             suffix=".md", mode="w", encoding="utf-8", delete=False
@@ -60,8 +62,6 @@ class TestFetchWebpageTool(unittest.TestCase):
             )
             tmp_md.flush()
 
-        mock_subprocess.return_value = None  # subprocess.run成功
-
         with unittest.mock.patch(
             "builtins.open",
             unittest.mock.mock_open(
@@ -70,7 +70,7 @@ class TestFetchWebpageTool(unittest.TestCase):
         ):
             result = self.toolset.call_tool(
                 "fetch_webpage",
-                {"url": "http://example.com", "http_downloader": "selenium"},
+                {"url": "http://example.com", "http_downloader": "chromium"},
             )
 
         self.assertIn("测试标题", result.content)
@@ -93,7 +93,7 @@ class TestFetchWebpageTool(unittest.TestCase):
         self.assertIn("http_downloader", tool_info["args"])
         self.assertEqual(
             tool_info["args"]["http_downloader"]["desc"],
-            "HTML下载器，必须指定'selenium'或'httpx'",
+            "HTML下载器，必须指定'chromium'或'httpx'",
         )
         self.assertEqual(tool_info["args"]["http_downloader"]["type"], "str")
         self.assertIn("http_downloader", tool_info["required"])
@@ -103,7 +103,6 @@ class TestFetchWebpageTool(unittest.TestCase):
         """测试fetch_webpage使用httpx下载器"""
         mock_httpx_download.return_value = "<html><body>Test content</body></html>"
 
-        # 模拟pandoc已安装和其他依赖
         with unittest.mock.patch(
             "linhai.tool.general.shutil.which", return_value="/usr/bin/pandoc"
         ):
@@ -111,88 +110,88 @@ class TestFetchWebpageTool(unittest.TestCase):
                 with unittest.mock.patch(
                     "builtins.open", unittest.mock.mock_open(read_data="# Test")
                 ):
-                    # 测试调用工具时指定http_downloader='httpx'
                     result = self.toolset.call_tool(
                         "fetch_webpage",
                         {"url": "http://example.com", "http_downloader": "httpx"},
                     )
-                    # 验证调用了httpx下载函数
                     mock_httpx_download.assert_called_once_with("http://example.com")
                     self.assertIn("Test", result.content)
 
     def test_fetch_webpage_invalid_http_downloader(self):
         """测试fetch_webpage使用无效的http_downloader参数"""
-        # 测试调用工具时指定无效的http_downloader值
         result = self.toolset.call_tool(
             "fetch_webpage", {"url": "http://example.com", "http_downloader": "invalid"}
         )
-        # 验证返回了正确的错误信息
         self.assertIsInstance(result, FailedToolResult)
         self.assertIn(
-            "错误: http_downloader参数只能是'selenium'或'httpx'，得到'invalid'",
+            "错误: http_downloader参数只能是'chromium'或'httpx'，得到'invalid'",
             result.content,
         )
 
-    @unittest.mock.patch("linhai.tool.general._download_with_selenium")
+    @unittest.mock.patch("linhai.tool.general._download_with_chromium")
     @unittest.mock.patch("linhai.tool.general.shutil.which")
     def test_fetch_webpage_pandoc_not_installed(self, mock_which, mock_download):
         """测试pandoc未安装的情况"""
-        mock_which.return_value = None
+        mock_which.side_effect = lambda x: (
+            "/usr/bin/chromium" if x == "chromium" else None
+        )
         mock_download.return_value = "<html><body>Test</body></html>"
 
         result = self.toolset.call_tool(
             "fetch_webpage",
-            {"url": "http://example.com", "http_downloader": "selenium"},
+            {"url": "http://example.com", "http_downloader": "chromium"},
         )
 
         self.assertIsInstance(result, FailedToolResult)
         self.assertEqual(result.content, "错误：pandoc未安装，请先安装pandoc")
 
-    @unittest.mock.patch("linhai.tool.general.Firefox")
-    @unittest.mock.patch("linhai.tool.general.shutil.which")
-    def test_fetch_webpage_webdriver_error(self, mock_which, mock_driver):
-        """测试webdriver出错的情况"""
-        mock_which.return_value = "/usr/bin/pandoc"
-
-        mock_driver.side_effect = Exception("WebDriver错误")
-
-        with self.assertRaises(Exception) as context:
-            self.toolset.call_tool(
-                "fetch_webpage",
-                {"url": "http://example.com", "http_downloader": "selenium"},
-            )
-        self.assertIn("WebDriver错误", str(context.exception))
-
-    @unittest.mock.patch("linhai.tool.general.Firefox")
-    @unittest.mock.patch("linhai.tool.general.shutil.which")
     @unittest.mock.patch("linhai.tool.general.subprocess.run")
-    def test_fetch_webpage_pandoc_error(self, mock_subprocess, mock_which, mock_driver):
+    @unittest.mock.patch("linhai.tool.general.shutil.which")
+    def test_fetch_webpage_chromium_error(self, mock_which, mock_subprocess):
+        """测试chromium出错的情况"""
+        mock_which.return_value = "/usr/bin/chromium"
+        mock_subprocess.return_value = unittest.mock.Mock(
+            returncode=1, stdout="", stderr="chromium error"
+        )
+
+        with self.assertRaises(RuntimeError) as context:
+            self.toolset.call_tool(
+                "fetch_webpage",
+                {"url": "http://example.com", "http_downloader": "chromium"},
+            )
+        self.assertIn("chromium下载失败", str(context.exception))
+
+    @unittest.mock.patch("linhai.tool.general.subprocess.run")
+    @unittest.mock.patch("linhai.tool.general.shutil.which")
+    def test_fetch_webpage_pandoc_error(self, mock_which, mock_subprocess):
         """测试pandoc转换出错的情况"""
-        mock_which.return_value = "/usr/bin/pandoc"
+        mock_which.side_effect = lambda x: (
+            "/usr/bin/chromium" if x == "chromium" else "/usr/bin/pandoc"
+        )
+        html = "<html><body>测试内容</body></html>"
 
-        mock_driver_instance = mock_driver.return_value.__enter__.return_value
-        mock_driver_instance.page_source = "<html><body>测试内容</body></html>"
+        def side_effect(cmd, **kwargs):
+            if cmd[0] == "/usr/bin/chromium":
+                return unittest.mock.Mock(returncode=0, stdout=html, stderr="")
+            raise Exception("Pandoc错误")
 
-        mock_subprocess.side_effect = Exception("Pandoc错误")
+        mock_subprocess.side_effect = side_effect
 
         with self.assertRaises(Exception) as context:
             self.toolset.call_tool(
                 "fetch_webpage",
-                {"url": "http://example.com", "http_downloader": "selenium"},
+                {"url": "http://example.com", "http_downloader": "chromium"},
             )
         self.assertIn("Pandoc错误", str(context.exception))
 
-    @unittest.mock.patch("linhai.tool.general.Firefox")
-    @unittest.mock.patch("linhai.tool.general.shutil.which")
     @unittest.mock.patch("linhai.tool.general.subprocess.run")
-    def test_fetch_webpage_table_attributes_removed(
-        self, mock_subprocess, mock_which, mock_driver
-    ):
+    @unittest.mock.patch("linhai.tool.general.shutil.which")
+    def test_fetch_webpage_table_attributes_removed(self, mock_which, mock_subprocess):
         """测试表格属性被正确删除"""
-        mock_which.return_value = "/usr/bin/pandoc"
-
-        mock_driver_instance = mock_driver.return_value.__enter__.return_value
-        mock_driver_instance.page_source = """
+        mock_which.side_effect = lambda x: (
+            "/usr/bin/chromium" if x == "chromium" else "/usr/bin/pandoc"
+        )
+        html = """
         <html>
         <body>
             <table border="1" class="test-table" style="color: red;">
@@ -202,6 +201,9 @@ class TestFetchWebpageTool(unittest.TestCase):
         </body>
         </html>
         """
+        mock_subprocess.return_value = unittest.mock.Mock(
+            returncode=0, stdout=html, stderr=""
+        )
 
         with tempfile.NamedTemporaryFile(
             suffix=".md", mode="w", encoding="utf-8", delete=False
@@ -212,7 +214,9 @@ class TestFetchWebpageTool(unittest.TestCase):
             )
             tmp_md.flush()
 
-        mock_subprocess.return_value = None
+        mock_subprocess.return_value = unittest.mock.Mock(
+            returncode=0, stdout=html, stderr=""
+        )
 
         with unittest.mock.patch(
             "builtins.open",
@@ -222,7 +226,7 @@ class TestFetchWebpageTool(unittest.TestCase):
         ):
             result = self.toolset.call_tool(
                 "fetch_webpage",
-                {"url": "http://example.com", "http_downloader": "selenium"},
+                {"url": "http://example.com", "http_downloader": "chromium"},
             )
 
         self.assertIn("<table>", result.content)
@@ -237,6 +241,18 @@ class TestFetchWebpageTool(unittest.TestCase):
 
         if os.path.exists(tmp_md_path):
             os.unlink(tmp_md_path)
+
+    @unittest.mock.patch("linhai.tool.general.shutil.which")
+    def test_fetch_webpage_chromium_not_installed(self, mock_which):
+        """测试chromium未安装的情况"""
+        mock_which.return_value = None
+
+        with self.assertRaises(RuntimeError) as context:
+            self.toolset.call_tool(
+                "fetch_webpage",
+                {"url": "http://example.com", "http_downloader": "chromium"},
+            )
+        self.assertIn("chromium未安装", str(context.exception))
 
 
 if __name__ == "__main__":

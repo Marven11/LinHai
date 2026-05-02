@@ -114,7 +114,7 @@ class TestLoadImageUrlWarningPlugin(unittest.IsolatedAsyncioTestCase):
                 "name": "fetch_webpage",
                 "arguments": {
                     "url": "http://example.com",
-                    "http_downloader": "selenium",
+                    "http_downloader": "chromium",
                 },
             },
             {"name": "read_file", "arguments": {"filepath": "/etc/passwd"}},
