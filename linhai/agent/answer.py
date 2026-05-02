@@ -94,7 +94,10 @@ class AgentLlm:
                 interrupt_msg = UiNotice(level="WARNING", content="Agent被打断")
 
             current_content = self._current_parsed_answer._answer.get_current_content()
-            if "```json toolcall" in current_content:
+            has_tool_calls = "```json toolcall" in current_content or bool(
+                self._current_parsed_answer._openai_toolcall_segments
+            )
+            if has_tool_calls:
                 await message_processor.add_new_message(
                     RuntimeMessage("当前所有工具调用全部被忽略，请重新调用")
                 )

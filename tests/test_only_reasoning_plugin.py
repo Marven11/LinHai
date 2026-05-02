@@ -216,6 +216,28 @@ class TestOnlyReasoningPlugin(unittest.IsolatedAsyncioTestCase):
         self.mock_agent.message_processor.add_new_message.assert_not_called()
         self.registry.send_if_exists.assert_not_called()
 
+    async def test_after_message_generation_deepseek_with_openai_tool_calls(self):
+        """测试deepseek模型使用OpenAI工具调用时不发出警告（tool_calls参数非空）。"""
+        mock_model = MagicMock(spec=OpenAi)
+        mock_model.compatibility = "deepseek"
+        mock_model.get_compatibility.return_value = "deepseek"
+        self.mock_agent.get_current_model.return_value = mock_model
+
+        parsed_answer = MagicMock()
+        answer = MagicMock(spec=Answer)
+        answer.get_reasoning_message.return_value = "这是推理内容"
+        parsed_answer._answer = answer
+        parsed_answer.get_message.return_value.get_content.return_value = ""
+
+        tool_calls = [{"name": "read_file", "arguments": {"filepath": "test.txt"}}]
+        result = await self.plugin.after_message_generation(parsed_answer, tool_calls)
+
+        self.assertIsNone(result)
+        self.mock_agent.get_current_model.assert_called_once()
+        answer.get_reasoning_message.assert_called_once()
+        self.mock_agent.message_processor.update_notification_message.assert_not_called()
+        self.registry.send_if_exists.assert_not_called()
+
     def test_register(self):
         """测试插件注册。"""
         mock_lifecycle = MagicMock()
