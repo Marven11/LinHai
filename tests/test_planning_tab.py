@@ -165,6 +165,7 @@ class TestPlanningTabInApp(unittest.TestCase):
         registry.register_member("agent", mock_agent)
         registry.register_member("agent_message", mock_agent_message)
         registry.register_member("agent_context_orchestration", mock_orchestration)
+        registry.register_member("process_sandbox", Mock())
         Lifecycle(registry)
 
         mock_cli_args = argparse.Namespace()
@@ -227,6 +228,7 @@ class TestPlanningTabInApp(unittest.TestCase):
         registry.register_member("agent", mock_agent)
         registry.register_member("agent_message", mock_agent_message)
         registry.register_member("agent_context_orchestration", mock_orchestration)
+        registry.register_member("process_sandbox", Mock())
         Lifecycle(registry)
 
         mock_cli_args = argparse.Namespace()
@@ -299,6 +301,7 @@ class TestPlanningTabInApp(unittest.TestCase):
         registry.register_member("agent", mock_agent)
         registry.register_member("agent_message", mock_agent_message)
         registry.register_member("agent_context_orchestration", mock_orchestration)
+        registry.register_member("process_sandbox", Mock())
         Lifecycle(registry)
 
         mock_cli_args = argparse.Namespace()
