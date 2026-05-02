@@ -258,6 +258,12 @@ jobs:
           max_toolcall_token_in_round = 30000
           EOF
 
+      - name: Check e2e for skip patterns
+        run: |
+          export PATH="$HOME/.local/bin:$PATH"
+          echo "Checking e2e tests for skip patterns..."
+          uv run python .gitea/scripts/check_e2e_skip.py
+
       - name: Run e2e tests
         run: |
           export PATH="$HOME/.local/bin:$PATH"

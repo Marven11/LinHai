@@ -8,133 +8,115 @@ from linhai.base import (
     SystemMessage,
     UserMessage,
 )
-from linhai.llm import OpenAi
+from linhai.llm import OpenAiAnswer
 from linhai.registry import Registry
 
 pytestmark = pytest.mark.asyncio
 
-BASE_URL = "http://192.168.114.149:8124/v1/deepseek"
-MODEL = "deepseek-chat"
-E2E_NATIVE_TC_RETRIES = 3
-SKIP_REASON = "Model does not support native tool calling"
 
-ADD_TOOL = [
-    {
-        "type": "function",
-        "function": {
-            "name": "add",
-            "description": "Add two numbers together",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "a": {"type": "number", "description": "First number"},
-                    "b": {"type": "number", "description": "Second number"},
-                },
-                "required": ["a", "b"],
-            },
-        },
-    }
-]
+class _Fn:
+    def __init__(self, name=None, arguments=None):
+        self.name = name
+        self.arguments = arguments
 
 
-def _create_openai_with_tools() -> tuple[OpenAi, Registry]:
-    registry = Registry()
-    registry.register_queue("token_usage")
-    llm = OpenAi(
-        registry=registry,
-        api_key="x",
-        base_url=BASE_URL,
-        model=MODEL,
-        openai_config={
-            "default_headers": {
-                "HTTP-Referer": "https://github.com/Marven11/LinHai",
-                "X-Title": "LinHai E2E Tests",
-            }
-        },
-        chat_completion_kwargs={"max_tokens": 200},
-        support_image=False,
-        explicit_cache_info=None,
-        name="test_native_toolcall",
-        tools=ADD_TOOL,
-        custom_toolcall_format=False,
-    )
-    return llm, registry
+class _TC:
+    def __init__(self, index, id=None, name=None, arguments=None):
+        self.index = index
+        self.id = id
+        self.function = _Fn(name=name, arguments=arguments)
 
 
-async def _stream_and_collect(llm, history):
-    answer = await llm.answer_stream(history)
+class _Delta:
+    def __init__(self, content=None, tool_calls=None):
+        self.content = content
+        self.tool_calls = tool_calls
+        self.reasoning_content = None
+
+
+class _Choice:
+    def __init__(self, delta):
+        self.delta = delta
+
+
+class _Chunk:
+    def __init__(self, choices):
+        self.choices = choices
+        self.usage = None
+
+
+async def _stream_toolcall_answer(registry):
+    async def mock_stream():
+        yield _Chunk([_Choice(_Delta(content="I will add"))])
+        yield _Chunk(
+            [
+                _Choice(
+                    _Delta(
+                        tool_calls=[
+                            _TC(
+                                0,
+                                id="call_abc123",
+                                name="add",
+                                arguments='{"a": 3, "b": 5}',
+                            )
+                        ]
+                    )
+                )
+            ]
+        )
+        yield _Chunk([_Choice(_Delta(content=" these numbers."))])
+
+    answer = OpenAiAnswer(stream=mock_stream(), registry=registry)
     tokens = []
     async for t in answer:
         tokens.append(t)
     return answer, tokens
 
 
-async def _try_get_tool_calls(llm, history):
-    for _ in range(E2E_NATIVE_TC_RETRIES):
-        answer, tokens = await _stream_and_collect(llm, history)
-        tool_calls = answer.get_openai_toolcalls()
-        if tool_calls and len(tool_calls) > 0:
-            return answer, tool_calls, tokens
-    pytest.skip(SKIP_REASON)
-
-
-async def _try_get_content(llm, history):
-    for _ in range(E2E_NATIVE_TC_RETRIES):
-        answer, tokens = await _stream_and_collect(llm, history)
-        content = answer.get_current_content()
-        if content:
-            return content
-    pytest.skip(SKIP_REASON)
-
-
 async def test_openai_native_tool_call_generation():
-    llm, registry = _create_openai_with_tools()
-    system_msg = SystemMessage(registry)
-    history = [system_msg, UserMessage("What is 3 plus 5?")]
+    registry = Registry()
+    answer, _ = await _stream_toolcall_answer(registry)
 
-    answer, tool_calls, _ = await _try_get_tool_calls(llm, history)
+    tool_calls = answer.get_openai_toolcalls()
+    assert tool_calls is not None
     assert len(tool_calls) >= 1
     call = tool_calls[0]
     assert call["function"]["name"] == "add"
     args = json.loads(call["function"]["arguments"])
     assert "a" in args
     assert "b" in args
-    assert call["id"]
+    assert call["id"] == "call_abc123"
     assert call["type"] == "function"
 
 
 async def test_openai_native_tool_call_multi_turn():
-    llm, registry = _create_openai_with_tools()
-    system_msg = SystemMessage(registry)
-    user_msg = UserMessage("What is 3 plus 5?")
-    history = [system_msg, user_msg]
+    registry = Registry()
+    answer, _ = await _stream_toolcall_answer(registry)
 
-    answer1, tool_calls, _ = await _try_get_tool_calls(llm, history)
-    assert len(tool_calls) >= 1
+    tool_calls = answer.get_openai_toolcalls()
+    assert tool_calls is not None
     call = tool_calls[0]
     assert call["function"]["name"] == "add"
     args = json.loads(call["function"]["arguments"])
-    a = args["a"]
-    b = args["b"]
-    result = a + b
+    result = args["a"] + args["b"]
 
-    assistant_msg = answer1.get_message()
+    assistant_msg = answer.get_message()
     tool_result_msg = OpenAiToolResultMessage(
         tool_call_id=call["id"],
         content=str(result),
     )
-    history2 = [system_msg, user_msg, assistant_msg, tool_result_msg]
 
-    final_content = await _try_get_content(llm, history2)
-    assert str(result) in final_content or str(int(result)) in final_content
+    assert isinstance(assistant_msg, AssistantMessage)
+    assert assistant_msg.tool_calls is not None
+    assert str(result) == "8"
+    assert tool_result_msg.tool_call_id == "call_abc123"
+    assert tool_result_msg.content == "8"
 
 
 async def test_openai_toolcall_token_streaming():
-    llm, registry = _create_openai_with_tools()
-    system_msg = SystemMessage(registry)
-    history = [system_msg, UserMessage("What is 3 plus 5?")]
+    registry = Registry()
+    _, tokens = await _stream_toolcall_answer(registry)
 
-    answer, _, tokens = await _try_get_tool_calls(llm, history)
     tc_tokens = [t for t in tokens if isinstance(t, OpenAiToolCallToken)]
     assert len(tc_tokens) > 0
     names = {t.name for t in tc_tokens if t.name is not None}
@@ -142,11 +124,9 @@ async def test_openai_toolcall_token_streaming():
 
 
 async def test_openai_answer_get_message_with_toolcalls():
-    llm, registry = _create_openai_with_tools()
-    system_msg = SystemMessage(registry)
-    history = [system_msg, UserMessage("What is 3 plus 5?")]
+    registry = Registry()
+    answer, _ = await _stream_toolcall_answer(registry)
 
-    answer, _, _ = await _try_get_tool_calls(llm, history)
     msg = answer.get_message()
     assert isinstance(msg, AssistantMessage)
     assert msg.tool_calls is not None

@@ -31,16 +31,14 @@ class TestPosixShellControlE2E(unittest.IsolatedAsyncioTestCase):
             / "trojan"
             / "trojan.py"
         )
-        if not trojan_source.exists():
-            self.skipTest(f"trojan.py不存在: {trojan_source}")
+        assert trojan_source.exists(), f"trojan.py不存在: {trojan_source}"
 
         # 使用which查找bash路径，提高跨平台兼容性
         bash_path = shutil.which("bash")
         if bash_path is None:
             # 如果找不到bash，尝试使用sh
             bash_path = shutil.which("sh")
-            if bash_path is None:
-                self.skipTest("未找到bash或sh命令")
+        assert bash_path is not None, "未找到bash或sh命令"
 
         process = await asyncio.create_subprocess_exec(
             bash_path,
