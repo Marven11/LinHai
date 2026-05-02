@@ -248,15 +248,17 @@ class Agent:
                 await self.toolcall_processor.call_openai_tools(openai_toolcalls)
             openai_toolcall_dicts = []
             for tc in openai_toolcalls or []:
-                try:
+                if (
+                    "function" in tc
+                    and "name" in tc["function"]
+                    and "arguments" in tc["function"]
+                ):
                     openai_toolcall_dicts.append(
                         {
                             "name": tc["function"]["name"],
                             "arguments": json.loads(tc["function"]["arguments"]),
                         }
                     )
-                except (json.JSONDecodeError, KeyError):
-                    pass
             await self.lifecycle.after_message_generation.trigger(
                 parsed_answer, openai_toolcall_dicts
             )
