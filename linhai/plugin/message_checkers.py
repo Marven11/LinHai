@@ -44,8 +44,6 @@ class WaitingUserPlugin(Plugin):
         """检查等待用户标记的位置和工具调用冲突。"""
         full_response = parsed_answer.get_message().get_content() or ""
         agent = self.registry.get_member_typechecked("agent", Agent)
-        if not agent.get_current_model().get_custom_toolcall_format():
-            return
         has_waiting_marker = WAITING_USER_MARKER in full_response
 
         if tool_calls and has_waiting_marker:
@@ -219,7 +217,7 @@ class OnlyReasoningPlugin(Plugin):
     async def after_message_generation(
         self,
         parsed_answer,
-        _tool_calls: List[Dict[str, JsonValue]],
+        tool_calls: List[Dict[str, JsonValue]],
     ):
         full_response = parsed_answer.get_message().get_content() or ""
         agent = self.registry.get_member_typechecked("agent", Agent)
@@ -229,6 +227,9 @@ class OnlyReasoningPlugin(Plugin):
             return
 
         reasoning_content = parsed_answer._answer.get_reasoning_message()
+
+        if tool_calls:
+            return
 
         if reasoning_content and not full_response.strip():
             agent.message_processor.update_notification_message(

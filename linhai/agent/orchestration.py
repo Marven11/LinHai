@@ -712,19 +712,31 @@ class NotificationMessagePlugin:
             )
             cleanable_count = len(cleanable_messages)
 
-            if cleanable_count >= MIN_CLEANABLE_LARGE_MESSAGES:
-                example_call = (
-                    '{"name": "context_forget_large_message", "arguments": {}}'
+            custom_format = agent.get_current_model().get_custom_toolcall_format()
+
+            if custom_format:
+                if cleanable_count >= MIN_CLEANABLE_LARGE_MESSAGES:
+                    example_call = (
+                        '{"name": "context_forget_large_message", "arguments": {}}'
+                    )
+                else:
+                    example_call = (
+                        '{"name": "context_forget_range_step1", "arguments": {}}'
+                    )
+
+                message_content = t(
+                    {
+                        "zh_CN": f"【注意】你应该立即开始使用正确的工具调用清理上下文，而不是继续工作或者使用错误的工具调用，例如：\n\n```json toolcall\n{example_call}\n```\n",
+                        "en": f"[Attention] You should immediately start using the correct tool call to clean up context instead of continuing to work or using incorrect tool calls, e.g.:\n\n```json toolcall\n{example_call}\n```\n",
+                    }
                 )
             else:
-                example_call = '{"name": "context_forget_range_step1", "arguments": {}}'
-
-            message_content = t(
-                {
-                    "zh_CN": f"【注意】你应该立即开始使用正确的工具调用清理上下文，而不是继续工作或者使用错误的工具调用，例如：\n\n```json toolcall\n{example_call}\n```\n",
-                    "en": f"[Attention] You should immediately start using the correct tool call to clean up context instead of continuing to work or using incorrect tool calls, e.g.:\n\n```json toolcall\n{example_call}\n```\n",
-                }
-            )
+                message_content = t(
+                    {
+                        "zh_CN": "【注意】你应该立即开始使用工具调用清理上下文，而不是继续工作",
+                        "en": "[Attention] You should immediately start using tool calls to clean up context instead of continuing to work",
+                    }
+                )
             agent.message_processor.update_notification_message(
                 RuntimeMessage(message_content),
                 source="consecutive_red_block",
