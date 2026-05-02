@@ -190,7 +190,6 @@ class Trojan:
 
             stdout_str = stdout_data.decode("utf-8", errors="replace")
             stderr_str = stderr_data.decode("utf-8", errors="replace")
-            del self._processes[pid]
             return {
                 "message": json.dumps(
                     {
@@ -292,7 +291,6 @@ class Trojan:
             stderr_data = await process.stderr.read()
         stdout_str = stdout_data.decode("utf-8", errors="replace")
         stderr_str = stderr_data.decode("utf-8", errors="replace")
-        del self._processes[pid]
         return {
             "message": json.dumps(
                 {
@@ -315,7 +313,6 @@ class Trojan:
             await asyncio.wait_for(process.wait(), timeout=5)
         except asyncio.TimeoutError:
             return {"error": f"杀死进程 {pid} 超时"}
-        del self._processes[pid]
         return {"message": f"进程 {pid} 已被杀死"}
 
     async def change_directory(self, directory):
