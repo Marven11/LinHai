@@ -395,5 +395,59 @@ class TestBashHostDownloadUpload(unittest.TestCase):
         self.loop.run_until_complete(test())
 
 
+class TestBashHostExecuteLock(unittest.TestCase):
+
+    def setUp(self):
+        self.loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(self.loop)
+        self.registry = Mock(spec=Registry)
+        self.registry.send_if_exists = AsyncMock()
+        self.registry.has_member = Mock(return_value=False)
+        self.registry.members = {}
+        self.control = BashHostControl(registry=self.registry)
+
+    def tearDown(self):
+        self.loop.close()
+
+    def test_has_execute_lock(self):
+        self.assertIsInstance(self.control._execute_lock, asyncio.Lock)
+
+    def test_execute_lock_serializes_concurrent_calls(self):
+        async def test():
+            concurrent_count = 0
+            max_concurrent = 0
+            mock_process = AsyncMock()
+
+            async def mock_write(content, with_enter):
+                return Mock(success=True)
+
+            async def tracked_read(wait_seconds=1.0):
+                nonlocal concurrent_count, max_concurrent
+                concurrent_count += 1
+                max_concurrent = max(max_concurrent, concurrent_count)
+                marker = f"_LINHAI_CMD_RESULT_{self.control._counter}"
+                await asyncio.sleep(0.05)
+                concurrent_count -= 1
+                return Mock(success=True, stdout=f"{marker}:0\n".encode())
+
+            mock_process.stdio_write = mock_write
+            mock_process.stdio_read = tracked_read
+            self.control._shell_process = mock_process
+
+            await asyncio.gather(
+                self.control.execute_raw("cmd1"),
+                self.control.execute_raw("cmd2"),
+                self.control.execute_raw("cmd3"),
+            )
+
+            self.assertEqual(
+                max_concurrent,
+                1,
+                f"Expected max 1 concurrent call, got {max_concurrent}",
+            )
+
+        self.loop.run_until_complete(test())
+
+
 if __name__ == "__main__":
     unittest.main()

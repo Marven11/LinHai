@@ -50,6 +50,7 @@ class BashHostControl:
         self._processes: dict[str, BashProcess] = {}
         self._cwd: str = ""
         self._has_curl: bool = False
+        self._execute_lock = asyncio.Lock()
 
     def make_temp_path(self, prefix: str) -> str:
         self._counter += 1
@@ -117,65 +118,66 @@ class BashHostControl:
         if self._shell_process is None:
             return 1, "", "未建立连接"
 
-        shell_proc = self._shell_process
-        effective_timeout = timeout if timeout > 0 else self.GLOBAL_TIMEOUT
-        marker = self._next_marker()
-        quoted_cmd = shlex.quote(command)
+        async with self._execute_lock:
+            shell_proc = self._shell_process
+            effective_timeout = timeout if timeout > 0 else self.GLOBAL_TIMEOUT
+            marker = self._next_marker()
+            quoted_cmd = shlex.quote(command)
 
-        timeout_secs = int(effective_timeout)
-        if self._timeout_mode == "timeout":
-            full_command = (
-                f"timeout {timeout_secs} sh -c {quoted_cmd} 2>&1; "
-                f"_RC=$?; echo ''; echo '{marker}:'$_RC"
-            )
-        elif self._timeout_mode == "perl":
-            full_command = (
-                f"perl -e 'alarm shift; exec @ARGV' {timeout_secs}"
-                f" sh -c {quoted_cmd} 2>&1; "
-                f"_RC=$?; echo ''; echo '{marker}:'$_RC"
-            )
-        else:
-            full_command = (
-                f"sh -c {quoted_cmd} 2>&1 & _CPID=$!; "
-                f"( sleep {timeout_secs}; kill -9 $_CPID 2>/dev/null ) & "
-                f"_WPID=$!; "
-                f"wait $_CPID 2>/dev/null; _RC=$?; "
-                f"kill $_WPID 2>/dev/null; wait $_WPID 2>/dev/null; "
-                f"echo ''; echo '{marker}:'$_RC"
-            )
+            timeout_secs = int(effective_timeout)
+            if self._timeout_mode == "timeout":
+                full_command = (
+                    f"timeout {timeout_secs} sh -c {quoted_cmd} 2>&1; "
+                    f"_RC=$?; echo ''; echo '{marker}:'$_RC"
+                )
+            elif self._timeout_mode == "perl":
+                full_command = (
+                    f"perl -e 'alarm shift; exec @ARGV' {timeout_secs}"
+                    f" sh -c {quoted_cmd} 2>&1; "
+                    f"_RC=$?; echo ''; echo '{marker}:'$_RC"
+                )
+            else:
+                full_command = (
+                    f"sh -c {quoted_cmd} 2>&1 & _CPID=$!; "
+                    f"( sleep {timeout_secs}; kill -9 $_CPID 2>/dev/null ) & "
+                    f"_WPID=$!; "
+                    f"wait $_CPID 2>/dev/null; _RC=$?; "
+                    f"kill $_WPID 2>/dev/null; wait $_WPID 2>/dev/null; "
+                    f"echo ''; echo '{marker}:'$_RC"
+                )
 
-        write_result = await shell_proc.stdio_write(full_command, with_enter=True)
-        if not write_result.success:
-            return 1, "", f"写入命令失败: {write_result.error}"
+            write_result = await shell_proc.stdio_write(full_command, with_enter=True)
+            if not write_result.success:
+                return 1, "", f"写入命令失败: {write_result.error}"
 
-        output_lines: list[str] = []
-        buffer = ""
-        result_line: str | None = None
+            output_lines: list[str] = []
+            buffer = ""
+            result_line: str | None = None
 
-        while result_line is None:
-            read_result = await shell_proc.stdio_read(wait_seconds=1.0)
-            if not read_result.success:
-                break
-            decoded = read_result.stdout.decode(self._encoding, errors="replace")
-            buffer += decoded
-            while "\n" in buffer:
-                line, buffer = buffer.split("\n", 1)
-                line = line.rstrip()
-                if line.startswith(f"{marker}:"):
-                    result_line = line
+            while result_line is None:
+                read_result = await shell_proc.stdio_read(wait_seconds=1.0)
+                if not read_result.success:
                     break
-                output_lines.append(line)
+                decoded = read_result.stdout.decode(self._encoding, errors="replace")
+                buffer += decoded
+                while "\n" in buffer:
+                    line, buffer = buffer.split("\n", 1)
+                    line = line.rstrip()
+                    if line.startswith(f"{marker}:"):
+                        result_line = line
+                        break
+                    output_lines.append(line)
 
-        if result_line is None:
-            return 1, "\n".join(output_lines), "无法获取命令返回码"
+            if result_line is None:
+                return 1, "\n".join(output_lines), "无法获取命令返回码"
 
-        parts = result_line.split(":", 1)
-        if len(parts) == 2 and parts[1].strip().isdigit():
-            exit_code = int(parts[1].strip())
-        else:
-            exit_code = 1
+            parts = result_line.split(":", 1)
+            if len(parts) == 2 and parts[1].strip().isdigit():
+                exit_code = int(parts[1].strip())
+            else:
+                exit_code = 1
 
-        return exit_code, "\n".join(output_lines), ""
+            return exit_code, "\n".join(output_lines), ""
 
     async def ping(self) -> SuccessfulToolResult | FailedToolResult:
         rc, stdout, stderr = await self.execute_raw("echo pong", timeout=5.0)
