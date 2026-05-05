@@ -18,15 +18,15 @@ class TestProcessArgvCheckerPlugin(unittest.IsolatedAsyncioTestCase):
     def test_initialization(self):
         """测试插件初始化"""
         self.assertEqual(self.plugin.registry, self.registry)
-        self.assertTrue(hasattr(ProcessArgvCheckerPlugin, "BASH_OPERATORS"))
-        self.assertIsInstance(ProcessArgvCheckerPlugin.BASH_OPERATORS, list)
-        self.assertGreater(len(ProcessArgvCheckerPlugin.BASH_OPERATORS), 0)
+        self.assertTrue(hasattr(ProcessArgvCheckerPlugin, "BASH_OPERATOR_PATTERNS"))
+        self.assertIsInstance(ProcessArgvCheckerPlugin.BASH_OPERATOR_PATTERNS, list)
+        self.assertGreater(len(ProcessArgvCheckerPlugin.BASH_OPERATOR_PATTERNS), 0)
 
-        # 检查是否包含常见的bash操作符
-        self.assertIn("&&", ProcessArgvCheckerPlugin.BASH_OPERATORS)
-        self.assertIn("|", ProcessArgvCheckerPlugin.BASH_OPERATORS)
-        self.assertIn(">", ProcessArgvCheckerPlugin.BASH_OPERATORS)
-        self.assertIn(";", ProcessArgvCheckerPlugin.BASH_OPERATORS)
+        sample_patterns = ProcessArgvCheckerPlugin.BASH_OPERATOR_PATTERNS
+        self.assertTrue(any(p.search("&&") for p in sample_patterns))
+        self.assertTrue(any(p.search("|") for p in sample_patterns))
+        self.assertTrue(any(p.search(">") for p in sample_patterns))
+        self.assertTrue(any(p.search(";") for p in sample_patterns))
 
     async def test_before_tool_call_no_argv(self):
         """测试process_create没有argv参数时不处理"""
@@ -140,6 +140,81 @@ class TestProcessArgvCheckerPlugin(unittest.IsolatedAsyncioTestCase):
         # 检查是否报告了多个操作符
         self.assertIn("&&", warning_message)
         self.assertIn(">", warning_message)
+
+    async def test_before_tool_call_no_false_positive_python_semicolon(self):
+        """测试Python代码中的分号不应触发警告（issue #1516）"""
+        false_positive_cases = [
+            [
+                "python3",
+                "-c",
+                "import sqlite3; conn = sqlite3.connect('/path/db.sqlite')",
+            ],
+            ["python3", "-c", "x = 1; y = 2; print(x + y)"],
+            [
+                "python3",
+                "-c",
+                "import os; print(os.getcwd())",
+            ],
+        ]
+
+        for argv in false_positive_cases:
+            with self.subTest(argv=argv):
+                toolcall_arguments = {"argv": argv}
+                mock_agent = Mock()
+                mock_agent.message_processor = Mock()
+                mock_agent.message_processor.add_new_message = AsyncMock()
+                self.plugin.registry.get_member_typechecked = Mock(
+                    return_value=mock_agent
+                )
+
+                result = await self.plugin.before_tool_call(
+                    tool_name="process_create",
+                    toolcall_arguments=toolcall_arguments,
+                    with_secret=None,
+                )
+
+                self.assertIsNone(result)
+                mock_agent.message_processor.add_new_message.assert_not_called()
+
+    async def test_before_tool_call_standalone_semicolon_detected(self):
+        """测试独立的分号参数仍然触发警告"""
+        toolcall_arguments = {"argv": ["ls", ";", "pwd"]}
+        mock_agent = Mock()
+        mock_agent.message_processor = Mock()
+        mock_agent.message_processor.add_new_message = AsyncMock()
+        self.plugin.registry.get_member_typechecked = Mock(return_value=mock_agent)
+
+        result = await self.plugin.before_tool_call(
+            tool_name="process_create",
+            toolcall_arguments=toolcall_arguments,
+            with_secret=None,
+        )
+
+        self.assertIsNone(result)
+        mock_agent.message_processor.add_new_message.assert_called_once()
+        call_args = mock_agent.message_processor.add_new_message.call_args
+        warning_message = str(call_args[0][0])
+        self.assertIn(";", warning_message)
+
+    async def test_before_tool_call_no_false_positive_compound_operators(self):
+        """测试复合操作符不应触发单字符操作符的误报"""
+        toolcall_arguments = {"argv": ["echo", "a>>b"]}
+        mock_agent = Mock()
+        mock_agent.message_processor = Mock()
+        mock_agent.message_processor.add_new_message = AsyncMock()
+        self.plugin.registry.get_member_typechecked = Mock(return_value=mock_agent)
+
+        result = await self.plugin.before_tool_call(
+            tool_name="process_create",
+            toolcall_arguments=toolcall_arguments,
+            with_secret=None,
+        )
+
+        self.assertIsNone(result)
+        mock_agent.message_processor.add_new_message.assert_called_once()
+        call_args = mock_agent.message_processor.add_new_message.call_args
+        warning_message = str(call_args[0][0])
+        self.assertIn(">>", warning_message)
 
     def test_register_method(self):
         """测试插件的register方法"""

@@ -184,21 +184,21 @@ class CommandWhitelistPlugin(Plugin):
 class ProcessArgvCheckerPlugin(Plugin):
     """检查process_create的argv参数是否包含bash语法操作符的插件。"""
 
-    BASH_OPERATORS = [
-        "&&",
-        "||",
-        "|",
-        ">",
-        ">>",
-        "<",
-        "<<",
-        "2>&1",
-        ";",
-        "\n",
-        "$(",
-        "`",
-        "&",
-        "${",
+    BASH_OPERATOR_PATTERNS: list[re.Pattern[str]] = [
+        re.compile(r"\$\("),
+        re.compile(r"`"),
+        re.compile(r"\$\{"),
+        re.compile(r"2>&1"),
+        re.compile(r"&&"),
+        re.compile(r"\|\|"),
+        re.compile(r">>"),
+        re.compile(r"<<"),
+        re.compile(r"(?<!\|)\|(?!\|)"),
+        re.compile(r"(?<!&)&(?!&)"),
+        re.compile(r"(?<!>)>(?!>)"),
+        re.compile(r"(?<!<)<(?!<)"),
+        re.compile(r"(?:^|\s);(?:\s|$)"),
+        re.compile(r"\n"),
     ]
 
     def __init__(self, registry):
@@ -218,13 +218,11 @@ class ProcessArgvCheckerPlugin(Plugin):
             if argv is None:
                 return None
 
-            # 检查argv类型
             if not isinstance(argv, list):
                 return FailedToolResult(
                     content=f"argv参数必须是列表类型，但收到{type(argv).__name__}"
                 )
 
-            # 检查argv元素类型
             for i, arg in enumerate(argv):
                 if not isinstance(arg, str):
                     return FailedToolResult(
@@ -234,7 +232,7 @@ class ProcessArgvCheckerPlugin(Plugin):
             warnings = [
                 f"参数[{i}]: '{arg}' 包含可能的bash操作符"
                 for i, arg in enumerate(argv)
-                if any(op in arg for op in self.BASH_OPERATORS)
+                if any(p.search(arg) for p in self.BASH_OPERATOR_PATTERNS)
             ]
 
             if warnings:
