@@ -28,6 +28,7 @@ class TrojanTransport:
         self._pending_futures: Dict[str, asyncio.Future[JsonRpcResponse]] = {}
         self._reader_started: bool = False
         self._connection_valid = True
+        self._send_lock = asyncio.Lock()
 
     def start_reading(self) -> None:
         if not self._reader_started:
@@ -57,11 +58,13 @@ class TrojanTransport:
 
         request_bytes = json.dumps(request).encode()
         fractions = self._pulse_encoder.encode(request_bytes)
-        write_result = await self._process.stdio_write(
-            b"".join(fractions).decode(), with_enter=False
-        )
-        if not write_result.success:
-            raise ConnectionError(f"写入失败: {write_result.error}")
+        async with self._send_lock:
+            for fraction in fractions:
+                write_result = await self._process.stdio_write(
+                    fraction.decode(), with_enter=False
+                )
+                if not write_result.success:
+                    raise ConnectionError(f"写入失败: {write_result.error}")
 
         loop = asyncio.get_running_loop()
         future: asyncio.Future[JsonRpcResponse] = loop.create_future()
