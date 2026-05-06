@@ -164,19 +164,6 @@ class ToolManager:
                 toolcall_arguments={},
             )
 
-            from linhai.agent.lifecycle import Lifecycle
-
-            lifecycle = self.registry.get_member_typechecked("lifecycle", Lifecycle)
-            callback_result = await lifecycle.after_toolcall.trigger(
-                tool_name=tool_call.function_name,
-                tool_index=tool_index,
-                status="failed",
-                message=failed_result,
-                toolcall_arguments=kwargs,
-                with_secret=tool_call.with_secret,
-                is_tool_failed_duplicated_error=False,
-            )
-
             await self.registry.send_if_exists(
                 "ui_log",
                 UiNotice(
@@ -184,9 +171,6 @@ class ToolManager:
                     content=f"工具执行失败: {tool_call.function_name} - {error_msg}",
                 ),
             )
-
-            if callback_result is not None and callback_result.replacement is not None:
-                return callback_result.replacement
 
             return failed_result
 

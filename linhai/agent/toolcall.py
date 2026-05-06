@@ -496,7 +496,7 @@ class AgentToolcall:
             message_processor = self.registry.get_member_typechecked(
                 "agent_message", AgentMessage
             )
-            await lifecycle.after_toolcall.trigger(
+            callback_result = await lifecycle.after_toolcall.trigger(
                 tool_name=tool_call.function_name,
                 tool_index=tool_index,
                 status="failed",
@@ -505,6 +505,8 @@ class AgentToolcall:
                 with_secret=tool_call.with_secret,
                 is_tool_failed_duplicated_error=False,
             )
+            if callback_result is not None:
+                self._pending_warnings.extend(callback_result.warnings)
             await message_processor.add_new_message(result_msg)
             return True
         elif isinstance(beforecbs_result, dict):
@@ -548,6 +550,10 @@ class AgentToolcall:
         )
         if callback_result is not None:
             self._pending_warnings.extend(callback_result.warnings)
+            if callback_result.replacement is not None:
+                replaced_content = callback_result.replacement.get_content()
+                if replaced_content is not None:
+                    result_content = replaced_content
 
         result_msg = OpenAiToolResultMessage(
             tool_call_id=tool_call_id,
