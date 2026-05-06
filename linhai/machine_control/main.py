@@ -74,7 +74,9 @@ class MachineControl:
             ),
         )
 
-        return SuccessfulToolResult(content=f"已切换到机器: {machine_id}")
+        return SuccessfulToolResult(
+            content=f"已切换机器: {old_machine_id} -> {machine_id}"
+        )
 
     async def disconnect_machine(
         self, machine_id: str

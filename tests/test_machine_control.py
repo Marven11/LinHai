@@ -82,7 +82,7 @@ class TestMachineControl(unittest.IsolatedAsyncioTestCase):
         self.machine_control.registry.send = mock_send
 
         result = await self.machine_control.switch_machine("master_host")
-        self.assertIn("已切换到机器", result.content)
+        self.assertIn("已切换机器", result.content)
         self.assertEqual(self.machine_control.target_machine, "master_host")
 
     def test_register_tools(self):
