@@ -347,9 +347,18 @@ class ToolConfig(BaseModel):
         description="是否在tmux可用时使用tmux作为终端后端。",
     )
     remote_shell_control: str = Field(
-        default="auto",
-        description="远程shell控制方式: python, bash, auto",
+        default="python",
+        description="远程shell控制方式: python, bash",
     )
+
+    @field_validator("remote_shell_control")
+    def validate_remote_shell_control(cls, v):
+        if v not in ("python", "bash"):
+            raise ConfigValidationError(
+                f"remote_shell_control must be 'python' or 'bash', got '{v}'"
+            )
+        return v
+
     enable_toolsets: Optional[list[str]] = Field(
         default=None,
         description="启用指定工具集，设置后仅加载这些工具集。",

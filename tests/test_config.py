@@ -637,6 +637,63 @@ compress_threshold = 0
         finally:
             os.unlink(temp_file)
 
+    def test_remote_shell_control_default_python(self):
+        from linhai.config import ToolConfig
+
+        tools = ToolConfig()
+        self.assertEqual(tools.remote_shell_control, "python")
+
+    def test_remote_shell_control_accepts_python(self):
+        config_content = """[[llm]]
+name = "test_llm"
+base_url = "https://api.example.com"
+api_key = "test_key"
+model = "test_model"
+
+[tools]
+remote_shell_control = "python"
+"""
+        temp_file = create_temp_config(config_content)
+        try:
+            config = load_config(temp_file)
+            self.assertEqual(config.tools.remote_shell_control, "python")
+        finally:
+            os.unlink(temp_file)
+
+    def test_remote_shell_control_accepts_bash(self):
+        config_content = """[[llm]]
+name = "test_llm"
+base_url = "https://api.example.com"
+api_key = "test_key"
+model = "test_model"
+
+[tools]
+remote_shell_control = "bash"
+"""
+        temp_file = create_temp_config(config_content)
+        try:
+            config = load_config(temp_file)
+            self.assertEqual(config.tools.remote_shell_control, "bash")
+        finally:
+            os.unlink(temp_file)
+
+    def test_remote_shell_control_rejects_auto(self):
+        config_content = """[[llm]]
+name = "test_llm"
+base_url = "https://api.example.com"
+api_key = "test_key"
+model = "test_model"
+
+[tools]
+remote_shell_control = "auto"
+"""
+        temp_file = create_temp_config(config_content)
+        try:
+            with self.assertRaises(ConfigValidationError):
+                load_config(temp_file)
+        finally:
+            os.unlink(temp_file)
+
     def test_load_config_with_process_sandbox_none(self):
         """Test loading a config without sandbox configuration."""
         config_content = """[[llm]]

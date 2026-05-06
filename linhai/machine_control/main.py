@@ -37,7 +37,7 @@ class MachineControl:
         registry: Registry,
         remote_machines: list[RemoteMachineConfig],
         tmux_terminal: bool = True,
-        remote_shell_control: str = "auto",
+        remote_shell_control: str = "python",
     ):
         self.registry = registry
         self.target_machine = "master_host"
@@ -135,17 +135,6 @@ class MachineControl:
 
         connected = await shell_control.connect(process)
         if not connected:
-            if self.remote_shell_control == "auto":
-                await self.registry.send_if_exists(
-                    "ui_log",
-                    UiNotice(
-                        level="INFO",
-                        content="Python控制连接失败，尝试回退到bash控制",
-                    ),
-                )
-                return await self._connect_bash_control(
-                    machine_id, process, source_machine_id, pid
-                )
             return FailedToolResult(content=f"连接posix shell进程失败: PID {pid}")
 
         self.machines[machine_id] = shell_control
