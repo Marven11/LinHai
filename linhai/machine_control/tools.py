@@ -435,6 +435,25 @@ def register_machine_control_tools(machine_control: "MachineControl") -> ToolSet
         if not result.success:
             return FailedToolResult(content=result.error or "创建进程失败")
         if result.returncode is None:
+            if result.pid:
+                process = host_control.get_process(result.pid)
+                if (
+                    process is not None
+                    and "lifecycle" in machine_control.registry.members
+                ):
+                    from linhai.agent.lifecycle import Lifecycle
+                    from linhai.machine_control.process import ProcessCreateInfo
+
+                    lifecycle = machine_control.registry.get_member_typechecked(
+                        "lifecycle", Lifecycle
+                    )
+                    await lifecycle.after_process_create.trigger(
+                        ProcessCreateInfo(
+                            process=process,
+                            argv=argv,
+                            machine_id=machine_control.target_machine,
+                        )
+                    )
             return SuccessfulToolResult(
                 content=f"<<pid>>{result.pid}<<pid>><<message>>{result.message}<<message>>"
             )

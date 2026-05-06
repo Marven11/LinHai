@@ -1,7 +1,6 @@
 """MachineControl类的单元测试"""
 
 import unittest
-import asyncio
 from unittest.mock import Mock, AsyncMock, patch
 
 from linhai.machine_control import MachineControl
@@ -454,17 +453,17 @@ class TestMasterHostControl(unittest.IsolatedAsyncioTestCase):
 
 class TestNotifyProcessCreated(unittest.IsolatedAsyncioTestCase):
 
-    def setUp(self):
-        self.host_control = _create_host_control()
-
-    def tearDown(self):
-        self.host_control._processes.clear()
-
-    async def test_notify_triggers_lifecycle(self):
+    async def test_notify_triggers_lifecycle_for_running_process(self):
         from linhai.agent.lifecycle import Lifecycle
+        from linhai.machine_control.tools import register_machine_control_tools
+        from linhai.sandbox import NoSandbox
 
-        registry = self.host_control._registry
+        registry = Registry()
+        registry.register_member("process_sandbox", NoSandbox())
         lifecycle = Lifecycle(registry)
+        mc = MachineControl(registry, remote_machines=[])
+        mc.register_plugin(lifecycle)
+
         triggered_infos: list[ProcessCreateInfo] = []
 
         async def on_process_create(info: ProcessCreateInfo) -> None:
@@ -472,41 +471,33 @@ class TestNotifyProcessCreated(unittest.IsolatedAsyncioTestCase):
 
         lifecycle.after_process_create.register(on_process_create)
 
-        with (
-            patch("asyncio.create_subprocess_exec") as mock_create,
-            patch("asyncio.sleep"),
-        ):
-            mock_process = AsyncMock()
-            mock_process.pid = 55555
-            mock_process.returncode = None
-            mock_create.return_value = mock_process
+        mock_process = Mock()
+        mock_process.pid = "55555"
+        mc.machines["master_host"].create_process = AsyncMock(
+            return_value=ProcessCreateResult(
+                pid="55555", success=True, returncode=None, message="running"
+            )
+        )
+        mc.machines["master_host"].get_process = Mock(return_value=mock_process)
 
-            await self.host_control.create_process(["sleep", "10"], wait_second=5.0)
+        toolset = register_machine_control_tools(mc)
+        await toolset.get_tool("process_create")(argv=["sleep", "10"])
 
         self.assertEqual(len(triggered_infos), 1)
         self.assertEqual(triggered_infos[0].machine_id, "master_host")
         self.assertEqual(triggered_infos[0].argv, ["sleep", "10"])
 
-    async def test_notify_no_lifecycle_no_error(self):
-        with (
-            patch("asyncio.create_subprocess_exec") as mock_create,
-            patch("asyncio.sleep"),
-        ):
-            mock_process = AsyncMock()
-            mock_process.pid = 55556
-            mock_process.returncode = None
-            mock_create.return_value = mock_process
-
-            result = await self.host_control.create_process(
-                ["sleep", "1"], wait_second=1.0
-            )
-            self.assertTrue(result.success)
-
-    async def test_notify_not_called_for_exited_process(self):
+    async def test_notify_not_triggered_for_exited_process(self):
         from linhai.agent.lifecycle import Lifecycle
+        from linhai.machine_control.tools import register_machine_control_tools
+        from linhai.sandbox import NoSandbox
 
-        registry = self.host_control._registry
+        registry = Registry()
+        registry.register_member("process_sandbox", NoSandbox())
         lifecycle = Lifecycle(registry)
+        mc = MachineControl(registry, remote_machines=[])
+        mc.register_plugin(lifecycle)
+
         triggered_infos: list[ProcessCreateInfo] = []
 
         async def on_process_create(info: ProcessCreateInfo) -> None:
@@ -514,21 +505,99 @@ class TestNotifyProcessCreated(unittest.IsolatedAsyncioTestCase):
 
         lifecycle.after_process_create.register(on_process_create)
 
-        with patch("asyncio.create_subprocess_exec") as mock_create:
-            mock_process = AsyncMock()
-            mock_process.pid = 55557
-            mock_process.returncode = 0
-            mock_process.stdout = AsyncMock()
-            mock_process.stdout.read = AsyncMock(return_value=b"")
-            mock_process.stderr = AsyncMock()
-            mock_process.stderr.read = AsyncMock(return_value=b"")
-            mock_create.return_value = mock_process
-
-            result = await self.host_control.create_process(
-                ["echo", "test"], wait_second=1.0
+        mc.machines["master_host"].create_process = AsyncMock(
+            return_value=ProcessCreateResult(
+                pid="55557", success=True, returncode=0, stdout="", stderr=""
             )
-            self.assertEqual(result.returncode, 0)
-            self.assertEqual(len(triggered_infos), 1)
+        )
+
+        toolset = register_machine_control_tools(mc)
+        result = await toolset.get_tool("process_create")(argv=["echo", "test"])
+        self.assertEqual(len(triggered_infos), 0)
+
+    async def test_notify_triggered_for_remote_machine(self):
+        from linhai.agent.lifecycle import Lifecycle
+        from linhai.machine_control.tools import register_machine_control_tools
+        from linhai.sandbox import NoSandbox
+
+        registry = Registry()
+        registry.register_member("process_sandbox", NoSandbox())
+        lifecycle = Lifecycle(registry)
+        mc = MachineControl(registry, remote_machines=[])
+        mc.register_plugin(lifecycle)
+
+        triggered_infos: list[ProcessCreateInfo] = []
+
+        async def on_process_create(info: ProcessCreateInfo) -> None:
+            triggered_infos.append(info)
+
+        lifecycle.after_process_create.register(on_process_create)
+
+        mock_remote = Mock()
+        mock_remote.create_process = AsyncMock(
+            return_value=ProcessCreateResult(
+                pid="789", success=True, returncode=None, message="running"
+            )
+        )
+        mock_remote_process = Mock()
+        mock_remote_process.pid = "789"
+        mock_remote.get_process = Mock(return_value=mock_remote_process)
+        mc.machines["remote_host"] = mock_remote
+        mc.target_machine = "remote_host"
+
+        toolset = register_machine_control_tools(mc)
+        await toolset.get_tool("process_create")(argv=["sleep", "5"])
+
+        self.assertEqual(len(triggered_infos), 1)
+        self.assertEqual(triggered_infos[0].machine_id, "remote_host")
+        self.assertEqual(triggered_infos[0].argv, ["sleep", "5"])
+
+        mc.target_machine = "master_host"
+
+    async def test_notify_no_lifecycle_no_error(self):
+        from linhai.machine_control.tools import register_machine_control_tools
+        from linhai.sandbox import NoSandbox
+
+        registry = Registry()
+        registry.register_member("process_sandbox", NoSandbox())
+        mc = MachineControl(registry, remote_machines=[])
+
+        mc.machines["master_host"].create_process = AsyncMock(
+            return_value=ProcessCreateResult(
+                pid="55556", success=True, returncode=None, message="running"
+            )
+        )
+        mc.machines["master_host"].get_process = Mock(return_value=Mock(pid="55556"))
+
+        toolset = register_machine_control_tools(mc)
+        result = await toolset.get_tool("process_create")(argv=["sleep", "1"])
+        self.assertTrue(result.content.startswith("<<pid>>"))
+
+    async def test_notify_not_triggered_for_failed_process(self):
+        from linhai.agent.lifecycle import Lifecycle
+        from linhai.machine_control.tools import register_machine_control_tools
+        from linhai.sandbox import NoSandbox
+
+        registry = Registry()
+        registry.register_member("process_sandbox", NoSandbox())
+        lifecycle = Lifecycle(registry)
+        mc = MachineControl(registry, remote_machines=[])
+        mc.register_plugin(lifecycle)
+
+        triggered_infos: list[ProcessCreateInfo] = []
+
+        async def on_process_create(info: ProcessCreateInfo) -> None:
+            triggered_infos.append(info)
+
+        lifecycle.after_process_create.register(on_process_create)
+
+        mc.machines["master_host"].create_process = AsyncMock(
+            return_value=ProcessCreateResult(pid="", success=False, error="failed")
+        )
+
+        toolset = register_machine_control_tools(mc)
+        result = await toolset.get_tool("process_create")(argv=["bad_cmd"])
+        self.assertEqual(len(triggered_infos), 0)
 
 
 class TestRegisterPluginStoreProcessInfo(unittest.IsolatedAsyncioTestCase):
