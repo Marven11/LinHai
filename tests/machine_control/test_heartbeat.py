@@ -5,6 +5,7 @@ from unittest.mock import AsyncMock, Mock
 
 from linhai.machine_control.main import MachineControl
 from linhai.machine_control.plugin import MachineHeartbeatPlugin
+from linhai.machine_control.trojan.transport import MachineToolTimeoutError
 from linhai.registry import Registry
 from linhai.tool.base import SuccessfulToolResult, FailedToolResult
 
@@ -193,6 +194,59 @@ class TestMachineHeartbeatPlugin(unittest.TestCase):
             )
 
         asyncio.run(test())
+
+    def test_heartbeat_timeout_disconnects_machine(self):
+        async def test():
+            mock_host = AsyncMock()
+            mock_host.ping = AsyncMock(side_effect=MachineToolTimeoutError("请求超时"))
+            mock_host.disconnect = AsyncMock()
+            self.mc.machines["ssh_hop1"] = mock_host
+            self.mc.source_machines["ssh_hop1"] = "master_host"
+            self.mc.target_machine = "ssh_hop1"
+
+            self.plugin._next_heartbeat["ssh_hop1"] = 0
+
+            gather_results = await asyncio.gather(
+                mock_host.ping(), return_exceptions=True
+            )
+            result = gather_results[0]
+
+            self.assertIsInstance(result, MachineToolTimeoutError)
+
+            await self.mc.disconnect_machine("ssh_hop1")
+            self.assertNotIn("ssh_hop1", self.mc.machines)
+            self.plugin._next_heartbeat.pop("ssh_hop1", None)
+            self.assertNotIn("ssh_hop1", self.plugin._next_heartbeat)
+
+        asyncio.run(test())
+
+    def test_heartbeat_connection_error_disconnects_machine(self):
+        async def test():
+            mock_host = AsyncMock()
+            mock_host.ping = AsyncMock(side_effect=ConnectionError("连接已失效"))
+            mock_host.disconnect = AsyncMock()
+            self.mc.machines["ssh_hop1"] = mock_host
+            self.mc.source_machines["ssh_hop1"] = "master_host"
+
+            self.plugin._next_heartbeat["ssh_hop1"] = 0
+
+            gather_results = await asyncio.gather(
+                mock_host.ping(), return_exceptions=True
+            )
+            result = gather_results[0]
+
+            self.assertIsInstance(result, ConnectionError)
+
+            await self.mc.disconnect_machine("ssh_hop1")
+            self.assertNotIn("ssh_hop1", self.mc.machines)
+
+        asyncio.run(test())
+
+    def test_timeout_error_is_not_connection_error(self):
+        self.assertFalse(issubclass(MachineToolTimeoutError, ConnectionError))
+        err = MachineToolTimeoutError("test")
+        self.assertIsInstance(err, Exception)
+        self.assertNotIsInstance(err, ConnectionError)
 
 
 if __name__ == "__main__":

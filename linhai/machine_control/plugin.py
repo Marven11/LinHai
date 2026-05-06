@@ -108,7 +108,14 @@ class MachineHeartbeatPlugin:
                 del self._next_heartbeat[earliest_id]
                 continue
 
-            result = await host.ping()
+            gather_results = await asyncio.gather(host.ping(), return_exceptions=True)
+            result = gather_results[0]
+
+            if isinstance(result, BaseException):
+                await self.machine_control.disconnect_machine(earliest_id)
+                self._next_heartbeat.pop(earliest_id, None)
+                continue
+
             interval = self._get_interval(earliest_id)
             next_time = time.monotonic() + interval
 

@@ -13,6 +13,10 @@ class JsonRpcResponse(Dict[str, Any]):
     pass
 
 
+class MachineToolTimeoutError(Exception):
+    pass
+
+
 class TrojanTransport:
     def __init__(
         self,
@@ -73,7 +77,7 @@ class TrojanTransport:
         done, _ = await asyncio.wait({future}, timeout=60.0)
         self._pending_futures.pop(request_id, None)
         if not done:
-            raise ConnectionError("请求超时")
+            raise MachineToolTimeoutError("请求超时")
         return next(iter(done)).result()
 
     async def send_request(self, method: str, params: Dict[str, Any]) -> Dict[str, Any]:
@@ -81,7 +85,7 @@ class TrojanTransport:
             self._send_request(method, params), return_exceptions=True
         )
         result = results[0]
-        if isinstance(result, ConnectionError):
+        if isinstance(result, (ConnectionError, MachineToolTimeoutError)):
             self._connection_valid = False
             raise result
         if isinstance(result, BaseException):
