@@ -103,7 +103,7 @@
             pyproject = true;
 
             nativeBuildInputs = [ pkgs.installShellFiles ];
-            buildInputs = [ pkgs.tmux pkgs.chromium ];
+            buildInputs = [ pkgs.tmux ];
 
             build-system = [
               hatchling

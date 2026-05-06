@@ -53,10 +53,18 @@ def analyze_content(content_type: str, content: bytes) -> tuple[bool, Optional[s
     return False, encoding
 
 
+def _find_chromium_binary() -> Optional[str]:
+    for name in ("chromium", "chromium-browser", "chrome", "google-chrome-stable"):
+        path = shutil.which(name)
+        if path is not None:
+            return path
+    return None
+
+
 def _download_with_chromium(url: str) -> str:
-    chromium_path = shutil.which("chromium")
+    chromium_path = _find_chromium_binary()
     if chromium_path is None:
-        raise RuntimeError("chromium未安装，请先安装chromium")
+        raise RuntimeError("chrome/chromium未安装，请先安装chrome或chromium")
     result = subprocess.run(
         [
             chromium_path,

@@ -244,7 +244,7 @@ class TestFetchWebpageTool(unittest.TestCase):
 
     @unittest.mock.patch("linhai.tool.general.shutil.which")
     def test_fetch_webpage_chromium_not_installed(self, mock_which):
-        """测试chromium未安装的情况"""
+        """测试chrome/chromium未安装的情况"""
         mock_which.return_value = None
 
         with self.assertRaises(RuntimeError) as context:
@@ -252,7 +252,30 @@ class TestFetchWebpageTool(unittest.TestCase):
                 "fetch_webpage",
                 {"url": "http://example.com", "http_downloader": "chromium"},
             )
-        self.assertIn("chromium未安装", str(context.exception))
+        self.assertIn("chrome/chromium未安装", str(context.exception))
+
+    @unittest.mock.patch("linhai.tool.general.subprocess.run")
+    @unittest.mock.patch("linhai.tool.general.shutil.which")
+    def test_fetch_webpage_fallback_to_chrome(self, mock_which, mock_subprocess):
+        """测试chromium不存在时fallback到chrome"""
+        mock_which.side_effect = lambda x: (
+            "/usr/bin/google-chrome-stable"
+            if x == "google-chrome-stable"
+            else "/usr/bin/pandoc" if x == "pandoc" else None
+        )
+        html = "<html><body>Test</body></html>"
+        mock_subprocess.return_value = unittest.mock.Mock(
+            returncode=0, stdout=html, stderr=""
+        )
+
+        with unittest.mock.patch(
+            "builtins.open", unittest.mock.mock_open(read_data="# Test")
+        ):
+            result = self.toolset.call_tool(
+                "fetch_webpage",
+                {"url": "http://example.com", "http_downloader": "chromium"},
+            )
+        self.assertIn("Test", result.content)
 
 
 if __name__ == "__main__":
