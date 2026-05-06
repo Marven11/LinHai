@@ -31,7 +31,7 @@
 
 - YOLO in mind: 沙箱 > 审批
 - 完善的软件开发/机器运维工具集: 文件读写、终端操控、进程操控
-- 进程控制: 比bash更底层的工具集: 未退出进程自动转后台，避免run_in_background的混乱；强制输入argv, 避开`&&`和pipe的过度使用；后台进程可通过stdio操控，允许使用repl
+- 进程控制与机器控制: 比bash和run_in_background更加灵活的进程控制工具集；未退出进程自动转后台；强制输入argv，避开`&&`和pipe的过度使用；后台进程可通过stdio操控，允许使用repl；动态连接任何bash进程（ssh/sudo bash/docker exec/adb shell）作为机器操控，适用read_file等标准工具；支持多跳连接机器
 - MCP: 静态/动态连接MCP服务器 - 在需要使用浏览器MCP时动态连接，不使用时完全不连接以去除MCP工具带来的负担
 - 沙箱: 文件读写权限规则和进程沙箱 - **动态连接的MCP**也会在沙箱中运行
 
@@ -48,7 +48,6 @@
 
 ## 还在糊
 
-- 远程控制功能：使用本地工具控制任何bash：sudo / ssh / docker exec / ..., 只要是bash且存在python即可连接为机器，并适用read_file等标准工具进行操控
 - claw模式: Continuous Living Autonomous Worker / 类OpenClaw模式 - 心跳消息、自动更新记忆文件
 - telegram远程控制功能
 - webshell控制：只是粘上去了而已

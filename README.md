@@ -38,7 +38,7 @@ The testing tools and payloads integrated into the Product have been deliberatel
 
 - YOLO in mind: sandbox > approval
 - Comprehensive software development and machine operations toolset: file read/write, terminal control, process control
-- Process control: lower-level toolset than bash; unfinished processes automatically move to background; force argv input to avoid excessive use of `&&` and pipes; background processes controllable via stdio, supporting REPL
+- Process control and machine control: more flexible process toolkit than bash and run_in_background; long-running processes automatically background; force argv input to avoid excessive `&&` and pipes; background processes controllable via stdio, supporting REPL; dynamically connect any bash session (ssh/sudo bash/docker exec/adb shell) as a machine with standard tools like read_file; multi-hop machine connections
 - MCP: static/dynamic MCP server connections - dynamically connect browser MCP when needed, fully disconnect when unused to reduce tool overhead
 - Sandbox: file read/write permission rules and process sandbox - **dynamically connected MCP** also runs within the sandbox
 
@@ -55,7 +55,6 @@ The testing tools and payloads integrated into the Product have been deliberatel
 
 ## WIP
 
-- Remote control: use local tools to control any bash session - sudo/ssh/docker exec/etc. - any bash with Python can be connected as a machine, supporting standard tools like read_file
 - CLAW mode: Continuous Living Autonomous Worker / OpenClaw-like mode - heartbeat messages, automatic memory file updates
 - Telegram remote control
 - Webshell control
