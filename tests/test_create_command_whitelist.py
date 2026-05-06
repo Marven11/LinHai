@@ -39,7 +39,7 @@ class TestCreateCommandWhitelist(unittest.IsolatedAsyncioTestCase):
         config = Config(**config_data)
         config_basedir = Path("/tmp")
         build_args: AgentBuildArguments = {
-            "rss": [],
+            "cron": [],
             "telegram": False,
             "disable_waiting_marker": False,
             "afk": False,
@@ -111,7 +111,7 @@ class TestCreateCommandWhitelist(unittest.IsolatedAsyncioTestCase):
         config = Config(**config_data)
         config_basedir = Path("/tmp")
         build_args: AgentBuildArguments = {
-            "rss": [],
+            "cron": [],
             "telegram": False,
             "disable_waiting_marker": False,
             "afk": False,

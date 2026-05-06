@@ -446,10 +446,10 @@ class AgentMessage:
     def _ensure_message_modules_imported() -> None:
         import linhai.telegram
         import linhai.multimodal
-        import linhai.rss
+        import linhai.cron
         from linhai.tool import base as tool_base
 
-        _ = (linhai.telegram, linhai.multimodal, linhai.rss, tool_base)
+        _ = (linhai.telegram, linhai.multimodal, linhai.cron, tool_base)
 
     def restore_from(self, data: dict) -> None:
         self._ensure_message_modules_imported()

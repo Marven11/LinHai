@@ -33,7 +33,7 @@ class TestCreateAgent(unittest.TestCase):
 
         config = load_config(Path(config_path))
         build_args: AgentBuildArguments = {
-            "rss": [],
+            "cron": [],
             "telegram": False,
             "disable_waiting_marker": False,
             "afk": False,
@@ -80,7 +80,7 @@ class TestCreateAgent(unittest.TestCase):
 
         config = load_config(Path(config_path))
         build_args: AgentBuildArguments = {
-            "rss": [],
+            "cron": [],
             "telegram": False,
             "disable_waiting_marker": False,
             "afk": False,
@@ -116,7 +116,7 @@ class TestCreateAgent(unittest.TestCase):
 
         config = load_config(Path(config_path))
         build_args: AgentBuildArguments = {
-            "rss": [],
+            "cron": [],
             "telegram": False,
             "disable_waiting_marker": False,
             "afk": False,

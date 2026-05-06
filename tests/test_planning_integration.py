@@ -34,7 +34,7 @@ class TestPlanningIntegration(unittest.IsolatedAsyncioTestCase):
 
     async def test_planning_parameter_default_false(self):
         build_args: AgentBuildArguments = {
-            "rss": [],
+            "cron": [],
             "telegram": False,
             "disable_waiting_marker": False,
             "afk": False,
@@ -59,7 +59,7 @@ class TestPlanningIntegration(unittest.IsolatedAsyncioTestCase):
 
     async def test_planning_parameter_true(self):
         build_args: AgentBuildArguments = {
-            "rss": [],
+            "cron": [],
             "telegram": False,
             "disable_waiting_marker": False,
             "afk": False,
@@ -201,7 +201,7 @@ class TestPlanningIntegration(unittest.IsolatedAsyncioTestCase):
             "max_toolcall_for_llm": {},
             "allowed_commands": self.mock_config.agent[0].allowed_commands,
             "telegram_config": None,
-            "rss": [],
+            "cron": [],
             "telegram": False,
             "disable_waiting_marker": False,
             "afk": False,
@@ -290,7 +290,7 @@ class TestPlanningIntegration(unittest.IsolatedAsyncioTestCase):
             "max_toolcall_for_llm": {},
             "allowed_commands": self.mock_config.agent[0].allowed_commands,
             "telegram_config": None,
-            "rss": [],
+            "cron": [],
             "telegram": False,
             "disable_waiting_marker": False,
             "afk": False,

@@ -1,4 +1,4 @@
-"""测试AgentBuildContext中rss/telegram/disable_waiting_marker/afk的传递"""
+"""测试AgentBuildContext中cron/telegram/disable_waiting_marker/afk的传递"""
 
 import unittest
 from pathlib import Path
@@ -58,10 +58,10 @@ class TestAgentBuildContextParameters(unittest.TestCase):
         self.config.agent[0].planning = False
         self.config.agent[0].claw = False
 
-    def test_agent_build_context_with_rss(self):
-        """测试rss参数从build_args传递到AgentBuildContext"""
+    def test_agent_build_context_with_cron(self):
+        """测试cron参数从build_args传递到AgentBuildContext"""
         build_args: AgentBuildArguments = {
-            "rss": ["http://example.com/rss1", "http://example.com/rss2"],
+            "cron": ["http://example.com/cron1", "http://example.com/cron2"],
             "telegram": False,
             "disable_waiting_marker": False,
             "afk": False,
@@ -83,7 +83,7 @@ class TestAgentBuildContextParameters(unittest.TestCase):
         )
 
         self.assertEqual(
-            context["rss"], ["http://example.com/rss1", "http://example.com/rss2"]
+            context["cron"], ["http://example.com/cron1", "http://example.com/cron2"]
         )
         self.assertEqual(context["afk"], False)
         self.assertEqual(context["claw_enabled"], False)
@@ -93,7 +93,7 @@ class TestAgentBuildContextParameters(unittest.TestCase):
     def test_agent_build_context_with_telegram(self):
         """测试telegram参数从build_args传递到AgentBuildContext"""
         build_args: AgentBuildArguments = {
-            "rss": [],
+            "cron": [],
             "telegram": True,
             "disable_waiting_marker": False,
             "afk": False,
@@ -122,7 +122,7 @@ class TestAgentBuildContextParameters(unittest.TestCase):
     def test_agent_build_context_with_disable_waiting_marker(self):
         """测试disable_waiting_marker参数从build_args传递到AgentBuildContext"""
         build_args: AgentBuildArguments = {
-            "rss": [],
+            "cron": [],
             "telegram": False,
             "disable_waiting_marker": True,
             "afk": False,
@@ -150,7 +150,7 @@ class TestAgentBuildContextParameters(unittest.TestCase):
     def test_agent_build_context_with_afk(self):
         """测试afk参数从build_args传递到AgentBuildContext"""
         build_args: AgentBuildArguments = {
-            "rss": [],
+            "cron": [],
             "telegram": False,
             "disable_waiting_marker": False,
             "afk": True,
@@ -176,7 +176,7 @@ class TestAgentBuildContextParameters(unittest.TestCase):
     def test_agent_build_context_with_all_parameters(self):
         """测试所有参数同时传递"""
         build_args: AgentBuildArguments = {
-            "rss": ["http://example.com/rss"],
+            "cron": ["http://example.com/cron"],
             "telegram": True,
             "disable_waiting_marker": True,
             "afk": True,
@@ -197,7 +197,7 @@ class TestAgentBuildContextParameters(unittest.TestCase):
             build_args=build_args,
         )
 
-        self.assertEqual(context["rss"], ["http://example.com/rss"])
+        self.assertEqual(context["cron"], ["http://example.com/cron"])
         self.assertEqual(context["telegram"], True)
         self.assertEqual(context["disable_waiting_marker"], True)
         self.assertEqual(context["afk"], True)
@@ -207,7 +207,7 @@ class TestAgentBuildContextParameters(unittest.TestCase):
     def test_agent_build_context_with_default_values(self):
         """测试默认值"""
         build_args: AgentBuildArguments = {
-            "rss": [],
+            "cron": [],
             "telegram": False,
             "disable_waiting_marker": False,
             "afk": False,
@@ -228,7 +228,7 @@ class TestAgentBuildContextParameters(unittest.TestCase):
             build_args=build_args,
         )
 
-        self.assertEqual(context["rss"], [])
+        self.assertEqual(context["cron"], [])
         self.assertEqual(context["telegram"], False)
         self.assertEqual(context["disable_waiting_marker"], False)
         self.assertEqual(context["afk"], False)
@@ -239,7 +239,7 @@ class TestAgentBuildContextParameters(unittest.TestCase):
         """测试profile中planning=True在CLI未传--planning时生效"""
         self.config.agent[0].planning = True
         build_args: AgentBuildArguments = {
-            "rss": [],
+            "cron": [],
             "telegram": False,
             "disable_waiting_marker": False,
             "afk": False,
@@ -264,7 +264,7 @@ class TestAgentBuildContextParameters(unittest.TestCase):
         """测试profile中claw=True在CLI未传--claw时生效"""
         self.config.agent[0].claw = True
         build_args: AgentBuildArguments = {
-            "rss": [],
+            "cron": [],
             "telegram": False,
             "disable_waiting_marker": False,
             "afk": False,
@@ -288,7 +288,7 @@ class TestAgentBuildContextParameters(unittest.TestCase):
     def test_cli_planning_overrides_profile_false(self):
         """测试CLI --planning覆盖profile中planning=False"""
         build_args: AgentBuildArguments = {
-            "rss": [],
+            "cron": [],
             "telegram": False,
             "disable_waiting_marker": False,
             "afk": False,
@@ -314,7 +314,7 @@ class TestAgentBuildContextParameters(unittest.TestCase):
         self.config.agent[0].planning = True
         self.config.agent[0].claw = True
         build_args: AgentBuildArguments = {
-            "rss": [],
+            "cron": [],
             "telegram": False,
             "disable_waiting_marker": False,
             "afk": False,

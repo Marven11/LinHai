@@ -101,7 +101,7 @@ class TestCreateAgent(unittest.TestCase):
         mock_agent.return_value = mock_agent_instance
 
         build_args: AgentBuildArguments = {
-            "rss": [],
+            "cron": [],
             "telegram": False,
             "disable_waiting_marker": False,
             "afk": False,
@@ -225,7 +225,7 @@ class TestCreateAgent(unittest.TestCase):
             mock_agent.return_value = mock_agent_instance
 
             build_args: AgentBuildArguments = {
-                "rss": [],
+                "cron": [],
                 "telegram": False,
                 "disable_waiting_marker": False,
                 "afk": False,
@@ -577,7 +577,7 @@ class TestDefaultLlmConfig(unittest.TestCase):
         )
 
         build_args: AgentBuildArguments = {
-            "rss": [],
+            "cron": [],
             "telegram": False,
             "disable_waiting_marker": False,
             "afk": False,
@@ -609,7 +609,7 @@ class TestDefaultLlmConfig(unittest.TestCase):
         )
 
         build_args: AgentBuildArguments = {
-            "rss": [],
+            "cron": [],
             "telegram": False,
             "disable_waiting_marker": False,
             "afk": False,
@@ -641,7 +641,7 @@ class TestDefaultLlmConfig(unittest.TestCase):
         )
 
         build_args: AgentBuildArguments = {
-            "rss": [],
+            "cron": [],
             "telegram": False,
             "disable_waiting_marker": False,
             "afk": False,
@@ -674,7 +674,7 @@ class TestDefaultLlmConfig(unittest.TestCase):
         )
 
         build_args: AgentBuildArguments = {
-            "rss": [],
+            "cron": [],
             "telegram": False,
             "disable_waiting_marker": False,
             "afk": False,

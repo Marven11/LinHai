@@ -82,7 +82,7 @@ async def run(args):
     from linhai.agent.create import AgentBuildArguments
 
     build_args: AgentBuildArguments = {
-        "rss": args.rss,
+        "cron": args.cron,
         "telegram": args.telegram,
         "disable_waiting_marker": args.disable_waiting_marker,
         "afk": args.afk,
@@ -179,11 +179,11 @@ def main():
         help="指定claw目录路径（默认：~/.local/share/linhai/claw）",
     )
     parser.add_argument(
-        "--rss",
+        "--cron",
         type=str,
         action="append",
         default=[],
-        help="RSS feed URL，可指定多个",
+        help="cron定时任务，格式: '<cron_expression> <command>'，可指定多个",
     )
     parser.add_argument(
         "--telegram",

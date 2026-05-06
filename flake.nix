@@ -88,7 +88,7 @@
             bashlex
             pillow
             tomli-w
-            feedparser
+            croniter
             pathspec
             python-telegram-bot'
             quickjs-ng'

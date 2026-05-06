@@ -168,7 +168,7 @@ disable_toolsets = ["llm"]
         import asyncio
 
         build_args: AgentBuildArguments = {
-            "rss": [],
+            "cron": [],
             "telegram": False,
             "disable_waiting_marker": False,
             "afk": False,
@@ -270,7 +270,7 @@ disable_toolsets = ["llm"]
         import asyncio
 
         build_args: AgentBuildArguments = {
-            "rss": [],
+            "cron": [],
             "telegram": False,
             "disable_waiting_marker": False,
             "afk": False,

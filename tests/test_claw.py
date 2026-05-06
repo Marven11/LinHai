@@ -107,7 +107,7 @@ class TestClawPinnedMessages(unittest.TestCase):
             "claw_folder": None,
             "message": [],
             "file": [],
-            "rss": [],
+            "cron": [],
             "telegram": False,
             "disable_waiting_marker": False,
             "git_worktree": False,

@@ -60,7 +60,7 @@ class TelegramContext(TypedDict):
 
 class AgentBuildArguments(TypedDict):
 
-    rss: list[str]
+    cron: list[str]
     telegram: bool
     disable_waiting_marker: bool
     afk: bool
@@ -98,7 +98,7 @@ class AgentBuildContext(TypedDict):
     mcp_configs: list["MCPConfig"]
     tool_config: "ToolConfig"
     secret_config_path: Optional[str]
-    rss: list[str]
+    cron: list[str]
     telegram: bool
     disable_waiting_marker: bool
     afk: bool
@@ -244,7 +244,7 @@ def create_agent_build_context(
         "secret_config_path": (
             agent_config.secret.config_path if agent_config.secret else None
         ),
-        "rss": build_args.get("rss", []),
+        "cron": build_args.get("cron", []),
         "telegram": build_args.get("telegram", False),
         "disable_waiting_marker": build_args.get("disable_waiting_marker", False),
         "afk": build_args.get("afk", False),
@@ -345,16 +345,17 @@ async def create_agent_from_context(
         ).register(agent.lifecycle)
 
     from linhai.plugin import MachineControlIntroductionPlugin, CurrentDirectoryPlugin
-    from linhai.rss import RssPlugin
+    from linhai.cron import CronPlugin, parse_cron_arg
 
     MachineControlIntroductionPlugin(context["registry"]).register(agent.lifecycle)
     CurrentDirectoryPlugin(context["registry"]).register(agent.lifecycle)
 
-    if context["rss"]:
-        RssPlugin(
+    for cron_arg in context["cron"]:
+        cron_expression, command = parse_cron_arg(cron_arg)
+        CronPlugin(
             context["registry"],
-            context["rss"],
-            30,
+            cron_expression,
+            command,
         ).register(agent.lifecycle)
 
     telegram_config = context["telegram_config"]

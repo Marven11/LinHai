@@ -98,7 +98,7 @@ command = "python {server_script_path}"
             "secret_config_path": (
                 config.agent[0].secret.config_path if config.agent[0].secret else None
             ),
-            "rss": [],
+            "cron": [],
             "telegram": False,
             "disable_waiting_marker": False,
             "afk": False,
@@ -154,7 +154,7 @@ compress_threshold = 80000
             "secret_config_path": (
                 config.agent[0].secret.config_path if config.agent[0].secret else None
             ),
-            "rss": [],
+            "cron": [],
             "telegram": False,
             "disable_waiting_marker": False,
             "afk": False,

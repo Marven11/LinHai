@@ -68,7 +68,7 @@ async def create_agent(request: AgentCreateRequest):
             )
 
     build_args: _AgentBuildArguments = {
-        "rss": request.rss,
+        "cron": request.cron,
         "telegram": request.telegram,
         "disable_waiting_marker": request.disable_waiting_marker,
         "afk": request.afk,

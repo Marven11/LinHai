@@ -17,7 +17,7 @@ class TestSchemas(unittest.TestCase):
         self.assertFalse(req.claw_enabled)
         self.assertIsNone(req.claw_folder)
         self.assertIsNone(req.checklist_path)
-        self.assertEqual(req.rss, [])
+        self.assertEqual(req.cron, [])
         self.assertFalse(req.telegram)
         self.assertEqual(req.message, [])
         self.assertEqual(req.file, [])

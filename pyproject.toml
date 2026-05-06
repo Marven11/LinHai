@@ -26,7 +26,7 @@ dependencies = [
     "pillow",
     "tomli-w",
     "ether-ghost @ git+https://github.com/Marven11/EtherGhost.git@dev",
-    "feedparser",
+    "croniter",
     "python-telegram-bot>=22.7",
     "quickjs-ng @ git+https://github.com/Marven11/python-quickjs-ng@v0.12.1.1",
     "rich",
