@@ -44,6 +44,7 @@ class AgentToolcall:
         self.early_return = False
         self.current_round_token_count = 0
         self.compress_tool_called_in_last_response = False
+        self._pending_warnings: list[RuntimeMessage] = []
 
         if isinstance(max_toolcall_token_in_round, float):
             llm_manager = registry.get_member_typechecked("llm_manager", LlmManager)
@@ -223,10 +224,21 @@ class AgentToolcall:
             f"当前轮次token总数已达限制（已使用{current_round_token_count} tokens，当前工具{token_count} tokens超过限制）。工具输出已保存到文件: {filepath}"
         )
 
+    async def flush_warnings(self):
+        if not self._pending_warnings:
+            return
+        message_processor = self.registry.get_member_typechecked(
+            "agent_message", AgentMessage
+        )
+        for warning in self._pending_warnings:
+            await message_processor.add_new_message(warning)
+        self._pending_warnings.clear()
+
     def start_new_tool_call_round(self):
         """开始新一轮工具调用"""
         self.early_return = False
         self.current_round_token_count = 0
+        self._pending_warnings.clear()
 
     async def call_tool(self, tool_call: ToolCallMessage, tool_index: int):
         """
@@ -308,15 +320,10 @@ class AgentToolcall:
             with_secret=tool_call.with_secret,
             is_tool_failed_duplicated_error=False,
         )
-        if isinstance(callback_result, ToolResult):
-            replaced_tool_result = ToolCallResultMessage(
-                tool_name=tool_call.function_name,
-                tool_index=tool_index,
-                result=callback_result,
-                toolcall_arguments=tool_call.function_arguments,
-            )
-        elif isinstance(callback_result, Message):
-            replaced_tool_result = callback_result
+        if callback_result is not None:
+            if callback_result.replacement is not None:
+                replaced_tool_result = callback_result.replacement
+            self._pending_warnings.extend(callback_result.warnings)
 
         return replaced_tool_result
 
@@ -331,7 +338,7 @@ class AgentToolcall:
             tool_call.with_secret,
         )
         if isinstance(beforecbs_result, FailedToolResult):
-            await lifecycle.after_toolcall.trigger(
+            callback_result = await lifecycle.after_toolcall.trigger(
                 tool_name=tool_call.function_name,
                 tool_index=tool_index,
                 status="failed",
@@ -340,6 +347,8 @@ class AgentToolcall:
                 with_secret=tool_call.with_secret,
                 is_tool_failed_duplicated_error=False,
             )
+            if callback_result is not None:
+                self._pending_warnings.extend(callback_result.warnings)
             msg = f"工具调用失败: {beforecbs_result.content}"
             message_processor = self.registry.get_member_typechecked(
                 "agent_message", AgentMessage
@@ -362,7 +371,7 @@ class AgentToolcall:
                 tool_result.result, FailedToolResult
             ):
                 lifecycle = self.registry.get_member_typechecked("lifecycle", Lifecycle)
-                await lifecycle.after_toolcall.trigger(
+                callback_result = await lifecycle.after_toolcall.trigger(
                     tool_name=tool_call.function_name,
                     tool_index=tool_index,
                     status="failed",
@@ -371,6 +380,8 @@ class AgentToolcall:
                     with_secret=tool_call.with_secret,
                     is_tool_failed_duplicated_error=False,
                 )
+                if callback_result is not None:
+                    self._pending_warnings.extend(callback_result.warnings)
 
                 await message_processor.add_new_message(tool_result)
                 return tool_call.assert_success
@@ -385,7 +396,7 @@ class AgentToolcall:
 
             lifecycle = self.registry.get_member_typechecked("lifecycle", Lifecycle)
             msg = RuntimeMessage(f"工具调用失败: {str(e)} {repr(e)}")
-            await lifecycle.after_toolcall.trigger(
+            callback_result = await lifecycle.after_toolcall.trigger(
                 tool_name=tool_call.function_name,
                 tool_index=tool_index,
                 status="failed",
@@ -394,6 +405,8 @@ class AgentToolcall:
                 with_secret=tool_call.with_secret,
                 is_tool_failed_duplicated_error=False,
             )
+            if callback_result is not None:
+                self._pending_warnings.extend(callback_result.warnings)
 
             await message_processor.add_new_message(msg)
             return False
@@ -524,7 +537,7 @@ class AgentToolcall:
             else:
                 self.current_round_token_count += token_count
 
-        await lifecycle.after_toolcall.trigger(
+        callback_result = await lifecycle.after_toolcall.trigger(
             tool_name=tool_call.function_name,
             tool_index=tool_index,
             status="failed" if is_failed else "success",
@@ -533,6 +546,8 @@ class AgentToolcall:
             with_secret=tool_call.with_secret,
             is_tool_failed_duplicated_error=False,
         )
+        if callback_result is not None:
+            self._pending_warnings.extend(callback_result.warnings)
 
         result_msg = OpenAiToolResultMessage(
             tool_call_id=tool_call_id,

@@ -167,7 +167,7 @@ class ToolManager:
             from linhai.agent.lifecycle import Lifecycle
 
             lifecycle = self.registry.get_member_typechecked("lifecycle", Lifecycle)
-            processed_result = await lifecycle.after_toolcall.trigger(
+            callback_result = await lifecycle.after_toolcall.trigger(
                 tool_name=tool_call.function_name,
                 tool_index=tool_index,
                 status="failed",
@@ -185,8 +185,8 @@ class ToolManager:
                 ),
             )
 
-            if isinstance(processed_result, Message):
-                return processed_result
+            if callback_result is not None and callback_result.replacement is not None:
+                return callback_result.replacement
 
             return failed_result
 

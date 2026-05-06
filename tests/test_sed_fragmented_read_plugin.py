@@ -6,6 +6,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
+from linhai.agent.lifecycle import AfterToolcallResult
 from linhai.agent.messages import RuntimeMessage
 from linhai.plugin.file_operations import SedFragmentedReadPlugin
 from linhai.tool.base import ToolCallResultMessage, SuccessfulToolResult

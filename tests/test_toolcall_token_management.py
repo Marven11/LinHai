@@ -305,10 +305,12 @@ class TestToolcallTokenManagementTDD(unittest.IsolatedAsyncioTestCase):
         )
 
     async def test_on_tool_result_replacement(self):
-        """测试当on_tool_result回调返回RuntimeMessage时使用替换内容。"""
+        """测试当on_tool_result回调返回AfterToolcallResult时使用替换内容。"""
+        from linhai.agent.lifecycle import AfterToolcallResult
+
         replacement_message = RuntimeMessage("替换消息")
         self.mock_agent.lifecycle.after_toolcall.trigger = AsyncMock(
-            return_value=replacement_message
+            return_value=AfterToolcallResult(replacement=replacement_message)
         )
 
         content = "x" * 100

@@ -4,7 +4,7 @@ import asyncio
 import time
 from typing import TYPE_CHECKING, Optional, Literal, Union
 from linhai.agent import Agent
-from linhai.agent.lifecycle import Lifecycle
+from linhai.agent.lifecycle import AfterToolcallResult, Lifecycle
 from linhai.base import Message
 from linhai.agent.messages import RuntimeMessage
 from linhai.registry import Registry
@@ -50,7 +50,7 @@ class MachineControlPlugin:
         toolcall_arguments: dict,
         with_secret: list[str] | None,
         is_tool_failed_duplicated_error: bool,
-    ) -> Union[None, bool, RuntimeMessage]:
+    ) -> AfterToolcallResult | None:
         return None
 
     def register(self, lifecycle: "Lifecycle"):

@@ -2,12 +2,12 @@
 
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import TYPE_CHECKING, Literal, Union
+from typing import TYPE_CHECKING, Literal
 import reprlib
 import time
 
 from linhai.agent import Agent
-from linhai.agent.lifecycle import Lifecycle
+from linhai.agent.lifecycle import AfterToolcallResult, Lifecycle
 from linhai.agent.messages import (
     RuntimeMessage,
 )
@@ -60,7 +60,7 @@ class DuplicateFileReadPlugin(Plugin):
         toolcall_arguments: dict,
         with_secret: list[str] | None,
         is_tool_failed_duplicated_error: bool,
-    ) -> Union[None, bool, RuntimeMessage]:
+    ) -> AfterToolcallResult | None:
         """工具调用结果回调，检查是否重复读取文件。"""
         machine_control = self.registry.get_member_typechecked(
             "machine_control", MachineControl
@@ -121,14 +121,15 @@ class DuplicateFileReadPlugin(Plugin):
                     )
                     reprobj = reprlib.Repr(maxstring=100)
                     preview = reprobj.repr(actual_content)
-                    await agent.message_processor.add_new_message(
-                        RuntimeMessage(
-                            f"警告：你已经读取过文件{filepath}，内容和上一次完全相同，这是第一次警告！\n"
-                            f"文件内容预览：{preview}\n"
-                            f"不要重复读取文件拖延时间！你应该立即修改文件而不是继续拖延！"
-                        )
+                    return AfterToolcallResult(
+                        warnings=[
+                            RuntimeMessage(
+                                f"警告：你已经读取过文件{filepath}，内容和上一次完全相同，这是第一次警告！\n"
+                                f"文件内容预览：{preview}\n"
+                                f"不要重复读取文件拖延时间！你应该立即修改文件而不是继续拖延！"
+                            )
+                        ]
                     )
-                    return None
                 else:
                     await self.registry.send_if_exists(
                         "ui_log",
@@ -139,11 +140,13 @@ class DuplicateFileReadPlugin(Plugin):
                     )
                     reprobj = reprlib.Repr(maxstring=100)
                     preview = reprobj.repr(actual_content)
-                    return RuntimeMessage(
-                        f"错误：你已经读取过文件{filepath}，内容和上一次完全相同，本条重复内容已自动隐藏。\n"
-                        f"警告：你已经重复读取{self.counter}次文件！这是非常低效的行为！立即停止重复读取！{"！！！" * self.counter}"
-                        f"文件内容预览：{preview}\n"
-                        f"不要重复读取文件拖延时间！你应该立即修改文件而不是继续拖延！"
+                    return AfterToolcallResult(
+                        replacement=RuntimeMessage(
+                            f"错误：你已经读取过文件{filepath}，内容和上一次完全相同，本条重复内容已自动隐藏。\n"
+                            f"警告：你已经重复读取{self.counter}次文件！这是非常低效的行为！立即停止重复读取！{"！！！" * self.counter}"
+                            f"文件内容预览：{preview}\n"
+                            f"不要重复读取文件拖延时间！你应该立即修改文件而不是继续拖延！"
+                        )
                     )
             else:
                 self.counter = 0
@@ -174,7 +177,7 @@ class UnnecessarySedReadPlugin(Plugin):
         toolcall_arguments: dict,
         with_secret: list[str] | None,
         is_tool_failed_duplicated_error: bool,
-    ) -> Union[None, bool, RuntimeMessage]:
+    ) -> AfterToolcallResult | None:
         """工具调用后回调，检查是否不必要的小块读取。"""
         machine_control = self.registry.get_member_typechecked(
             "machine_control", MachineControl
@@ -214,11 +217,13 @@ class UnnecessarySedReadPlugin(Plugin):
                     content="模型多次小块读取代码文件，已阻止",
                 ),
             )
-            return RuntimeMessage(
-                "错误：不使用read_file直接读取文件而是滥用read_file_with_sed多次小块读取代码文件\n"
-                "警告：本插件会一直阻止你重复读取文件，直到你开始改代码为止！\n"
-                "建议：如果需要查看对应内容的行号，使用show_line参数读取整个文件；"
-                "如果需要查看修改过的文件，使用read_file重新读取！"
+            return AfterToolcallResult(
+                replacement=RuntimeMessage(
+                    "错误：不使用read_file直接读取文件而是滥用read_file_with_sed多次小块读取代码文件\n"
+                    "警告：本插件会一直阻止你重复读取文件，直到你开始改代码为止！\n"
+                    "建议：如果需要查看对应内容的行号，使用show_line参数读取整个文件；"
+                    "如果需要查看修改过的文件，使用read_file重新读取！"
+                )
             )
         else:
             await self.registry.send_if_exists(
@@ -228,8 +233,10 @@ class UnnecessarySedReadPlugin(Plugin):
                     content="模型多次小块读取代码文件，已警告",
                 ),
             )
-            return RuntimeMessage(
-                f"警告：检测到不必要的sed读取（第{self.warning_count}次警告）。建议直接使用read_file读取整个文件。"
+            return AfterToolcallResult(
+                replacement=RuntimeMessage(
+                    f"警告：检测到不必要的sed读取（第{self.warning_count}次警告）。建议直接使用read_file读取整个文件。"
+                )
             )
 
 
@@ -254,7 +261,7 @@ class UnnecessaryRunCommandPlugin(Plugin):
         toolcall_arguments: dict,
         with_secret: list[str] | None,
         is_tool_failed_duplicated_error: bool,
-    ) -> Union[None, bool, RuntimeMessage]:
+    ) -> AfterToolcallResult | None:
         """工具调用后回调，检查是否不必要的process_create用于读取已读文件。"""
         machine_control = self.registry.get_member_typechecked(
             "machine_control", MachineControl
@@ -298,11 +305,13 @@ class UnnecessaryRunCommandPlugin(Plugin):
                             content="模型多次使用process_create读取已读文件，已阻止",
                         ),
                     )
-                    return RuntimeMessage(
-                        "错误：不使用read_file直接读取文件而是滥用process_create多次读取已读文件\n"
-                        "警告：本插件会一直阻止你重复读取文件，直到你开始改代码为止！\n"
-                        "建议：如果需要查看文件内容，使用read_file工具；"
-                        "如果需要执行命令，确保命令必要且文件未重复读取。"
+                    return AfterToolcallResult(
+                        replacement=RuntimeMessage(
+                            "错误：不使用read_file直接读取文件而是滥用process_create多次读取已读文件\n"
+                            "警告：本插件会一直阻止你重复读取文件，直到你开始改代码为止！\n"
+                            "建议：如果需要查看文件内容，使用read_file工具；"
+                            "如果需要执行命令，确保命令必要且文件未重复读取。"
+                        )
                     )
                 else:
                     await self.registry.send_if_exists(
@@ -312,9 +321,11 @@ class UnnecessaryRunCommandPlugin(Plugin):
                             content=f"模型使用process_create读取已读文件，已警告（第{self.warning_count}次）",
                         ),
                     )
-                    return RuntimeMessage(
-                        f"警告：检测到不必要的process_create用于读取已读文件（第{self.warning_count}次警告）。"
-                        f"建议直接使用read_file读取文件。"
+                    return AfterToolcallResult(
+                        replacement=RuntimeMessage(
+                            f"警告：检测到不必要的process_create用于读取已读文件（第{self.warning_count}次警告）。"
+                            f"建议直接使用read_file读取文件。"
+                        )
                     )
         self.warning_count = 0
         return None
@@ -340,7 +351,7 @@ class FileReadWriteConflictPlugin(Plugin):
         toolcall_arguments: dict,
         with_secret: list[str] | None,
         is_tool_failed_duplicated_error: bool,
-    ) -> Union[None, bool, RuntimeMessage]:
+    ) -> AfterToolcallResult | None:
         """工具结果回调，检查读写文件冲突。"""
         try:
             machine_control = self.registry.get_member_typechecked(
@@ -391,11 +402,13 @@ class FileReadWriteConflictPlugin(Plugin):
                         content=f"检测到读写文件冲突：在读取文件后立即尝试写入同一文件 {filepath}，已警告",
                     ),
                 )
-                return RuntimeMessage(
-                    f"警告：你刚刚读取了文件{filepath!r}，然后立即尝试修改它。\n"
-                    "注意：如果你没有看到文件内容（例如在同一个回答中连续调用多个工具），\n"
-                    "这是模型幻觉。你应该先读取文件，查看内容后再决定是否修改。\n"
-                    "建议：确保在修改文件之前已经读取并理解了文件内容。"
+                return AfterToolcallResult(
+                    replacement=RuntimeMessage(
+                        f"警告：你刚刚读取了文件{filepath!r}，然后立即尝试修改它。\n"
+                        "注意：如果你没有看到文件内容（例如在同一个回答中连续调用多个工具），\n"
+                        "这是模型幻觉。你应该先读取文件，查看内容后再决定是否修改。\n"
+                        "建议：确保在修改文件之前已经读取并理解了文件内容。"
+                    )
                 )
 
         return None
@@ -440,7 +453,7 @@ class SedFragmentedReadPlugin(Plugin):
         toolcall_arguments: dict,
         with_secret: list[str] | None,
         is_tool_failed_duplicated_error: bool,
-    ) -> Union[None, bool, RuntimeMessage]:
+    ) -> AfterToolcallResult | None:
         machine_control = self.registry.get_member_typechecked(
             "machine_control", MachineControl
         )
@@ -509,8 +522,12 @@ class SedFragmentedReadPlugin(Plugin):
                 content=f"模型连续{count}次使用sed重复读取文件{filepath}的细碎重叠内容",
             ),
         )
-        return RuntimeMessage(
-            f"你已经连续{count}次使用sed重复读取文件内容，"
-            "为什么要重复读取？为什么要重复确认内容？"
-            "你就不能一次性读取周围大块内容以完全理解这部分代码吗？"
+        return AfterToolcallResult(
+            warnings=[
+                RuntimeMessage(
+                    f"你已经连续{count}次使用sed重复读取文件内容，"
+                    "为什么要重复读取？为什么要重复确认内容？"
+                    "你就不能一次性读取周围大块内容以完全理解这部分代码吗？"
+                )
+            ]
         )

@@ -4,7 +4,7 @@ import time
 from typing import TYPE_CHECKING, Union
 from linhai.agent import Agent
 from linhai.agent.messages import RuntimeMessage
-from linhai.agent.lifecycle import Lifecycle
+from linhai.agent.lifecycle import AfterToolcallResult, Lifecycle
 from linhai.registry import Registry
 from linhai.tool.base import FailedToolResult, SuccessfulToolResult
 from linhai.plugin import Plugin
@@ -75,7 +75,7 @@ class SudoStdioCheckerPlugin(Plugin):
         toolcall_arguments: dict,
         with_secret: list[str] | None,
         is_tool_failed_duplicated_error: bool,
-    ):
+    ) -> AfterToolcallResult | None:
         """在工具调用后检查bash -c命令。"""
         if tool_name != "process_create":
             return None

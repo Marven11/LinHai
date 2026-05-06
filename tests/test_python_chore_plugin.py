@@ -5,6 +5,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock
 
+from linhai.agent.lifecycle import AfterToolcallResult
 from linhai.agent.messages import (
     GlobalPrompt,
     PathPrompt,
@@ -133,11 +134,9 @@ class TestWriteFileWarning(_BasePluginTest):
             "write_file",
             {"filepath": "test.py", "content": "x = 1  # hello"},
         )
-        self.assertIsNone(result)
-        self.agent.message_processor.add_new_message.assert_called_once()
-        call_args = self.agent.message_processor.add_new_message.call_args[0]
-        self.assertIsInstance(call_args[0], RuntimeMessage)
-        self.assertIn("# hello", call_args[0].message)
+        self.assertIsInstance(result, AfterToolcallResult)
+        self.assertEqual(len(result.warnings), 1)
+        self.assertIn("你添加了注释", result.warnings[0].message)
 
 
 class TestMultilineStringNotComment(_BasePluginTest):
@@ -194,13 +193,9 @@ class TestMixedCommentsOnlyWarnAgentOnes(_BasePluginTest):
             "write_file",
             {"filepath": "test.py", "content": content},
         )
-        self.assertIsNone(result)
-        self.agent.message_processor.add_new_message.assert_called_once()
-        call_args = self.agent.message_processor.add_new_message.call_args[0]
-        msg = call_args[0]
-        self.assertIsInstance(msg, RuntimeMessage)
-        self.assertIn("# agent_comment", msg.message)
-        self.assertNotIn("# user_comment", msg.message)
+        self.assertIsInstance(result, AfterToolcallResult)
+        self.assertEqual(len(result.warnings), 1)
+        self.assertIn("你添加了注释", result.warnings[0].message)
 
 
 class TestReadFileContent(unittest.TestCase):
@@ -230,10 +225,9 @@ class TestReplaceFileContent(_BasePluginTest):
             )
         finally:
             os.unlink(filepath)
-        self.assertIsNone(result)
-        self.agent.message_processor.add_new_message.assert_called_once()
-        call_args = self.agent.message_processor.add_new_message.call_args[0]
-        self.assertIn("# added", call_args[0].message)
+        self.assertIsInstance(result, AfterToolcallResult)
+        self.assertEqual(len(result.warnings), 1)
+        self.assertIn("你添加了注释", result.warnings[0].message)
 
     async def test_no_warn_when_comment_already_in_old(self):
         with tempfile.NamedTemporaryFile(suffix=".py", mode="w", delete=False) as f:

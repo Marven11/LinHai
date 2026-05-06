@@ -26,6 +26,7 @@ def _make_file_msg(filepath="", content="", show_line_numbers=False, **kwargs):
     )
 
 
+from linhai.agent.lifecycle import AfterToolcallResult
 from linhai.agent.messages import RuntimeMessage
 
 
@@ -208,8 +209,8 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
         self.assertIsNotNone(result)
         from linhai.agent.messages import RuntimeMessage
 
-        self.assertIsInstance(result, RuntimeMessage)
-        self.assertIn("警告：检测到不必要的sed读取", result.message)
+        self.assertIsInstance(result, AfterToolcallResult)
+        self.assertIn("警告：检测到不必要的sed读取", result.replacement.message)
 
     @patch("pathlib.Path")
     @patch("builtins.open", new_callable=mock_open, read_data=b"line1\nline2\n")
@@ -250,8 +251,8 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
         self.assertIsNotNone(result)
         from linhai.agent.messages import RuntimeMessage
 
-        self.assertIsInstance(result, RuntimeMessage)
-        self.assertIn("警告：检测到不必要的sed读取", result.message)
+        self.assertIsInstance(result, AfterToolcallResult)
+        self.assertIn("警告：检测到不必要的sed读取", result.replacement.message)
 
     @patch("pathlib.Path")
     @patch("builtins.open", side_effect=IOError("文件读取错误"))
@@ -369,8 +370,8 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
         self.assertIsNotNone(result)
         from linhai.agent.messages import RuntimeMessage
 
-        self.assertIsInstance(result, RuntimeMessage)
-        self.assertIn("警告：检测到不必要的sed读取", result.message)
+        self.assertIsInstance(result, AfterToolcallResult)
+        self.assertIn("警告：检测到不必要的sed读取", result.replacement.message)
         self.assertEqual(self.plugin.warning_count, 1)
 
     @patch("pathlib.Path")
@@ -474,9 +475,9 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
                 False,
             )
         )
-        self.assertIsNone(result)
-        # 检查是否发送了警告
-        self.registry.send_if_exists.assert_called_once()
+        self.assertIsInstance(result, AfterToolcallResult)
+        self.assertEqual(len(result.warnings), 1)
+        self.assertIn("第一次警告", result.warnings[0].message)
 
         # 重置模拟，准备第二次调用
         self.registry.send_if_exists.reset_mock()
@@ -498,8 +499,8 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
         self.assertIsNotNone(result2)
         from linhai.agent.messages import RuntimeMessage
 
-        self.assertIsInstance(result2, RuntimeMessage)
-        self.assertIn("错误：你已经读取过文件", result2.message)
+        self.assertIsInstance(result2, AfterToolcallResult)
+        self.assertIn("错误：你已经读取过文件", result2.replacement.message)
         self.registry.send_if_exists.assert_called_once()
 
     @patch("pathlib.Path")
@@ -718,9 +719,9 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
                 False,
             )
         )
-        self.assertIsNone(result)
-        # 检查是否发送了警告
-        self.registry.send_if_exists.assert_called_once()
+        self.assertIsInstance(result, AfterToolcallResult)
+        self.assertEqual(len(result.warnings), 1)
+        self.assertIn("第一次警告", result.warnings[0].message)
 
         # 重置模拟，准备第二次调用
         self.registry.send_if_exists.reset_mock()
@@ -740,8 +741,8 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
 
         # 应该被阻止，因为最新消息内容相同且是第二次重复
         self.assertIsNotNone(result2)
-        self.assertIsInstance(result2, RuntimeMessage)
-        self.assertIn("错误：你已经读取过文件", result2.message)
+        self.assertIsInstance(result2, AfterToolcallResult)
+        self.assertIn("错误：你已经读取过文件", result2.replacement.message)
         self.registry.send_if_exists.assert_called_once()
 
     @patch("pathlib.Path")
@@ -930,9 +931,9 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
                 False,
             )
         )
-        self.assertIsNone(result)
-        # 检查是否发送了警告
-        self.registry.send_if_exists.assert_called_once()
+        self.assertIsInstance(result, AfterToolcallResult)
+        self.assertEqual(len(result.warnings), 1)
+        self.assertIn("第一次警告", result.warnings[0].message)
 
         # 重置模拟，准备第二次调用
         self.registry.send_if_exists.reset_mock()
@@ -953,8 +954,8 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
 
         # 应该拦截，因为好消息的内容与当前读取相同且是第二次重复
         self.assertIsNotNone(result2)
-        self.assertIsInstance(result2, RuntimeMessage)
-        self.assertIn("错误：你已经读取过文件", result2.message)
+        self.assertIsInstance(result2, AfterToolcallResult)
+        self.assertIn("错误：你已经读取过文件", result2.replacement.message)
         self.registry.send_if_exists.assert_called_once()
 
     def test_duplicate_file_read_plugin_returns_none_on_failed_tool_call(self):

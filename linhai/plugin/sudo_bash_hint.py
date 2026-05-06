@@ -2,7 +2,7 @@ import os
 import time
 from linhai.agent import Agent
 from linhai.agent.messages import RuntimeMessage
-from linhai.agent.lifecycle import Lifecycle
+from linhai.agent.lifecycle import AfterToolcallResult, Lifecycle
 from linhai.registry import Registry
 from linhai.plugin import Plugin
 
@@ -26,7 +26,7 @@ class SudoBashHintPlugin(Plugin):
         toolcall_arguments: dict,
         with_secret: list[str] | None,
         is_tool_failed_duplicated_error: bool,
-    ):
+    ) -> AfterToolcallResult | None:
         if tool_name != "process_create" or status != "success":
             return None
 

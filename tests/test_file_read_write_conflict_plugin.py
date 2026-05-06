@@ -91,8 +91,8 @@ class TestFileReadWriteConflictPlugin(unittest.IsolatedAsyncioTestCase):
         )
         # 应该返回警告消息
         self.assertIsNotNone(result)
-        self.assertIn("警告", result.message)
-        self.assertIn(str(self.test_file), result.message)
+        self.assertIn("警告", result.replacement.message)
+        self.assertIn(str(self.test_file), result.replacement.message)
         # 应该调用了send_if_exists发送UI日志
         self.registry.send_if_exists.assert_called_once()
 

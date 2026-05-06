@@ -10,7 +10,7 @@ from .exceptions import ConfigValidationError
 from .agent.messages import RuntimeMessage
 from .agent.conversation import save_secret_intercepted
 from .base import Message
-from .agent.lifecycle import Lifecycle
+from .agent.lifecycle import AfterToolcallResult, Lifecycle
 from .tool.base import SuccessfulToolResult, FailedToolResult
 
 if TYPE_CHECKING:
@@ -222,7 +222,7 @@ class SecretInterceptorPlugin:
         toolcall_arguments: dict,
         with_secret: list[str] | None,
         is_tool_failed_duplicated_error: bool,
-    ) -> Union[None, bool, RuntimeMessage]:
+    ) -> AfterToolcallResult | None:
         _ = (tool_index, toolcall_arguments, is_tool_failed_duplicated_error)
         if status == "skipped":
             return None
@@ -255,11 +255,11 @@ class SecretInterceptorPlugin:
                     f"请将以上secret键添加到with_secret字段中以查看掩码后的结果。"
                     f"原始内容已保存到文件: {filepath}"
                 )
-                return RuntimeMessage(return_message)
+                return AfterToolcallResult(replacement=RuntimeMessage(return_message))
 
             if with_secret:
                 return_message = f"<<masked>><<message>>工具内容包含{with_secret!r}secret的内容，已替换<<message>><<content>>{result_content}<<content>><<masked>>"
-                return RuntimeMessage(return_message)
+                return AfterToolcallResult(replacement=RuntimeMessage(return_message))
 
             return None
 

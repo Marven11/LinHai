@@ -6,6 +6,7 @@ import asyncio
 import tempfile
 from pathlib import Path
 
+from linhai.sandbox import NoSandbox
 from linhai.tui.planning_tab import PlanningTabWidget, FILE_NAMES
 from linhai.tui.app import TUIApp
 from linhai.registry import Registry
@@ -165,7 +166,7 @@ class TestPlanningTabInApp(unittest.TestCase):
         registry.register_member("agent", mock_agent)
         registry.register_member("agent_message", mock_agent_message)
         registry.register_member("agent_context_orchestration", mock_orchestration)
-        registry.register_member("process_sandbox", Mock())
+        registry.register_member("process_sandbox", NoSandbox())
         Lifecycle(registry)
 
         mock_cli_args = argparse.Namespace()
@@ -228,7 +229,7 @@ class TestPlanningTabInApp(unittest.TestCase):
         registry.register_member("agent", mock_agent)
         registry.register_member("agent_message", mock_agent_message)
         registry.register_member("agent_context_orchestration", mock_orchestration)
-        registry.register_member("process_sandbox", Mock())
+        registry.register_member("process_sandbox", NoSandbox())
         Lifecycle(registry)
 
         mock_cli_args = argparse.Namespace()
@@ -301,7 +302,7 @@ class TestPlanningTabInApp(unittest.TestCase):
         registry.register_member("agent", mock_agent)
         registry.register_member("agent_message", mock_agent_message)
         registry.register_member("agent_context_orchestration", mock_orchestration)
-        registry.register_member("process_sandbox", Mock())
+        registry.register_member("process_sandbox", NoSandbox())
         Lifecycle(registry)
 
         mock_cli_args = argparse.Namespace()

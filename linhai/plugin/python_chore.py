@@ -3,10 +3,10 @@
 import io
 import tokenize
 from pathlib import Path
-from typing import TYPE_CHECKING, Literal, Union
+from typing import TYPE_CHECKING, Literal
 
 from linhai.agent import Agent
-from linhai.agent.lifecycle import Lifecycle
+from linhai.agent.lifecycle import AfterToolcallResult, Lifecycle
 from linhai.agent.messages import (
     GlobalPrompt,
     PathPrompt,
@@ -79,7 +79,7 @@ class PythonCommentCheckerPlugin:
         toolcall_arguments: dict,
         with_secret: list[str] | None,
         is_tool_failed_duplicated_error: bool,
-    ) -> Union[None, bool, RuntimeMessage]:
+    ) -> AfterToolcallResult | None:
         machine_control = self.registry.get_member_typechecked(
             "machine_control", MachineControl
         )
@@ -124,7 +124,8 @@ class PythonCommentCheckerPlugin:
             return None
 
         comment_list = ", ".join(f"`{c}`" for c in agent_comments)
-        await agent.message_processor.add_new_message(
-            RuntimeMessage(f"你添加了注释{comment_list}? 有注释相关的要求吗？")
+        return AfterToolcallResult(
+            warnings=[
+                RuntimeMessage(f"你添加了注释{comment_list}? 有注释相关的要求吗？")
+            ]
         )
-        return None

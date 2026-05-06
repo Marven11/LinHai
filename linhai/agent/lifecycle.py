@@ -1,3 +1,4 @@
+from dataclasses import dataclass, field
 from typing import (
     Callable,
     Awaitable,
@@ -18,6 +19,7 @@ from linhai.agent.callback_slot import (
     ShortCircuitSlot,
     InterruptSlot,
     ChainSlot,
+    AfterToolcallSlot,
 )
 
 if TYPE_CHECKING:
@@ -25,6 +27,13 @@ if TYPE_CHECKING:
     from linhai.parsed_message import ParsedAnswer, Segment as Segment
     from linhai.agent.user_message_handler import ParsedUserMessage
     from linhai.machine_control.process import ProcessCreateInfo
+
+
+@dataclass
+class AfterToolcallResult:
+    replacement: Message | None = None
+    warnings: list["RuntimeMessage"] = field(default_factory=list)
+
 
 BeforeMessageGenerationCallback: TypeAlias = Callable[[], Awaitable[None]]
 
@@ -43,7 +52,7 @@ AfterToolcallCallback: TypeAlias = Callable[
         list[str] | None,
         bool,
     ],
-    Awaitable[Union[None, bool, "RuntimeMessage"]],
+    Awaitable[Union[None, AfterToolcallResult]],
 ]
 
 AfterTokenGenerationCallback: TypeAlias = Callable[
@@ -144,7 +153,7 @@ class Lifecycle:
 
         self.before_message_generation = BroadcastSlot()
         self.after_message_generation = BroadcastSlot()
-        self.after_toolcall = ShortCircuitSlot()
+        self.after_toolcall = AfterToolcallSlot()
         self.after_token_generation = InterruptSlot()
         self.before_parsing = BroadcastSlot()
         self.after_segment = BroadcastSlot()

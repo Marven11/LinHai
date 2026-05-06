@@ -4,6 +4,7 @@ import unittest
 from unittest.mock import MagicMock, AsyncMock, patch
 from pathlib import Path
 from linhai.plugin import UnnecessaryRunCommandPlugin
+from linhai.agent.lifecycle import AfterToolcallResult
 from linhai.agent.messages import RuntimeMessage
 from linhai.tool.base import ToolCallResultMessage
 from linhai.base import ToolCallMessage
@@ -134,9 +135,10 @@ class TestUnnecessaryRunCommandPlugin(unittest.IsolatedAsyncioTestCase):
                 )
 
         self.assertIsNotNone(result)
-        self.assertIsInstance(result, RuntimeMessage)
+        self.assertIsInstance(result, AfterToolcallResult)
         self.assertIn(
-            "警告：检测到不必要的process_create用于读取已读文件", result.message
+            "警告：检测到不必要的process_create用于读取已读文件",
+            result.replacement.message,
         )
         self.assertEqual(self.plugin.warning_count, 1)
 
@@ -163,9 +165,10 @@ class TestUnnecessaryRunCommandPlugin(unittest.IsolatedAsyncioTestCase):
                 )
 
         self.assertIsNotNone(result)
-        self.assertIsInstance(result, RuntimeMessage)
+        self.assertIsInstance(result, AfterToolcallResult)
         self.assertIn(
-            "警告：检测到不必要的process_create用于读取已读文件", result.message
+            "警告：检测到不必要的process_create用于读取已读文件",
+            result.replacement.message,
         )
         self.assertEqual(self.plugin.warning_count, 1)
 
@@ -194,9 +197,10 @@ class TestUnnecessaryRunCommandPlugin(unittest.IsolatedAsyncioTestCase):
                 )
 
         self.assertIsNotNone(result)
-        self.assertIsInstance(result, RuntimeMessage)
+        self.assertIsInstance(result, AfterToolcallResult)
         self.assertIn(
-            "警告：检测到不必要的process_create用于读取已读文件", result.message
+            "警告：检测到不必要的process_create用于读取已读文件",
+            result.replacement.message,
         )
         self.assertEqual(self.plugin.warning_count, 1)
 
@@ -225,9 +229,10 @@ class TestUnnecessaryRunCommandPlugin(unittest.IsolatedAsyncioTestCase):
                 )
 
         self.assertIsNotNone(result)
-        self.assertIsInstance(result, RuntimeMessage)
+        self.assertIsInstance(result, AfterToolcallResult)
         self.assertIn(
-            "警告：检测到不必要的process_create用于读取已读文件", result.message
+            "警告：检测到不必要的process_create用于读取已读文件",
+            result.replacement.message,
         )
         self.assertEqual(self.plugin.warning_count, 1)
 
@@ -256,9 +261,10 @@ class TestUnnecessaryRunCommandPlugin(unittest.IsolatedAsyncioTestCase):
                 )
 
         self.assertIsNotNone(result)
-        self.assertIsInstance(result, RuntimeMessage)
+        self.assertIsInstance(result, AfterToolcallResult)
         self.assertIn(
-            "警告：检测到不必要的process_create用于读取已读文件", result.message
+            "警告：检测到不必要的process_create用于读取已读文件",
+            result.replacement.message,
         )
         self.assertEqual(self.plugin.warning_count, 1)
 
@@ -287,9 +293,10 @@ class TestUnnecessaryRunCommandPlugin(unittest.IsolatedAsyncioTestCase):
                 )
 
         self.assertIsNotNone(result)
-        self.assertIsInstance(result, RuntimeMessage)
+        self.assertIsInstance(result, AfterToolcallResult)
         self.assertIn(
-            "警告：检测到不必要的process_create用于读取已读文件", result.message
+            "警告：检测到不必要的process_create用于读取已读文件",
+            result.replacement.message,
         )
         self.assertEqual(self.plugin.warning_count, 1)
 

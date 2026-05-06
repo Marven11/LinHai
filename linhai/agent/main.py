@@ -246,6 +246,7 @@ class Agent:
             if openai_toolcalls:
                 self.toolcall_processor.start_new_tool_call_round()
                 await self.toolcall_processor.call_openai_tools(openai_toolcalls)
+                await self.toolcall_processor.flush_warnings()
             openai_toolcall_dicts = []
             for tc in openai_toolcalls or []:
                 if (
@@ -282,6 +283,7 @@ class Agent:
                     )
                     await self.toolcall_processor.call_tool(tool_call, tool_index=i)
 
+            await self.toolcall_processor.flush_warnings()
             await self.lifecycle.after_message_generation.trigger(
                 parsed_answer, tool_calls
             )

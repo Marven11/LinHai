@@ -16,6 +16,7 @@ from linhai.tool.main import ToolManager
 from linhai.registry import Registry
 from linhai.tool.base import ToolSet, FailedToolResult
 from linhai.base import ToolCallMessage
+from linhai.agent.lifecycle import AfterToolcallResult
 from linhai.agent.messages import RuntimeMessage
 
 

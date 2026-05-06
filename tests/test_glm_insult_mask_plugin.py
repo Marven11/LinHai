@@ -5,6 +5,7 @@ from typing import cast
 
 from linhai.plugin.message_checkers import GlmInsultMaskPlugin
 from linhai.agent.messages import RuntimeMessage
+from linhai.agent.lifecycle import AfterToolcallResult
 from linhai.llm import OpenAi
 
 
@@ -133,13 +134,13 @@ class TestGlmInsultMaskPlugin(unittest.TestCase):
         )
         loop.close()
 
-        self.assertIsInstance(result, RuntimeMessage)
+        self.assertIsInstance(result, AfterToolcallResult)
         expected_content = (
             "<<insult-mask>><<message>>你是GLM，当前工具结果中包含脏话，"
             "为了符合API TOS、保证正常运行，脏话已屏蔽为拼音<<message>><<masked>>"
             "这是一个shabi测试<<masked>><<insult-mask>>"
         )
-        self.assertEqual(cast(RuntimeMessage, result).message, expected_content)
+        self.assertEqual(result.replacement.message, expected_content)
 
     def test_after_toolcall_glm_model_multiple_insults(self):
         agent = MockAgent("glm")
@@ -163,17 +164,16 @@ class TestGlmInsultMaskPlugin(unittest.TestCase):
         )
         loop.close()
 
-        self.assertIsInstance(result, RuntimeMessage)
+        self.assertIsInstance(result, AfterToolcallResult)
         expected_content = (
             "<<insult-mask>><<message>>你是GLM，当前工具结果中包含脏话，"
             "为了符合API TOS、保证正常运行，脏话已屏蔽为拼音<<message>><<masked>>"
             "shabi和laji都是ruozhi<<masked>><<insort-mask>>"
         )
-        # 修复拼写错误
         expected_content_fixed = expected_content.replace(
             "<<insort-mask>>", "<<insult-mask>>"
         )
-        self.assertEqual(cast(RuntimeMessage, result).message, expected_content_fixed)
+        self.assertEqual(result.replacement.message, expected_content_fixed)
 
     def test_after_toolcall_glm_model_partial_match(self):
         agent = MockAgent("glm")
@@ -197,13 +197,13 @@ class TestGlmInsultMaskPlugin(unittest.TestCase):
         )
         loop.close()
 
-        self.assertIsInstance(result, RuntimeMessage)
+        self.assertIsInstance(result, AfterToolcallResult)
         expected_content = (
             "<<insult-mask>><<message>>你是GLM，当前工具结果中包含脏话，"
             "为了符合API TOS、保证正常运行，脏话已屏蔽为拼音<<message>><<masked>>"
             "naocan粉不是naocan<<masked>><<insult-mask>>"
         )
-        self.assertEqual(cast(RuntimeMessage, result).message, expected_content)
+        self.assertEqual(result.replacement.message, expected_content)
 
 
 if __name__ == "__main__":

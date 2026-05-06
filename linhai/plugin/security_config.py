@@ -5,7 +5,7 @@ from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Literal, Union
 
 from linhai.agent import Agent
-from linhai.agent.lifecycle import Lifecycle
+from linhai.agent.lifecycle import AfterToolcallResult, Lifecycle
 from linhai.agent.messages import RuntimeMessage
 from linhai.registry import Registry
 from linhai.utils.common import UiNotice
@@ -40,7 +40,7 @@ class WithSecretParameterPositionPlugin(Plugin):
         toolcall_arguments: dict,
         with_secret: list[str] | None,
         is_tool_failed_duplicated_error: bool,
-    ) -> Union[None, bool, RuntimeMessage]:
+    ) -> AfterToolcallResult | None:
         if status != "failed":
             return None
 
@@ -51,9 +51,11 @@ class WithSecretParameterPositionPlugin(Plugin):
             "ui_log",
             UiNotice(level="WARNING", content="检测到with_secret参数位置错误"),
         )
-        return RuntimeMessage(
-            "错误：with_secret参数应该在工具调用的顶层，与name、arguments平级，而不是在arguments内部！\n"
-            '正确格式：{"name": "tool_name", "with_secret": ["KEY"], "arguments": {...}}'
+        return AfterToolcallResult(
+            replacement=RuntimeMessage(
+                "错误：with_secret参数应该在工具调用的顶层，与name、arguments平级，而不是在arguments内部！\n"
+                '正确格式：{"name": "tool_name", "with_secret": ["KEY"], "arguments": {...}}'
+            )
         )
 
     def register(self, lifecycle: "Lifecycle"):
@@ -75,7 +77,7 @@ class MissingWithSecretWarningPlugin(Plugin):
         toolcall_arguments: dict,
         with_secret: list[str] | None,
         is_tool_failed_duplicated_error: bool,
-    ) -> Union[None, bool, RuntimeMessage]:
+    ) -> AfterToolcallResult | None:
         if not toolcall_arguments:
             return None
 
@@ -87,21 +89,16 @@ class MissingWithSecretWarningPlugin(Plugin):
         if with_secret:
             return None
 
-        agent = self.registry.get_member_typechecked("agent", Agent)
-        await agent.message_processor.add_new_message(
-            RuntimeMessage(
-                f"警告：检测到工具调用参数中包含`<$KEY$>`占位符，但没有使用`with_secret`字段: {has_secret_pattern}。可能在{tool_name}工具调用中...\n"
-                f"你是希望{has_secret_pattern}被替换为实际的值还是将这个字面量填入工具参数中？请确认：\n"
-                "1. 如果确实需要使用secret，请将`with_secret`字段添加到工具调用的顶层（与name、arguments平级）\n"
-                "2. 如果只是想写入包含`<$$>`的文本内容，可以忽略此警告"
-            )
+        return AfterToolcallResult(
+            warnings=[
+                RuntimeMessage(
+                    f"警告：检测到工具调用参数中包含`<$KEY$>`占位符，但没有使用`with_secret`字段: {has_secret_pattern}。可能在{tool_name}工具调用中...\n"
+                    f"你是希望{has_secret_pattern}被替换为实际的值还是将这个字面量填入工具参数中？请确认：\n"
+                    "1. 如果确实需要使用secret，请将`with_secret`字段添加到工具调用的顶层（与name、arguments平级）\n"
+                    "2. 如果只是想写入包含`<$$>`的文本内容，可以忽略此警告"
+                )
+            ]
         )
-
-        await self.registry.send_if_exists(
-            "ui_log",
-            UiNotice(level="INFO", content="检测到可能忘记使用with_secret的工具调用"),
-        )
-        return None
 
     def register(self, lifecycle: "Lifecycle"):
         """注册到after_toolcall回调。"""

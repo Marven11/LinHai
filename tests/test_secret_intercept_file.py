@@ -8,6 +8,7 @@ from unittest.mock import Mock, patch, AsyncMock
 import asyncio
 
 from linhai.secret import SecretInterceptorPlugin, SecretInfo
+from linhai.agent.lifecycle import AfterToolcallResult
 from linhai.agent.messages import RuntimeMessage
 
 
@@ -69,7 +70,8 @@ class TestSecretInterceptorPluginWithFileSaving(unittest.TestCase):
         result = asyncio.run(run_test())
 
         # 验证返回的是RuntimeMessage
-        self.assertIsInstance(result, RuntimeMessage)
+        self.assertIsInstance(result, AfterToolcallResult)
+        self.assertIsInstance(result.replacement, RuntimeMessage)
         result_str = str(result)
         self.assertIn("secret键的内容", result_str)
         self.assertIn("DEEPSEEK_API_KEY", result_str)
@@ -105,7 +107,8 @@ class TestSecretInterceptorPluginWithFileSaving(unittest.TestCase):
         result = asyncio.run(run_test())
 
         # 验证返回RuntimeMessage且包含掩码内容
-        self.assertIsInstance(result, RuntimeMessage)
+        self.assertIsInstance(result, AfterToolcallResult)
+        self.assertIsInstance(result.replacement, RuntimeMessage)
         result_str = str(result)
         self.assertIn("已替换", result_str)
         self.assertIn("<$DEEPSEEK_API_KEY$>", result_str)

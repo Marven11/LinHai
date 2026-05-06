@@ -4,10 +4,10 @@ import re
 import time
 
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, Dict, List, Literal, Union
+from typing import TYPE_CHECKING, Dict, List, Literal
 
 from linhai.agent import Agent
-from linhai.agent.lifecycle import Lifecycle
+from linhai.agent.lifecycle import AfterToolcallResult, Lifecycle
 from linhai.agent.state_machine import AgentStateMachine
 from linhai.agent.messages import (
     RuntimeMessage,
@@ -726,7 +726,7 @@ class GlmInsultMaskPlugin(Plugin):
         toolcall_arguments: dict,
         with_secret: list[str] | None,
         is_tool_failed_duplicated_error: bool,
-    ) -> Union[None, bool, RuntimeMessage]:
+    ) -> AfterToolcallResult | None:
         """在工具调用后检查结果是否包含脏话。"""
         if status == "skipped":
             return None
@@ -759,7 +759,7 @@ class GlmInsultMaskPlugin(Plugin):
             "为了符合API TOS、保证正常运行，脏话已屏蔽为拼音<<message>><<masked>>"
             f"{masked_content}<<masked>><<insult-mask>>"
         )
-        return RuntimeMessage(warning_msg)
+        return AfterToolcallResult(replacement=RuntimeMessage(warning_msg))
 
     def register(self, lifecycle: "Lifecycle"):
         """注册到after_toolcall回调。"""

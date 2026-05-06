@@ -1,6 +1,7 @@
 import unittest
 from unittest.mock import Mock, AsyncMock
 
+from linhai.agent.lifecycle import AfterToolcallResult
 from linhai.plugin.security_config import MissingWithSecretWarningPlugin
 from linhai.utils.common import UiNotice
 
@@ -38,11 +39,11 @@ class TestMissingWithSecretWarningPlugin(unittest.IsolatedAsyncioTestCase):
             is_tool_failed_duplicated_error,
         )
 
-        self.assertIsNone(result)
-        self.agent.message_processor.add_new_message.assert_called_once()
-        call_args = self.agent.message_processor.add_new_message.call_args[0][0]
+        self.assertIsInstance(result, AfterToolcallResult)
+        self.assertEqual(len(result.warnings), 1)
         self.assertIn(
-            "警告：检测到工具调用参数中包含`<$KEY$>`占位符", call_args.message
+            "警告：检测到工具调用参数中包含`<$KEY$>`占位符",
+            result.warnings[0].message,
         )
 
     async def test_no_warning_when_secret_in_argument_with_with_secret_skipped(self):
@@ -115,11 +116,11 @@ class TestMissingWithSecretWarningPlugin(unittest.IsolatedAsyncioTestCase):
             is_tool_failed_duplicated_error,
         )
 
-        self.assertIsNone(result)
-        self.agent.message_processor.add_new_message.assert_called_once()
-        call_args = self.agent.message_processor.add_new_message.call_args[0][0]
+        self.assertIsInstance(result, AfterToolcallResult)
+        self.assertEqual(len(result.warnings), 1)
         self.assertIn(
-            "警告：检测到工具调用参数中包含`<$KEY$>`占位符", call_args.message
+            "警告：检测到工具调用参数中包含`<$KEY$>`占位符",
+            result.warnings[0].message,
         )
 
     async def test_warning_when_secret_in_argument_without_with_secret_failed(self):
@@ -145,11 +146,11 @@ class TestMissingWithSecretWarningPlugin(unittest.IsolatedAsyncioTestCase):
             is_tool_failed_duplicated_error,
         )
 
-        self.assertIsNone(result)
-        self.agent.message_processor.add_new_message.assert_called_once()
-        call_args = self.agent.message_processor.add_new_message.call_args[0][0]
+        self.assertIsInstance(result, AfterToolcallResult)
+        self.assertEqual(len(result.warnings), 1)
         self.assertIn(
-            "警告：检测到工具调用参数中包含`<$KEY$>`占位符", call_args.message
+            "警告：检测到工具调用参数中包含`<$KEY$>`占位符",
+            result.warnings[0].message,
         )
 
     def test_register(self):

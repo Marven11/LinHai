@@ -34,6 +34,24 @@ class InterruptSlot(CallbackSlot[bool]):
         return False
 
 
+class AfterToolcallSlot(CallbackSlot):
+    async def trigger(self, *args, **kwargs):
+        from linhai.agent.lifecycle import AfterToolcallResult
+
+        replacement = None
+        warnings = []
+        for callback in self._callbacks:
+            result = await callback(*args, **kwargs)
+            if result is None:
+                continue
+            if result.replacement is not None and replacement is None:
+                replacement = result.replacement
+            warnings.extend(result.warnings)
+        if replacement is None and not warnings:
+            return None
+        return AfterToolcallResult(replacement=replacement, warnings=warnings)
+
+
 class ChainSlot(CallbackSlot[R]):
     def __init__(
         self,
