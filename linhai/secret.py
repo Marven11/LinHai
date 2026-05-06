@@ -11,7 +11,7 @@ from .agent.messages import RuntimeMessage
 from .agent.conversation import save_secret_intercepted
 from .base import Message
 from .agent.lifecycle import AfterToolcallResult, Lifecycle
-from .tool.base import SuccessfulToolResult, FailedToolResult
+from .tool.base import SuccessfulToolResult, FailedToolResult, ToolSet, ToolArgInfo
 
 if TYPE_CHECKING:
     from .registry import Registry
@@ -208,6 +208,154 @@ def contains_any_secret(obj: T, secrets_dict: dict[str, SecretInfo]) -> bool:
         return False
 
 
+def _create_call_with_secret_toolset(
+    secrets_dict: dict[str, SecretInfo], registry: "Registry"
+) -> ToolSet:
+    toolset = ToolSet()
+
+    @toolset.register_tool(
+        name="call_with_secret",
+        desc=(
+            "使用secret调用另一个工具。"
+            "将目标工具的名字、参数和with_secret列表传入，"
+            "本工具会替换参数中的占位符为secret值，"
+            "然后调用目标工具并返回掩码后的结果。"
+        ),
+        args={
+            "tool_name": ToolArgInfo(
+                desc="要调用的目标工具名称",
+                type="str",
+            ),
+            "tool_arguments": ToolArgInfo(
+                desc="目标工具的参数字典，其中可以包含占位符引用secret值",
+                type="dict",
+            ),
+            "with_secret": ToolArgInfo(
+                desc='secret键列表，不含包裹符号，如 ["SECRET_PASSWORD"]',
+                type="list",
+            ),
+        },
+        required_args=["tool_name", "tool_arguments", "with_secret"],
+    )
+    async def call_with_secret(
+        tool_name: str, tool_arguments: dict, with_secret: list[str]
+    ):
+        from linhai.base import ToolCallMessage
+        from linhai.tool.main import ToolManager
+
+        cleaned_keys: list[str] = []
+        for key in with_secret:
+            if key.startswith("<$") and key.endswith("$>"):
+                return FailedToolResult(
+                    content=(
+                        f"Secret键 '{key}' 格式错误，" f"请使用 'KEY' 而不是占位符格式"
+                    )
+                )
+            if key not in secrets_dict:
+                return FailedToolResult(content=f"Secret键 '{key}' 未找到")
+            secret_info = secrets_dict[key]
+            if secret_info["disabled_in_toolcall_argument"]:
+                return FailedToolResult(
+                    content=f"Secret键 '{key}' 被禁止在工具调用参数中使用"
+                )
+            cleaned_keys.append(key)
+
+        replaced_args = replace_secrets_in_object(
+            tool_arguments, secrets_dict, cleaned_keys
+        )
+
+        tool_manager = registry.get_member_typechecked("tool_manager", ToolManager)
+        tool_call = ToolCallMessage(
+            function_name=tool_name,
+            function_arguments=replaced_args,
+            assert_success=True,
+            with_secret=None,
+        )
+        result_msg = await tool_manager.process_tool_call(tool_call, 0)
+
+        result_content = result_msg.get_content()
+        if result_content is None:
+            return SuccessfulToolResult(content="工具执行完成，无文本输出")
+
+        matched_keys = find_matching_secret_keys(result_content, secrets_dict)
+        if matched_keys:
+            conversation_dir = registry.get_member_typechecked(
+                "conversation_folder", Path
+            )
+            filepath = save_secret_intercepted(
+                conversation_dir, str(result_content), tool_name
+            )
+            keys_str = ", ".join(matched_keys)
+            return SuccessfulToolResult(
+                content=(
+                    f"工具结果中包含以下secret键的内容: {keys_str}。"
+                    f"原始内容已保存到文件: {filepath}"
+                )
+            )
+
+        masked_content = mask_secrets_in_object(
+            result_content, secrets_dict, cleaned_keys
+        )
+        return SuccessfulToolResult(content=masked_content)
+
+    return toolset
+
+
+_CALL_WITH_SECRET_RULE = """\
+## call_with_secret工具
+
+当你使用的LLM不支持自定义工具调用格式时，使用call_with_secret工具代替：
+
+1. 将目标工具名放入tool_name参数
+2. 将目标工具的参数放入tool_arguments参数，secret值用占位符
+3. 将需要的secret键列表放入with_secret参数
+
+示例：调用write_file工具并使用SECRET_PASSWORD
+
+tool_name: write_file
+tool_arguments: filepath和content等参数，其中secret用占位符
+with_secret: ["SECRET_PASSWORD"]
+
+可用secret键: {secrets_list}"""
+
+
+class SecretToolsetPlugin:
+    def __init__(
+        self,
+        registry: "Registry",
+        secrets_dict: dict[str, SecretInfo],
+    ):
+        self.registry = registry
+        self.secrets_dict = secrets_dict
+
+    async def before_message_generation(self) -> None:
+        from linhai.agent.main import Agent
+        from linhai.base import SystemMessage
+        from linhai.tool.main import ToolManager
+
+        agent = self.registry.get_member_typechecked("agent", Agent)
+        tool_manager = self.registry.get_member_typechecked("tool_manager", ToolManager)
+        system_message = self.registry.get_member_typechecked(
+            "system_message", SystemMessage
+        )
+
+        current_llm = agent.get_current_model()
+        use_custom = current_llm.get_custom_toolcall_format()
+
+        if use_custom:
+            tool_manager.set_toolset_enabled("secret_wrapper", False)
+            system_message.remove_rule("CALL_WITH_SECRET")
+        else:
+            tool_manager.set_toolset_enabled("secret_wrapper", True)
+            secrets_message = get_available_secrets_message(self.secrets_dict)
+            rule_content = _CALL_WITH_SECRET_RULE.format(secrets_list=secrets_message)
+            system_message.remove_rule("CALL_WITH_SECRET")
+            system_message.add_rule("CALL_WITH_SECRET", rule_content)
+
+    def register(self, lifecycle: "Lifecycle"):
+        lifecycle.before_message_generation.register(self.before_message_generation)
+
+
 class SecretInterceptorPlugin:
     def __init__(self, registry: "Registry", secrets_dict: dict[str, SecretInfo]):
         self.registry = registry
@@ -340,6 +488,22 @@ def initialize_secret_system(
     def register_plugin_to_lifecycle():
         lifecycle = registry.get_member_typechecked("lifecycle", Lifecycle)
         secret_plugin.register(lifecycle)
+
+    def register_secret_toolset():
+        from linhai.tool.main import ToolManager
+
+        tool_manager = registry.get_member_typechecked("tool_manager", ToolManager)
+        toolset = _create_call_with_secret_toolset(secrets_dict, registry)
+        tool_manager.register_toolset("secret_wrapper", toolset, enabled=False)
+
+    registry.add_postinit(register_secret_toolset)
+
+    def register_secret_toolset_plugin():
+        lifecycle = registry.get_member_typechecked("lifecycle", Lifecycle)
+        toolset_plugin = SecretToolsetPlugin(registry, secrets_dict)
+        toolset_plugin.register(lifecycle)
+
+    registry.add_postinit(register_secret_toolset_plugin)
 
     registry.add_postinit(register_plugin_to_lifecycle)
 
