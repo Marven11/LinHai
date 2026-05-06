@@ -239,7 +239,7 @@ class TestSecretToolsetPlugin(unittest.TestCase):
         mock_tool_manager.set_toolset_enabled.assert_called_once_with(
             "secret_wrapper", False
         )
-        mock_system_message.remove_rule.assert_called_once_with("CALL_WITH_SECRET")
+        mock_system_message.remove_rule.assert_called_once_with("CALL WITH SECRET")
         mock_system_message.add_rule.assert_not_called()
 
     def test_openai_format_enables_toolset(self):
@@ -264,10 +264,10 @@ class TestSecretToolsetPlugin(unittest.TestCase):
         mock_tool_manager.set_toolset_enabled.assert_called_once_with(
             "secret_wrapper", True
         )
-        mock_system_message.remove_rule.assert_called_once_with("CALL_WITH_SECRET")
+        mock_system_message.remove_rule.assert_called_once_with("CALL WITH SECRET")
         mock_system_message.add_rule.assert_called_once()
         call_args = mock_system_message.add_rule.call_args
-        self.assertEqual(call_args[0][0], "CALL_WITH_SECRET")
+        self.assertEqual(call_args[0][0], "CALL WITH SECRET")
 
 
 class TestCallWithSecretRule(unittest.TestCase):

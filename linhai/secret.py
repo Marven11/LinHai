@@ -344,13 +344,13 @@ class SecretToolsetPlugin:
 
         if use_custom:
             tool_manager.set_toolset_enabled("secret_wrapper", False)
-            system_message.remove_rule("CALL_WITH_SECRET")
+            system_message.remove_rule("CALL WITH SECRET")
         else:
             tool_manager.set_toolset_enabled("secret_wrapper", True)
             secrets_message = get_available_secrets_message(self.secrets_dict)
             rule_content = _CALL_WITH_SECRET_RULE.format(secrets_list=secrets_message)
-            system_message.remove_rule("CALL_WITH_SECRET")
-            system_message.add_rule("CALL_WITH_SECRET", rule_content)
+            system_message.remove_rule("CALL WITH SECRET")
+            system_message.add_rule("CALL WITH SECRET", rule_content)
 
     def register(self, lifecycle: "Lifecycle"):
         lifecycle.before_message_generation.register(self.before_message_generation)
