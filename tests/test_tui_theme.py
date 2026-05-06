@@ -47,35 +47,37 @@ class TestWidgetsWithNoneTheme(unittest.TestCase):
             "tool_name": "",
         }
         widget = ToolCallWidget(
-            theme=None, segment=segment, get_refresh_interval=lambda: 0.05
+            config_theme=None, segment=segment, get_refresh_interval=lambda: 0.05
         )
-        self.assertIsNone(widget.theme)
+        self.assertIsNone(widget.config_theme)
 
     def test_reasoning_widget_accepts_none_theme(self):
         segment = {"segment_type": "reasoning", "content": "", "is_finished": False}
         widget = ReasoningContentWidget(
             role="assistant",
             sender_name="test",
-            theme=None,
+            config_theme=None,
             segment=segment,
             get_refresh_interval=lambda: 0.05,
         )
-        self.assertIsNone(widget.theme)
+        self.assertIsNone(widget.config_theme)
 
     def test_user_message_widget_accepts_none_theme(self):
-        widget = UserMessageWidget(content="hello", sender_name="user", theme=None)
-        self.assertIsNone(widget.theme)
+        widget = UserMessageWidget(
+            content="hello", sender_name="user", config_theme=None
+        )
+        self.assertIsNone(widget.config_theme)
 
     def test_normal_content_widget_accepts_none_theme(self):
         segment = {"segment_type": "normal", "content": "", "is_finished": False}
         widget = NormalContentWidget(
             role="assistant",
             sender_name="test",
-            theme=None,
+            config_theme=None,
             segment=segment,
             get_refresh_interval=lambda: 0.05,
         )
-        self.assertIsNone(widget.theme)
+        self.assertIsNone(widget.config_theme)
 
     def test_toolcall_renders_text_with_none_theme(self):
         segment = {
@@ -87,7 +89,7 @@ class TestWidgetsWithNoneTheme(unittest.TestCase):
             "tool_name": "test",
         }
         widget = ToolCallWidget(
-            theme=None, segment=segment, get_refresh_interval=lambda: 0.05
+            config_theme=None, segment=segment, get_refresh_interval=lambda: 0.05
         )
         widget.update = Mock()
         widget.update_display()
@@ -101,7 +103,7 @@ class TestWidgetsWithNoneTheme(unittest.TestCase):
         widget = ReasoningContentWidget(
             role="assistant",
             sender_name="test",
-            theme=None,
+            config_theme=None,
             segment=segment,
             get_refresh_interval=lambda: 0.05,
         )

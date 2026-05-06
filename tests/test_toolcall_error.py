@@ -23,7 +23,7 @@ class TestToolCallErrorHandling(unittest.TestCase):
         segment["markdown_representation"] = "<bad toolcall>"
 
         widget = ToolCallWidget(
-            theme="nord", segment=segment, get_refresh_interval=lambda: 0.05
+            config_theme="nord", segment=segment, get_refresh_interval=lambda: 0.05
         )
         widget.update_display()
 
@@ -39,7 +39,7 @@ class TestToolCallErrorHandling(unittest.TestCase):
         segment["tool_name"] = "test_tool"
 
         widget = ToolCallWidget(
-            theme="nord", segment=segment, get_refresh_interval=lambda: 0.05
+            config_theme="nord", segment=segment, get_refresh_interval=lambda: 0.05
         )
         widget.update_display()
 

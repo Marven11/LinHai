@@ -34,7 +34,7 @@ class MessagesList(VerticalScroll):
         self,
         registry: Registry,
         tui_config: TUIConfig,
-        theme: str | None,
+        config_theme: str | None,
         lifecycle: Lifecycle,
         get_refresh_interval,
         *args,
@@ -43,7 +43,7 @@ class MessagesList(VerticalScroll):
         super().__init__(*args, **kwargs)
         self.registry = registry
         self.tui_config = tui_config
-        self.theme = theme
+        self.config_theme = config_theme
         self.get_refresh_interval = get_refresh_interval
         self.messages: List[
             Union[MessageWidget, UserMessageWidget, MessageGenerationWidget]
@@ -70,13 +70,13 @@ class MessagesList(VerticalScroll):
                 UserMessageWidget(
                     content=init_message,
                     sender_name="user",
-                    theme=self.theme,
+                    config_theme=self.config_theme,
                 )
             )
             await self.registry.send("user_message", user_msg)
 
             widget = UserMessageWidget(
-                user_msg.message, sender_name="user", theme=self.theme
+                user_msg.message, sender_name="user", config_theme=self.config_theme
             )
             self.mount(widget)
             widget.update_display()
@@ -88,13 +88,13 @@ class MessagesList(VerticalScroll):
             UserMessageWidget(
                 content=message_text,
                 sender_name="user",
-                theme=self.theme,
+                config_theme=self.config_theme,
             )
         )
         await self.registry.send("user_message", user_msg)
 
         widget = UserMessageWidget(
-            user_msg.message, sender_name="user", theme=self.theme
+            user_msg.message, sender_name="user", config_theme=self.config_theme
         )
         self.mount(widget)
         widget.update_display()
@@ -115,7 +115,7 @@ class MessagesList(VerticalScroll):
         message_widget = MessageWidget(
             role="assistant",
             sender_name=llm_name,
-            theme=self.theme,
+            config_theme=self.config_theme,
             parsed_answer=parsed_answer,
             get_refresh_interval=self.get_refresh_interval,
         )
@@ -235,7 +235,7 @@ class MessagesList(VerticalScroll):
                 widget = UserMessageWidget(
                     content=msg_data["content"],
                     sender_name=msg_data["sender_name"],
-                    theme=self.theme,
+                    config_theme=self.config_theme,
                 )
                 self.mount(widget)
                 widget.update_display()
@@ -246,7 +246,7 @@ class MessagesList(VerticalScroll):
                 message_widget = MessageWidget(
                     role="assistant",
                     sender_name=msg_data["sender_name"],
-                    theme=self.theme,
+                    config_theme=self.config_theme,
                     parsed_answer=None,
                     get_refresh_interval=self.get_refresh_interval,
                 )

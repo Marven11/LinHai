@@ -352,12 +352,12 @@ class ToolCallWidget(Static):
 
     def __init__(
         self,
-        theme: str | None,
+        config_theme: str | None,
         segment: ToolCallSegment | OpenAiToolCallSegment,
         get_refresh_interval: Callable[[], float],
     ):
         super().__init__()
-        self.theme = theme
+        self.config_theme = config_theme
         self._segment = segment
         self._last_rendered = ""
         self.is_collapsed = False
@@ -386,7 +386,7 @@ class ToolCallWidget(Static):
                 _syntax_or_text(
                     self._segment["markdown_representation"],
                     lexer="markdown",
-                    theme=self.theme,
+                    theme=self.config_theme,
                 )
             )
             self.border_title = "tool call (error)"
@@ -404,7 +404,7 @@ class ToolCallWidget(Static):
                 _syntax_or_text(
                     md,
                     lexer="markdown",
-                    theme=self.theme,
+                    theme=self.config_theme,
                 )
             )
 
@@ -436,7 +436,7 @@ class ToolCallWidget(Static):
             _syntax_or_text(
                 simplified,
                 lexer="python",
-                theme=self.theme,
+                theme=self.config_theme,
             )
         )
 
@@ -462,7 +462,7 @@ class ToolCallWidget(Static):
                 _syntax_or_text(
                     self._segment["markdown_representation"],
                     lexer="markdown",
-                    theme=self.theme,
+                    theme=self.config_theme,
                 )
             )
 
@@ -510,12 +510,12 @@ class ReasoningContentWidget(Static):
         self,
         role: str,
         sender_name: str,
-        theme: str | None,
+        config_theme: str | None,
         segment: ReasoningSegment,
         get_refresh_interval: Callable[[], float],
     ):
         super().__init__()
-        self.theme = theme
+        self.config_theme = config_theme
         self._segment = segment
         self.role = f"{role}-reasoning"
         self.content_str = ""
@@ -567,7 +567,7 @@ class ReasoningContentWidget(Static):
             renderable = _syntax_or_text(
                 content_to_display,
                 lexer="markdown",
-                theme=self.theme,
+                theme=self.config_theme,
             )
         else:
             lines = [line for line in content_to_display.splitlines() if line]
@@ -599,9 +599,9 @@ class UserMessageWidget(Markdown):
             return MarkdownParagraphWithoutNewLine
         return Markdown.BLOCKS[block_name]
 
-    def __init__(self, content: str, sender_name: str, theme: str | None):
+    def __init__(self, content: str, sender_name: str, config_theme: str | None):
         super().__init__()
-        self.theme = theme
+        self.config_theme = config_theme
         self.content_str = content
         self.display_name = sender_name
         self.timer: Timer | None = None
@@ -647,12 +647,12 @@ class NormalContentWidget(Markdown):
         self,
         role: str,
         sender_name: str,
-        theme: str | None,
+        config_theme: str | None,
         segment: NormalSegment,
         get_refresh_interval: Callable[[], float],
     ):
         super().__init__()
-        self.theme = theme
+        self.config_theme = config_theme
         self.display_name = sender_name
         self.role = role
         self.timer: Timer | None = None
@@ -732,14 +732,14 @@ class MessageWidget(Static):
         self,
         role: str,
         sender_name: str,
-        theme: str | None,
+        config_theme: str | None,
         parsed_answer: ParsedAnswer | None,
         get_refresh_interval: Callable[[], float],
     ):
         super().__init__()
         self.role = role
         self.sender_name = sender_name
-        self.theme = theme
+        self.config_theme = config_theme
         self.parsed_answer = parsed_answer
         self.get_refresh_interval = get_refresh_interval
         self._restored_segments: list[dict] | None = None
@@ -794,7 +794,7 @@ class MessageWidget(Static):
                         tool_name=segment_data["tool_name"],
                     )
                 widget = ToolCallWidget(
-                    theme=self.theme,
+                    config_theme=self.config_theme,
                     segment=seg,
                     get_refresh_interval=self.get_refresh_interval,
                 )
@@ -807,7 +807,7 @@ class MessageWidget(Static):
                 widget = NormalContentWidget(
                     role=self.role,
                     sender_name=self.sender_name,
-                    theme=self.theme,
+                    config_theme=self.config_theme,
                     segment=seg,
                     get_refresh_interval=self.get_refresh_interval,
                 )
@@ -820,7 +820,7 @@ class MessageWidget(Static):
                 widget = ReasoningContentWidget(
                     role=self.role,
                     sender_name=self.sender_name,
-                    theme=self.theme,
+                    config_theme=self.config_theme,
                     segment=seg,
                     get_refresh_interval=self.get_refresh_interval,
                 )
@@ -856,7 +856,7 @@ class MessageWidget(Static):
                 or segment["segment_type"] == "openai_toolcall"
             ):
                 widget = ToolCallWidget(
-                    theme=self.theme,
+                    config_theme=self.config_theme,
                     segment=segment,
                     get_refresh_interval=self.get_refresh_interval,
                 )
@@ -864,7 +864,7 @@ class MessageWidget(Static):
                 widget = NormalContentWidget(
                     role=self.role,
                     sender_name=self.sender_name,
-                    theme=self.theme,
+                    config_theme=self.config_theme,
                     segment=segment,
                     get_refresh_interval=self.get_refresh_interval,
                 )
@@ -872,7 +872,7 @@ class MessageWidget(Static):
                 widget = ReasoningContentWidget(
                     role=self.role,
                     sender_name=self.sender_name,
-                    theme=self.theme,
+                    config_theme=self.config_theme,
                     segment=segment,
                     get_refresh_interval=self.get_refresh_interval,
                 )

@@ -207,7 +207,7 @@ class TestRestoreFrom(unittest.TestCase):
 
         ml = object.__new__(MessagesList)
         ml.messages = []
-        ml.theme = None
+        ml.config_theme = None
         ml.get_refresh_interval = lambda: 0.1
         ml.mount = mock.MagicMock()
         data = {"messages": [{"type": "unknown"}]}
@@ -220,7 +220,7 @@ class TestRestoreFrom(unittest.TestCase):
 
         ml = object.__new__(MessagesList)
         ml.messages = ["old_message"]
-        ml.theme = None
+        ml.config_theme = None
         ml.get_refresh_interval = lambda: 0.1
         ml.mount = mock.MagicMock()
         data = {"messages": []}
@@ -232,7 +232,7 @@ class TestRestoreFrom(unittest.TestCase):
 
         ml = object.__new__(MessagesList)
         ml.messages = []
-        ml.theme = None
+        ml.config_theme = None
         ml.get_refresh_interval = lambda: 0.1
         ml.mount = mock.MagicMock()
         ml.is_user_scroll_to_end = False
