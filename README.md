@@ -1,77 +1,72 @@
-# 林海漫游
+# LinHai
 
-自用编程Agent，设计框架参考Claude Code
+A personal coding agent, framework inspired by Claude Code.
 
-当前Agent能力依然很差，暂不上传pypi
+[中文文档](./README_zh-CN.md)
 
 ![social-preview](./assets/social-preview.jpg)
 
-## 声明
+## Disclaimer
 
-如您通过Github、PYPI等渠道下载本产品则视为同意以下声明
+By downloading this product through Github, PYPI, or other channels, you agree to the following terms.
 
 ```markdown
-本项目产品仅有源代码（以下简称“本产品”）。包括代码文件、配置文档、开发配置在内的一系列文件均属于“本产品”。本项目在中华人民共和国内开发，适用中华人民共和国法律。但本产品不保证在所有司法管辖区均合法，使用者应自行评估并遵守所在地法律。
-基于本产品提供任何服务和产品的任何使用者需要向最终用户提供包括本声明在内的本产品，并提供明确的风险提示。因最终用户不知情导致的损失不由本项目开发者负责。
-本项目需搭配第三方人工智能模型服务使用。本产品通过频率限制、用量预估、高亮警示等方案保障合理调用服务。本产品保证按上述机制合理调用服务并实时、准确地展示费用相关数据。在非因开发者故意或重大过失的前提下，如用户配置错误、忽视费用指标和预估费用、忽略第三方服务计费规则，则本项目开发者不承担责任。
-使用者需避免配置“绕过虚拟化”、“允许执行任意命令”等文档中明确声明应避免修改的功能。本产品仅保证在正确配置时不造成损失。因用户不当配置、启用危险功能、或绕过安全机制导致的损失不由本项目开发者承担。
-本产品为以下三类场景设计：个人项目编程、安全靶场测试、简单文档编写，在设计时没有考虑商业项目编程、现实渗透测试等设计外场景。本产品仅对在设计场景下的损失负责。因本产品在设计场景外被恶意攻击造成的损失，和因本产品在设计场景外的不当行为造成的损失不由本项目开发者负责。
-本产品集成的测试工具和测试载荷已经通过合理弱化，仅能用于“个人项目漏洞测试”和“渗透靶场攻击测试”两个用途，无法通过商业防火墙、杀毒软件、态势感知等防御机制。在非因开发者故意或重大过失的前提下，如使用者擅自加强、增加测试工具和测试载荷，并用于设计用途之外的场景，则本项目开发者不承担责任。
+This product consists solely of source code (hereinafter referred to as "the Product"). All code files, configuration documents, and development configurations are part of "the Product". This project is developed within the People's Republic of China and is governed by PRC law. However, the Product does not guarantee legality in all jurisdictions; users should assess and comply with local laws.
+
+Any user who provides services or products based on the Product must provide the final user with the Product, including this disclaimer, and provide clear risk warnings. Losses caused by the final user's lack of awareness are not the responsibility of the project developers.
+
+This project requires third-party AI model services. The Product ensures reasonable service invocation through rate limiting, usage estimation, highlight warnings, and other mechanisms. The Product guarantees reasonable invocation of services and displays fee-related data in real-time and accurately. Provided that the developers have no intentional or gross negligence, the project developers are not liable if users misconfigure, ignore fee indicators and estimated costs, or overlook third-party service billing rules.
+
+Users must avoid configuring functions explicitly documented as dangerous, such as "bypass virtualization" or "allow arbitrary command execution." The Product only guarantees no losses when properly configured. Losses caused by user misconfiguration, enabling dangerous features, or bypassing security mechanisms are not the responsibility of the project developers.
+
+This product is designed for three scenarios: personal project programming, security CTF testing, and simple document writing. It was not designed for commercial project programming, real-world penetration testing, or other scenarios outside its design scope. The Product is only responsible for losses within the designed scenarios.
+
+The testing tools and payloads integrated into the Product have been deliberately weakened and can only be used for "personal project vulnerability testing" and "CTF challenge testing." They cannot bypass commercial firewalls, antivirus software, or security monitoring systems. Provided that the developers have no intentional or gross negligence, if users strengthen or add testing tools and payloads and use them outside the designed purposes, the project developers are not responsible.
 ```
 
-## 特点
+## Stable Features
 
-- 使用Markdown+JSON作为工具调用格式，可一次性调用多个工具
-- 支持OpenAI接口
-- 支持修改代码、运行命令、爬取网上文章（selenium+firefox）
-- 历史消息过长时自动压缩
-- 目录更改检测（默认关闭，需在配置中启用）
+### TUI
 
-## Secret系统
+- Stream all tokens: thinking content, conversation content, tool calls
+- Dynamically interrupt Agent output
+- Comprehensive context statistics and process management pages
+- Real-time display of context length and token consumption
+- Nerd fonts support
 
-Secret系统用于在调用工具时间接地输入密码等敏感信息，将敏感信息包含在工具调用中。
+### Tools
 
-Secret系统也用于掩盖工具输出中的密码等信息，让Agent在不查看的同时处理敏感信息。
+- YOLO in mind: sandbox > approval
+- Comprehensive software development and machine operations toolset: file read/write, terminal control, process control
+- Process control: lower-level toolset than bash; unfinished processes automatically move to background; force argv input to avoid excessive use of `&&` and pipes; background processes controllable via stdio, supporting REPL
+- MCP: static/dynamic MCP server connections - dynamically connect browser MCP when needed, fully disconnect when unused to reduce tool overhead
+- Sandbox: file read/write permission rules and process sandbox - **dynamically connected MCP** also runs within the sandbox
 
-当工具调用的结果包含secret值但没有使用`with_secret`参数指定时，原始内容会被保存到当前对话文件夹的`secret_intercepted_{timestamp}_{tool_name}.txt`文件中，并返回文件路径。
+### Context
 
-**警告**：这个功能仅用来防止隐私被泄漏给API提供商，且此功能会将带有secret的内容临时保存在本地文件以便agent后续处理。
+- Context Compacting: fully automatic cache-aware context compression - Agent automatically cleans context while maintaining cache hit rate above 90%
+- Context organization: pinned messages + regular messages + notification messages (Codex-like)
 
-## 使用
+### Practical Features
 
-创建[config.toml](./config-example.toml)，然后用一行命令启动：
+- Planning mode: Agent autonomously manages status, todo, and design documents; does not pause until all todos are completed (inspired by amp/oh my opencode)
+- Auto/manual LLM switching: use `@` syntax to switch LLMs; Agent can switch via tool calls; temporarily switches to fallback LLM on 429/API network issues
+- i18n: bilingual Chinese and English
 
-```shell
-python -m linhai --config ./config.toml
-```
+## WIP
 
-### 目录更改检测功能
+- Remote control: use local tools to control any bash session - sudo/ssh/docker exec/etc. - any bash with Python can be connected as a machine, supporting standard tools like read_file
+- CLAW mode: Continuous Living Autonomous Worker / OpenClaw-like mode - heartbeat messages, automatic memory file updates
+- Telegram remote control
+- Webshell control
+- Restore conversation: untested
 
-目录更改检测功能可以自动检测当前工作目录的变化，并在检测到特定文件（AGENTS.md, CLAUDE.md）时自动将其内容添加到对话中。
+## Planned
 
-默认情况下此功能是关闭的。要启用它，请在配置文件中添加：
+- WebUI
+- Skills: just a bunch of markdown + summaries
 
-```toml
-[agent]
-enable_directory_change_detection = true
-```
+## On Hold
 
-启用后，当您切换到包含这些文件的目录时，Agent会自动读取文件内容并添加到对话上下文中。
-
-## 警告
-
-agent会自动加载当前目录的AGENTS.md和CLAUDE.md！
-
-请不要在危险的文件夹中使用！
-
-## TODO
-
-自动完成CTF题目
-
-# 参考
-
-https://github.com/shareAI-lab/analysis_claude_code
-
-https://mp.weixin.qq.com/s/o4pu8QX1tRIPBRlFJqrX3A
-
-https://liruifengv.com/posts/openclaw-prompts/
+- MCP via HTTP: do we really need to reinvent REST?
+- Subagent and ACP: not important; ACP can easily become MCP/API
