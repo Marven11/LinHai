@@ -144,10 +144,27 @@ async def test_conversation_save_and_restore():
             save_path is not None
         ), f"Save path not found in notifications: {sub.data.get('messages', [])}"
         save_file = Path(save_path)
+        assert (
+            save_file.name == "saved.json"
+        ), f"Expected saved.json, got {save_file.name}"
         assert save_file.exists(), f"Save file not found: {save_path}"
         save_data = json.loads(save_file.read_text(encoding="utf-8"))
         assert "version" in save_data
         assert "members" in save_data
+
+        conversation_uuid = save_file.parent.name
+        cli_resolved_path = (
+            Path.home()
+            / ".local"
+            / "share"
+            / "linhai"
+            / "conversation"
+            / conversation_uuid
+            / "saved.json"
+        )
+        assert (
+            cli_resolved_path == save_file
+        ), f"--restore-conversation {conversation_uuid} would resolve to {cli_resolved_path}, but save is at {save_file}"
 
         await client.delete(f"/api/agents/{agent_id}")
 
