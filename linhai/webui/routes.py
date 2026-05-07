@@ -58,15 +58,6 @@ async def create_agent(request: AgentCreateRequest):
             raise HTTPException(status_code=400, detail=f"文件不存在: {f}")
         file_paths.append(p)
 
-    checklist_path = None
-    if request.checklist_path:
-        checklist_path = Path(request.checklist_path)
-        if not checklist_path.is_file():
-            raise HTTPException(
-                status_code=400,
-                detail=f"检查清单文件不存在或不是文件: {request.checklist_path}",
-            )
-
     build_args: _AgentBuildArguments = {
         "cron": request.cron,
         "telegram": request.telegram,
@@ -78,7 +69,6 @@ async def create_agent(request: AgentCreateRequest):
         "file": file_paths,
         "planning": request.planning,
         "llm_name": request.llm_name,
-        "checklist_path": checklist_path,
         "profile_name": request.profile_name,
         "git_worktree": False,
         "restore_path": Path(request.restore_path) if request.restore_path else None,

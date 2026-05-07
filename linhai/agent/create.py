@@ -70,7 +70,6 @@ class AgentBuildArguments(TypedDict):
     file: list[Path]
     planning: bool
     llm_name: Optional[str]
-    checklist_path: Optional[Path]
     profile_name: Optional[str]
     git_worktree: bool
     restore_path: Optional[Path]
@@ -87,7 +86,6 @@ class AgentBuildContext(TypedDict):
     llms: list[LLMConfig]
     llm_name: str
     max_toolcall_token_in_round: int | float
-    checklist_path: Optional[Path]
     user_prompt: Optional[str]
     planning: bool
     enabled_toolsets: list[str]
@@ -231,7 +229,6 @@ def create_agent_build_context(
         "llms": config.llm,
         "llm_name": resolved_llm_name,
         "max_toolcall_token_in_round": max_toolcall_token,
-        "checklist_path": build_args.get("checklist_path"),
         "user_prompt": user_prompt,
         "planning": build_args.get("planning", False) or agent_config.planning,
         "enabled_toolsets": _resolve_enabled_toolsets(config.tools, agent_config),
@@ -551,18 +548,6 @@ async def _create_pinned_messages(context: "AgentBuildContext") -> list[Message]
     else:
         pinned_messages.append(
             GlobalPrompt(Path("~/.config/linhai/AGENTS.md").expanduser())
-        )
-
-    if context["checklist_path"]:
-        from .messages import ChecklistMessage
-
-        pinned_messages.append(ChecklistMessage(context["checklist_path"]))
-        await context["registry"].send_if_exists(
-            "ui_log",
-            UiNotice(
-                level="INFO",
-                content=f"已加载检查清单文件: {context["checklist_path"]}",
-            ),
         )
 
     project_prompt_filepaths = [

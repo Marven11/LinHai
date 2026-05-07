@@ -261,7 +261,6 @@ class TestMainCommandLine(unittest.TestCase):
             "config": MagicMock(spec=Config),
             "config_basedir": Path("."),
             "llm_name": "test_llm",
-            "checklist_path": None,
             "git_diff_reviewer": False,
             "violation_checker": False,
             "message": [],
@@ -320,7 +319,6 @@ class TestMainCommandLine(unittest.TestCase):
             "config": MagicMock(spec=Config),
             "config_basedir": Path("."),
             "llm_name": "test_llm",
-            "checklist_path": None,
             "git_diff_reviewer": False,
             "violation_checker": False,
             "message": [],
@@ -353,48 +351,3 @@ class TestMainCommandLine(unittest.TestCase):
         self.assertEqual(cli_call_args.kwargs.get("registry"), mock_registry_instance)
 
         mock_app.run_async.assert_called_once()
-
-    @patch("linhai.agent.create.create_agent_build_context")
-    @patch("linhai.agent.create.create_agent_from_context")
-    @patch("linhai.main.TUIApp")
-    @patch("linhai.main.Registry")
-    def test_agent_command_with_checklist_option(
-        self, mock_registry, mock_cli_app, mock_create_agent, mock_create_context
-    ):
-        """测试使用--checklist选项时checklist路径被正确传递"""
-        mock_registry_instance = MagicMock()
-        mock_registry.return_value = mock_registry_instance
-
-        mock_agent = MagicMock()
-        mock_create_agent.return_value = mock_agent
-
-        mock_app = MagicMock()
-        mock_app.run_async = AsyncMock(return_value=None)
-        mock_app.return_code = 0
-        mock_cli_app.return_value = mock_app
-
-        # 模拟create_agent_build_context返回有效的context
-        mock_context = {
-            "registry": mock_registry_instance,
-            "config": MagicMock(spec=Config),
-            "config_basedir": Path("."),
-            "llm_name": None,
-            "checklist_path": Path("requirements.txt"),
-            "message": [],
-            "file": [],
-        }
-        mock_create_context.return_value = mock_context
-
-        test_args = ["linhai", "--checklist", "requirements.txt"]
-
-        with patch.object(sys, "argv", test_args):
-            with self.assertRaises(SystemExit) as cm:
-                main()
-        self.assertIsInstance(cm.exception, SystemExit)
-
-        mock_create_agent.assert_called_once()
-        call_args = mock_create_agent.call_args
-        context = call_args[0][0]
-        self.assertEqual(
-            context.get("checklist_path"), Path("requirements.txt")
-        )  # checklist_path在context字典中

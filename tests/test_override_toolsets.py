@@ -178,7 +178,6 @@ disable_toolsets = ["llm"]
             "file": [],
             "planning": False,
             "llm_name": "test_llm",
-            "checklist_path": None,
             "profile_name": None,
         }
 
@@ -280,7 +279,6 @@ disable_toolsets = ["llm"]
             "file": [],
             "planning": False,
             "llm_name": "test_llm",
-            "checklist_path": None,
             "profile_name": None,
         }
 

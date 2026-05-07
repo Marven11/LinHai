@@ -20,7 +20,6 @@ from .messages import (
     RuntimeMessage,
     GlobalPrompt,
     PathPrompt,
-    ChecklistMessage,
     DynamicFileContentMessage,
     PreviousReasoningMessage,
     SpoofedReasoningMessage,

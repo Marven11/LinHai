@@ -25,7 +25,6 @@ class TestCreateAgentMCP(unittest.TestCase):
         import argparse
 
         self.cli_args = argparse.Namespace()
-        self.cli_args.checklist = None
 
         self.cli_args.message = []
         self.cli_args.file = []
@@ -85,7 +84,6 @@ command = "python {server_script_path}"
             "llms": config.llm,
             "llm_name": None,
             "max_toolcall_token_in_round": 30000,
-            "checklist_path": None,
             "user_prompt": None,
             "planning": False,
             "enabled_toolsets": list(AVAILABLE_TOOLSETS),
@@ -141,7 +139,6 @@ compress_threshold = 80000
             "llms": config.llm,
             "llm_name": None,
             "max_toolcall_token_in_round": 30000,
-            "checklist_path": None,
             "user_prompt": None,
             "planning": False,
             "enabled_toolsets": list(AVAILABLE_TOOLSETS),

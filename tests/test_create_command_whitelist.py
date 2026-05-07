@@ -49,7 +49,6 @@ class TestCreateCommandWhitelist(unittest.IsolatedAsyncioTestCase):
             "file": [],
             "planning": False,
             "llm_name": "test",
-            "checklist_path": None,
             "profile_name": None,
         }
 
@@ -121,7 +120,6 @@ class TestCreateCommandWhitelist(unittest.IsolatedAsyncioTestCase):
             "file": [],
             "planning": False,
             "llm_name": "test",
-            "checklist_path": None,
             "profile_name": None,
         }
 

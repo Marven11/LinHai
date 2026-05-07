@@ -13,7 +13,6 @@ from linhai.tool.base import ToolCallResultMessage, FileContentToolResult
 from linhai.agent.messages import (
     GlobalPrompt,
     PathPrompt,
-    ChecklistMessage,
     RuntimeMessage,
 )
 from linhai.agent.messages import MessagesListSummerizeMessage
@@ -54,13 +53,12 @@ class TestPinnedMessages(unittest.IsolatedAsyncioTestCase):
         """清理测试环境。"""
         self.exists_patcher.stop()
 
-    def create_context(self, prompt_config=None, checklist_path=None, user_prompt=None):
+    def create_context(self, prompt_config=None, user_prompt=None):
         """创建AgentBuildContext。"""
         context = {
             "registry": self.registry,
             "config_basedir": self.config_basedir,
             "llms": [],
-            "checklist_path": checklist_path,
             "user_prompt": user_prompt,
             "max_toolcall_token_in_round": 0.3,
             "planning": False,
@@ -162,28 +160,6 @@ class TestPinnedMessages(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(pinned_messages[3].result.content, "File content")
         finally:
             temp_file_path.unlink()
-
-    async def test_pinned_messages_with_checklist(self):
-        """测试通过检查清单路径添加ChecklistMessage。"""
-        import tempfile
-
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".md", delete=False) as f:
-            f.write("# Checklist")
-            checklist_path = Path(f.name)
-
-        try:
-            context = self.create_context(checklist_path=checklist_path)
-
-            pinned_messages = await _create_pinned_messages(context)
-
-            # 系统消息 + 启动时间消息 + 全局指导消息 + ChecklistMessage
-            self.assertEqual(len(pinned_messages), 4)
-            self.assertIsInstance(pinned_messages[0], SystemMessage)
-            self.assertIsInstance(pinned_messages[1], RuntimeMessage)
-            self.assertIsInstance(pinned_messages[2], GlobalPrompt)
-            self.assertIsInstance(pinned_messages[3], ChecklistMessage)
-        finally:
-            checklist_path.unlink()
 
     @patch("pathlib.Path.exists", side_effect=lambda: True)
     async def test_pinned_messages_with_project_prompt_files(self, mock_exists):

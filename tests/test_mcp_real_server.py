@@ -22,7 +22,6 @@ class TestMCPRealServer(unittest.IsolatedAsyncioTestCase):
         # Register cli_args required by create_agent_from_context
         cli_args = argparse.Namespace(afk=False)
 
-        cli_args.checklist = False
         cli_args.message = []
         cli_args.file = []
         cli_args.claw = False
@@ -78,7 +77,6 @@ command = "python {server_path}"
             "llms": config.llm,
             "llm_name": None,
             "max_toolcall_token_in_round": 30000,
-            "checklist_path": None,
             "user_prompt": None,
             "planning": False,
             "enabled_toolsets": list(AVAILABLE_TOOLSETS),

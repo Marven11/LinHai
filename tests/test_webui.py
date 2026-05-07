@@ -16,7 +16,6 @@ class TestSchemas(unittest.TestCase):
         self.assertFalse(req.disable_waiting_marker)
         self.assertFalse(req.claw_enabled)
         self.assertIsNone(req.claw_folder)
-        self.assertIsNone(req.checklist_path)
         self.assertEqual(req.cron, [])
         self.assertFalse(req.telegram)
         self.assertEqual(req.message, [])
@@ -565,17 +564,6 @@ class TestCreateAgentPathValidation(unittest.IsolatedAsyncioTestCase):
         )
         self.assertEqual(response.status_code, 400)
         self.assertIn("\u6587\u4ef6\u4e0d\u5b58\u5728", response.json()["detail"])
-
-    def test_invalid_checklist_path_returns_400(self):
-        response = self.client.post(
-            "/api/agents",
-            json={"checklist_path": "/nonexistent/checklist.md"},
-        )
-        self.assertEqual(response.status_code, 400)
-        self.assertIn(
-            "\u68c0\u67e5\u6e05\u5355\u6587\u4ef6\u4e0d\u5b58\u5728",
-            response.json()["detail"],
-        )
 
     def test_none_paths_pass_validation(self):
         with patch("linhai.webui.routes.get_manager") as mock_get:

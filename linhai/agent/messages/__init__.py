@@ -1,5 +1,5 @@
 from .runtime import RuntimeMessage, WAITING_USER_MARKER
-from .prompt import GlobalPrompt, PathPrompt, ChecklistMessage
+from .prompt import GlobalPrompt, PathPrompt
 from .file_content import DynamicFileContentMessage
 from .reasoning import PreviousReasoningMessage, SpoofedReasoningMessage
 from .compression import MessagesListSummerizeMessage
@@ -9,7 +9,6 @@ __all__ = [
     "WAITING_USER_MARKER",
     "GlobalPrompt",
     "PathPrompt",
-    "ChecklistMessage",
     "DynamicFileContentMessage",
     "PreviousReasoningMessage",
     "SpoofedReasoningMessage",

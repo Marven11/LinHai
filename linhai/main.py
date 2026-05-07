@@ -92,7 +92,6 @@ async def run(args):
         "file": args.file,
         "planning": args.planning,
         "llm_name": args.llm,
-        "checklist_path": args.checklist,
         "profile_name": args.profile,
         "git_worktree": args.git_worktree,
         "restore_path": None,
@@ -146,11 +145,6 @@ def main():
         type=str,
         default=None,
         help="指定使用的Agent profile名称（默认使用第一个profile）",
-    )
-    parser.add_argument(
-        "--checklist",
-        type=Path,
-        help="检查清单文件路径，包含一系列代码要求，如./CODE_REQUIREMENTS.md",
     )
     parser.add_argument(
         "--planning",

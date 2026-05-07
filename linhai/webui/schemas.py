@@ -78,7 +78,6 @@ class AgentCreateRequest(BaseModel):
     )
     claw_enabled: bool = Field(default=False, description="启用CLAW模式")
     claw_folder: Optional[str] = Field(default=None, description="CLAW目录路径")
-    checklist_path: Optional[str] = Field(default=None, description="检查清单文件路径")
     cron: list[str] = Field(default_factory=list, description="cron定时任务列表")
     telegram: bool = Field(default=False, description="启用Telegram远程控制")
     message: list[str] = Field(default_factory=list, description="初始用户消息列表")

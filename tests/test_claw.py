@@ -92,7 +92,6 @@ class TestClawPinnedMessages(unittest.TestCase):
             "llms": [],
             "llm_name": "test-llm",
             "max_toolcall_token_in_round": 30000,
-            "checklist_path": None,
             "user_prompt": None,
             "planning": False,
             "enabled_toolsets": list(AVAILABLE_TOOLSETS),

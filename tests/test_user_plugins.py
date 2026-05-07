@@ -128,7 +128,6 @@ class TestLoadUserPlugins(TestCase):
             file=[],
             planning=False,
             llm_name=None,
-            checklist_path=None,
             profile_name=None,
         )
         context = create_agent_build_context(registry, config, Path("/tmp"), build_args)
@@ -158,7 +157,6 @@ class TestLoadUserPlugins(TestCase):
             file=[],
             planning=False,
             llm_name=None,
-            checklist_path=None,
             profile_name=None,
         )
         context = create_agent_build_context(registry, config, Path("/tmp"), build_args)

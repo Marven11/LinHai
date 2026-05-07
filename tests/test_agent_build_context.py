@@ -71,7 +71,6 @@ class TestAgentBuildContextParameters(unittest.TestCase):
             "claw_folder": None,
             "planning": False,
             "llm_name": None,
-            "checklist_path": None,
             "profile_name": None,
         }
 
@@ -103,7 +102,6 @@ class TestAgentBuildContextParameters(unittest.TestCase):
             "claw_folder": None,
             "planning": False,
             "llm_name": None,
-            "checklist_path": None,
             "profile_name": None,
         }
 
@@ -132,7 +130,6 @@ class TestAgentBuildContextParameters(unittest.TestCase):
             "claw_folder": None,
             "planning": False,
             "llm_name": None,
-            "checklist_path": None,
             "profile_name": None,
         }
 
@@ -160,7 +157,6 @@ class TestAgentBuildContextParameters(unittest.TestCase):
             "claw_folder": None,
             "planning": False,
             "llm_name": None,
-            "checklist_path": None,
             "profile_name": None,
         }
 
@@ -186,7 +182,6 @@ class TestAgentBuildContextParameters(unittest.TestCase):
             "claw_folder": Path("/custom/claw/path"),
             "planning": False,
             "llm_name": None,
-            "checklist_path": None,
             "profile_name": None,
         }
 
@@ -217,7 +212,6 @@ class TestAgentBuildContextParameters(unittest.TestCase):
             "claw_folder": None,
             "planning": False,
             "llm_name": None,
-            "checklist_path": None,
             "profile_name": None,
         }
 
@@ -249,7 +243,6 @@ class TestAgentBuildContextParameters(unittest.TestCase):
             "claw_folder": None,
             "planning": False,
             "llm_name": None,
-            "checklist_path": None,
             "profile_name": None,
         }
         context = create_agent_build_context(
@@ -274,7 +267,6 @@ class TestAgentBuildContextParameters(unittest.TestCase):
             "claw_folder": None,
             "planning": False,
             "llm_name": None,
-            "checklist_path": None,
             "profile_name": None,
         }
         context = create_agent_build_context(
@@ -298,7 +290,6 @@ class TestAgentBuildContextParameters(unittest.TestCase):
             "claw_folder": None,
             "planning": True,
             "llm_name": None,
-            "checklist_path": None,
             "profile_name": None,
         }
         context = create_agent_build_context(
@@ -324,7 +315,6 @@ class TestAgentBuildContextParameters(unittest.TestCase):
             "claw_folder": Path("/custom/claw"),
             "planning": True,
             "llm_name": None,
-            "checklist_path": None,
             "profile_name": None,
         }
         context = create_agent_build_context(

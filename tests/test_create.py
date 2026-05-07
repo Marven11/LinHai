@@ -111,7 +111,6 @@ class TestCreateAgent(unittest.TestCase):
             "file": [],
             "planning": False,
             "llm_name": "test_llm",
-            "checklist_path": None,
             "profile_name": None,
             "git_worktree": False,
         }
@@ -235,7 +234,6 @@ class TestCreateAgent(unittest.TestCase):
                 "file": [],
                 "planning": False,
                 "llm_name": "llm1",
-                "checklist_path": None,
                 "profile_name": None,
                 "git_worktree": False,
             }
@@ -286,7 +284,6 @@ class TestCreateLLMInstances(unittest.TestCase):
             "llms": llm_configs,
             "llm_name": "test-llm",
             "config_basedir": Path("."),
-            "checklist_path": None,
             "user_prompt": None,
             "max_toolcall_token_in_round": 0.3,
             "planning": False,
@@ -393,7 +390,6 @@ class TestCreateToolManager(unittest.TestCase):
             "config_basedir": Path("."),
             "llms": [],
             "llm_name": "test-llm",
-            "checklist_path": None,
             "tools_config": config,
             "user_prompt": None,
             "max_toolcall_token_in_round": 0.3,
@@ -513,7 +509,6 @@ class TestCreatePinnedMessages(unittest.TestCase):
             "config_basedir": Path("."),
             "llms": [],
             "llm_name": "test-llm",
-            "checklist_path": None,
             "user_prompt": None,
             "max_toolcall_token_in_round": 0.3,
             "planning": False,
@@ -587,7 +582,6 @@ class TestDefaultLlmConfig(unittest.TestCase):
             "file": [],
             "planning": False,
             "llm_name": None,
-            "checklist_path": None,
             "profile_name": None,
             "git_worktree": False,
         }
@@ -619,7 +613,6 @@ class TestDefaultLlmConfig(unittest.TestCase):
             "file": [],
             "planning": False,
             "llm_name": None,
-            "checklist_path": None,
             "profile_name": None,
             "git_worktree": False,
         }
@@ -651,7 +644,6 @@ class TestDefaultLlmConfig(unittest.TestCase):
             "file": [],
             "planning": False,
             "llm_name": None,
-            "checklist_path": None,
             "profile_name": None,
             "git_worktree": False,
         }
@@ -684,7 +676,6 @@ class TestDefaultLlmConfig(unittest.TestCase):
             "file": [],
             "planning": False,
             "llm_name": "llm2",
-            "checklist_path": None,
             "profile_name": None,
             "git_worktree": False,
         }

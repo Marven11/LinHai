@@ -43,7 +43,6 @@ class TestCreateAgent(unittest.TestCase):
             "file": [],
             "planning": False,
             "llm_name": None,
-            "checklist_path": None,
             "profile_name": None,
         }
         context = create_agent_build_context(
@@ -90,7 +89,6 @@ class TestCreateAgent(unittest.TestCase):
             "file": [],
             "planning": False,
             "llm_name": "test",
-            "checklist_path": None,
             "profile_name": None,
         }
         context = create_agent_build_context(
@@ -126,7 +124,6 @@ class TestCreateAgent(unittest.TestCase):
             "file": [],
             "planning": False,
             "llm_name": "invalid_llm",
-            "checklist_path": None,
             "profile_name": None,
         }
         with self.assertRaises(ValueError) as context_error:

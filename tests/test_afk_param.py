@@ -137,11 +137,6 @@ class TestAfkParam(unittest.TestCase):
         )
         parser.add_argument("--llm", type=str, help="强制指定使用的LLM名称")
         parser.add_argument(
-            "--checklist",
-            type=Path,
-            help="检查清单文件路径，包含一系列代码要求，如./CODE_REQUIREMENTS.md",
-        )
-        parser.add_argument(
             "--afk",
             action="store_true",
             help="关闭 #LINHAI_WAITING_USER 功能",
