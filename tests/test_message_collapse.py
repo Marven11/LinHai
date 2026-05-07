@@ -30,7 +30,7 @@ def _mount_toolcall(msg, name, is_finished=True, has_error=False):
         seg["markdown_representation"] = "<bad toolcall>"
         seg["tool_name"] = ""
     tc = ToolCallWidget(
-        config_theme=None,
+        pygments_theme="lightbulb",
         segment=seg,
         get_refresh_interval=lambda: 1.0,
     )
@@ -58,7 +58,7 @@ def _mount_normal(msg, content):
     nc = NormalContentWidget(
         role="assistant",
         sender_name="test",
-        config_theme=None,
+        pygments_theme="lightbulb",
         segment=_make_normal_segment(content, is_finished=True),
         get_refresh_interval=lambda: 1.0,
     )
@@ -74,7 +74,7 @@ class _MessageTestApp(App):
         widget = MessageWidget(
             role="assistant",
             sender_name="test",
-            config_theme=None,
+            pygments_theme="lightbulb",
             parsed_answer=mock_parsed,
             get_refresh_interval=lambda: 1.0,
         )
@@ -350,7 +350,7 @@ class TestMessageCollapseInteraction(unittest.TestCase):
             rc = ReasoningContentWidget(
                 role="assistant",
                 sender_name="test",
-                config_theme=None,
+                pygments_theme="lightbulb",
                 segment=_make_reasoning_segment("thinking content"),
                 get_refresh_interval=lambda: 1.0,
             )

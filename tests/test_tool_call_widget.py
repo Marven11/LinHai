@@ -31,7 +31,7 @@ class _TestApp(App):
 
     def compose(self) -> ComposeResult:
         widget = ToolCallWidget(
-            config_theme="monokai",
+            pygments_theme="monokai",
             segment=self._segment,
             get_refresh_interval=lambda: 1.0,
         )

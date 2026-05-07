@@ -21,7 +21,7 @@ class _TestApp(App):
         yield NormalContentWidget(
             role="assistant",
             sender_name="test-agent",
-            config_theme="nord",
+            pygments_theme="nord",
             segment=self._segment,
             get_refresh_interval=lambda: 1.0,
         )
@@ -113,7 +113,7 @@ class TestNormalContentWidgetStreaming(unittest.TestCase):
         widget = NormalContentWidget(
             role="assistant",
             sender_name="test",
-            config_theme="nord",
+            pygments_theme="nord",
             segment=segment,
             get_refresh_interval=lambda: 1.0,
         )
@@ -124,7 +124,7 @@ class TestNormalContentWidgetStreaming(unittest.TestCase):
         widget = NormalContentWidget(
             role="assistant",
             sender_name="test",
-            config_theme="nord",
+            pygments_theme="nord",
             segment=segment,
             get_refresh_interval=lambda: 1.0,
         )
@@ -136,7 +136,7 @@ class TestNormalContentWidgetStreaming(unittest.TestCase):
         widget = NormalContentWidget(
             role="assistant",
             sender_name="test",
-            config_theme="nord",
+            pygments_theme="nord",
             segment=segment,
             get_refresh_interval=lambda: 1.0,
         )
@@ -152,7 +152,7 @@ class TestNormalContentWidgetInitial(unittest.TestCase):
         widget = NormalContentWidget(
             role="assistant",
             sender_name="test",
-            config_theme="nord",
+            pygments_theme="nord",
             segment=segment,
             get_refresh_interval=lambda: 1.0,
         )
@@ -164,7 +164,7 @@ class TestNormalContentWidgetInitial(unittest.TestCase):
         widget = NormalContentWidget(
             role="assistant",
             sender_name="test",
-            config_theme="nord",
+            pygments_theme="nord",
             segment=segment,
             get_refresh_interval=lambda: 1.0,
         )

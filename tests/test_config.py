@@ -466,7 +466,12 @@ model = "test_model"
             "use_nerd_font should have a description",
         )
         self.assertIsNotNone(
-            cli_fields["theme"].description, "theme should have a description"
+            cli_fields["textual_theme"].description,
+            "textual_theme should have a description",
+        )
+        self.assertIsNotNone(
+            cli_fields["pygments_theme"].description,
+            "pygments_theme should have a description",
         )
 
     def test_config_field_descriptions(self):

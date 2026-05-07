@@ -96,9 +96,9 @@ class TUIApp(App):
         init_files: list[Path],
     ):
         super().__init__()
-        self.config_theme = tui_config.theme
-        if self.config_theme is not None:
-            self.theme = self.config_theme
+        if tui_config.textual_theme is not None:
+            self.theme = tui_config.textual_theme
+        self.pygments_theme = tui_config.pygments_theme
         self.registry = registry
         self.registry.register_queue("exit_signal")
         TextualTaskSupervisor(self, registry)
@@ -138,7 +138,7 @@ class TUIApp(App):
                 self.messages_list = MessagesList(
                     registry=self.registry,
                     tui_config=self.tui_config,
-                    config_theme=self.config_theme,
+                    pygments_theme=self.pygments_theme,
                     lifecycle=lifecycle,
                     get_refresh_interval=self.get_refresh_interval,
                     id="chat-container",

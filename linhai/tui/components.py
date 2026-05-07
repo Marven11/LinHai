@@ -35,17 +35,6 @@ StoppableWidget = Union[
 ]
 
 
-def _syntax_or_text(content: str, lexer: str, theme: str | None) -> Syntax | Text:
-    if theme is not None:
-        return Syntax(
-            content,
-            lexer=lexer,
-            theme=theme,
-            word_wrap=True,
-        )
-    return Text(content)
-
-
 def _simplify_openai_toolcall(tool_name: str, raw: str) -> str:
     full_json = f'{{"name":"{tool_name}","arguments":{raw}}}'
     return parse_and_simplify_toolcall(full_json)
@@ -351,12 +340,12 @@ class ToolCallWidget(Static):
 
     def __init__(
         self,
-        config_theme: str | None,
+        pygments_theme: str,
         segment: ToolCallSegment | OpenAiToolCallSegment,
         get_refresh_interval: Callable[[], float],
     ):
         super().__init__()
-        self.config_theme = config_theme
+        self.pygments_theme = pygments_theme
         self._segment = segment
         self._last_rendered = ""
         self.is_collapsed = False
@@ -382,10 +371,11 @@ class ToolCallWidget(Static):
     def update_display(self) -> None:
         if self._segment["is_corrupted"]:
             self.update(
-                _syntax_or_text(
+                Syntax(
                     self._segment["markdown_representation"],
                     lexer="markdown",
-                    theme=self.config_theme,
+                    theme=self.pygments_theme,
+                    word_wrap=True,
                 )
             )
             self.border_title = "tool call (error)"
@@ -400,10 +390,11 @@ class ToolCallWidget(Static):
         if md != self._last_rendered:
             self._last_rendered = md
             self.update(
-                _syntax_or_text(
+                Syntax(
                     md,
                     lexer="markdown",
-                    theme=self.config_theme,
+                    theme=self.pygments_theme,
+                    word_wrap=True,
                 )
             )
 
@@ -432,10 +423,11 @@ class ToolCallWidget(Static):
             else:
                 simplified = parse_and_simplify_toolcall(self._segment["raw"])
         self.update(
-            _syntax_or_text(
+            Syntax(
                 simplified,
                 lexer="python",
-                theme=self.config_theme,
+                theme=self.pygments_theme,
+                word_wrap=True,
             )
         )
 
@@ -458,10 +450,11 @@ class ToolCallWidget(Static):
                 {"zh_CN": "tool call [点击隐藏]", "en": "tool call [click to hide]"}
             )
             self.update(
-                _syntax_or_text(
+                Syntax(
                     self._segment["markdown_representation"],
                     lexer="markdown",
-                    theme=self.config_theme,
+                    theme=self.pygments_theme,
+                    word_wrap=True,
                 )
             )
 
@@ -509,12 +502,12 @@ class ReasoningContentWidget(Static):
         self,
         role: str,
         sender_name: str,
-        config_theme: str | None,
+        pygments_theme: str,
         segment: ReasoningSegment,
         get_refresh_interval: Callable[[], float],
     ):
         super().__init__()
-        self.config_theme = config_theme
+        self.pygments_theme = pygments_theme
         self._segment = segment
         self.role = f"{role}-reasoning"
         self.content_str = ""
@@ -563,10 +556,11 @@ class ReasoningContentWidget(Static):
         content_to_display = self.content_str.strip()
 
         if self.is_expanded:
-            renderable = _syntax_or_text(
+            renderable = Syntax(
                 content_to_display,
                 lexer="markdown",
-                theme=self.config_theme,
+                theme=self.pygments_theme,
+                word_wrap=True,
             )
         else:
             lines = [line for line in content_to_display.splitlines() if line]
@@ -598,9 +592,9 @@ class UserMessageWidget(Markdown):
             return MarkdownParagraphWithoutNewLine
         return Markdown.BLOCKS[block_name]
 
-    def __init__(self, content: str, sender_name: str, config_theme: str | None):
+    def __init__(self, content: str, sender_name: str, pygments_theme: str):
         super().__init__()
-        self.config_theme = config_theme
+        self.pygments_theme = pygments_theme
         self.content_str = content
         self.display_name = sender_name
         self.timer: Timer | None = None
@@ -646,12 +640,12 @@ class NormalContentWidget(Markdown):
         self,
         role: str,
         sender_name: str,
-        config_theme: str | None,
+        pygments_theme: str,
         segment: NormalSegment,
         get_refresh_interval: Callable[[], float],
     ):
         super().__init__()
-        self.config_theme = config_theme
+        self.pygments_theme = pygments_theme
         self.display_name = sender_name
         self.role = role
         self.timer: Timer | None = None
@@ -731,14 +725,14 @@ class MessageWidget(Static):
         self,
         role: str,
         sender_name: str,
-        config_theme: str | None,
+        pygments_theme: str,
         parsed_answer: ParsedAnswer | None,
         get_refresh_interval: Callable[[], float],
     ):
         super().__init__()
         self.role = role
         self.sender_name = sender_name
-        self.config_theme = config_theme
+        self.pygments_theme = pygments_theme
         self.parsed_answer = parsed_answer
         self.get_refresh_interval = get_refresh_interval
         self._restored_segments: list[dict] | None = None
@@ -793,7 +787,7 @@ class MessageWidget(Static):
                         tool_name=segment_data["tool_name"],
                     )
                 widget = ToolCallWidget(
-                    config_theme=self.config_theme,
+                    pygments_theme=self.pygments_theme,
                     segment=seg,
                     get_refresh_interval=self.get_refresh_interval,
                 )
@@ -806,7 +800,7 @@ class MessageWidget(Static):
                 widget = NormalContentWidget(
                     role=self.role,
                     sender_name=self.sender_name,
-                    config_theme=self.config_theme,
+                    pygments_theme=self.pygments_theme,
                     segment=seg,
                     get_refresh_interval=self.get_refresh_interval,
                 )
@@ -819,7 +813,7 @@ class MessageWidget(Static):
                 widget = ReasoningContentWidget(
                     role=self.role,
                     sender_name=self.sender_name,
-                    config_theme=self.config_theme,
+                    pygments_theme=self.pygments_theme,
                     segment=seg,
                     get_refresh_interval=self.get_refresh_interval,
                 )
@@ -855,7 +849,7 @@ class MessageWidget(Static):
                 or segment["segment_type"] == "openai_toolcall"
             ):
                 widget = ToolCallWidget(
-                    config_theme=self.config_theme,
+                    pygments_theme=self.pygments_theme,
                     segment=segment,
                     get_refresh_interval=self.get_refresh_interval,
                 )
@@ -863,7 +857,7 @@ class MessageWidget(Static):
                 widget = NormalContentWidget(
                     role=self.role,
                     sender_name=self.sender_name,
-                    config_theme=self.config_theme,
+                    pygments_theme=self.pygments_theme,
                     segment=segment,
                     get_refresh_interval=self.get_refresh_interval,
                 )
@@ -871,7 +865,7 @@ class MessageWidget(Static):
                 widget = ReasoningContentWidget(
                     role=self.role,
                     sender_name=self.sender_name,
-                    config_theme=self.config_theme,
+                    pygments_theme=self.pygments_theme,
                     segment=segment,
                     get_refresh_interval=self.get_refresh_interval,
                 )
