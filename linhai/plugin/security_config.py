@@ -4,6 +4,7 @@ import re
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Literal, Union
 
+from linhai.type_hints import WithSecret
 from linhai.agent.lifecycle import AfterToolcallResult, Lifecycle
 from linhai.agent.messages import RuntimeMessage
 from linhai.registry import Registry
@@ -37,7 +38,7 @@ class WithSecretParameterPositionPlugin(Plugin):
         status: Literal["skipped", "success", "failed"],
         message: Message | None,
         toolcall_arguments: dict,
-        with_secret: list[str] | None,
+        with_secret: WithSecret | None,
         is_tool_failed_duplicated_error: bool,
     ) -> AfterToolcallResult | None:
         if status != "failed":
@@ -76,7 +77,7 @@ class MissingWithSecretWarningPlugin(Plugin):
         status: Literal["skipped", "success", "failed"],
         message: Message | None,
         toolcall_arguments: dict,
-        with_secret: list[str] | None,
+        with_secret: WithSecret | None,
         is_tool_failed_duplicated_error: bool,
     ) -> AfterToolcallResult | None:
         if not toolcall_arguments:
@@ -141,7 +142,7 @@ class CommandWhitelistPlugin(Plugin):
         self,
         tool_name: str,
         toolcall_arguments: dict,
-        with_secret: list[str] | None,
+        with_secret: WithSecret | None,
     ) -> Union[SuccessfulToolResult, FailedToolResult, dict, None]:
         if tool_name != "process_create":
             return None
@@ -210,7 +211,7 @@ class ProcessArgvCheckerPlugin(Plugin):
         self,
         tool_name: str,
         toolcall_arguments: dict,
-        with_secret: list[str] | None,
+        with_secret: WithSecret | None,
     ) -> Union[SuccessfulToolResult, FailedToolResult, dict, None]:
         if tool_name == "process_create":
             argv = toolcall_arguments.get("argv")
@@ -237,7 +238,7 @@ class ProcessArgvCheckerPlugin(Plugin):
         status: str,
         message,
         toolcall_arguments: dict,
-        with_secret: list[str] | None,
+        with_secret: WithSecret | None,
         is_tool_failed_duplicated_error: bool,
     ) -> AfterToolcallResult | None:
         _ = (tool_index, message, with_secret, is_tool_failed_duplicated_error)

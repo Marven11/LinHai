@@ -1,6 +1,7 @@
 from typing import Literal
 
 from linhai.base import UserMessage, ToolCallMessage
+from linhai.type_hints import WithSecret
 from linhai.registry import Registry
 from linhai.utils.common import UiNotice
 from linhai.agent.user_message_handler import ParsedUserMessage
@@ -164,7 +165,7 @@ class CommandCallback:
             function_name=parsed_input.command,
             function_arguments={},
             assert_success=False,
-            with_secret=[],
+            with_secret=WithSecret(in_arguments=[], in_result=[]),
         )
 
         await agent.toolcall_processor.call_tool(tool_call, tool_index=1)

@@ -5,6 +5,7 @@ import tokenize
 from pathlib import Path
 from typing import TYPE_CHECKING, Literal
 
+from linhai.type_hints import WithSecret
 from linhai.agent import Agent
 from linhai.agent.lifecycle import AfterToolcallResult, Lifecycle
 from linhai.agent.messages import (
@@ -77,7 +78,7 @@ class PythonCommentCheckerPlugin:
         status: Literal["skipped", "success", "failed"],
         message: Message | None,
         toolcall_arguments: dict,
-        with_secret: list[str] | None,
+        with_secret: WithSecret | None,
         is_tool_failed_duplicated_error: bool,
     ) -> AfterToolcallResult | None:
         machine_control = self.registry.get_member_typechecked(

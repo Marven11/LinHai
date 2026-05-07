@@ -6,6 +6,7 @@ import time
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Dict, List, Literal
 
+from linhai.type_hints import WithSecret
 from linhai.agent import Agent
 from linhai.agent.lifecycle import AfterToolcallResult, Lifecycle
 from linhai.agent.state_machine import AgentStateMachine
@@ -724,7 +725,7 @@ class GlmInsultMaskPlugin(Plugin):
         status: Literal["skipped", "success", "failed"],
         message: "Message | None",
         toolcall_arguments: dict,
-        with_secret: list[str] | None,
+        with_secret: WithSecret | None,
         is_tool_failed_duplicated_error: bool,
     ) -> AfterToolcallResult | None:
         """在工具调用后检查结果是否包含脏话。"""

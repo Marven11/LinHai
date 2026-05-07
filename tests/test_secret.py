@@ -498,7 +498,10 @@ class TestSecretInterceptorPlugin(unittest.TestCase):
                 status="success",
                 message=RuntimeMessage(result_content),
                 toolcall_arguments={},
-                with_secret=["SECRET1", "SECRET2"],
+                with_secret={
+                    "in_arguments": ["SECRET1", "SECRET2"],
+                    "in_result": ["SECRET1", "SECRET2"],
+                },
                 is_tool_failed_duplicated_error=False,
             )
         )
@@ -538,7 +541,10 @@ class TestSecretInterceptorPlugin(unittest.TestCase):
                 status="success",
                 message=RuntimeMessage(result_content),
                 toolcall_arguments={},
-                with_secret=["SECRET1"],  # 只指定了SECRET1，但结果包含SECRET2
+                with_secret={
+                    "in_arguments": ["SECRET1"],
+                    "in_result": ["SECRET1"],
+                },  # 只指定了SECRET1，但结果包含SECRET2
                 is_tool_failed_duplicated_error=False,
             )
         )
@@ -565,7 +571,7 @@ class TestSecretInterceptorPlugin(unittest.TestCase):
                 status="success",
                 message=RuntimeMessage(result_content),
                 toolcall_arguments={},
-                with_secret=["SECRET1"],
+                with_secret={"in_arguments": ["SECRET1"], "in_result": ["SECRET1"]},
                 is_tool_failed_duplicated_error=False,
             )
         )
@@ -608,7 +614,7 @@ class TestSecretInterceptorPlugin(unittest.TestCase):
             self.plugin.before_tool_call(
                 tool_name="test_tool",
                 toolcall_arguments=toolcall_arguments,
-                with_secret=["SECRET1"],
+                with_secret={"in_arguments": ["SECRET1"], "in_result": ["SECRET1"]},
             )
         )
         loop.close()
@@ -632,7 +638,10 @@ class TestSecretInterceptorPlugin(unittest.TestCase):
             self.plugin.before_tool_call(
                 tool_name="test_tool",
                 toolcall_arguments=toolcall_arguments,
-                with_secret=["SECRET1", "SECRET2"],
+                with_secret={
+                    "in_arguments": ["SECRET1", "SECRET2"],
+                    "in_result": ["SECRET1", "SECRET2"],
+                },
             )
         )
         loop.close()
@@ -657,7 +666,10 @@ class TestSecretInterceptorPlugin(unittest.TestCase):
             self.plugin.before_tool_call(
                 tool_name="test_tool",
                 toolcall_arguments=toolcall_arguments,
-                with_secret=["NONEXISTENT"],
+                with_secret={
+                    "in_arguments": ["NONEXISTENT"],
+                    "in_result": ["NONEXISTENT"],
+                },
             )
         )
         loop.close()
@@ -678,7 +690,10 @@ class TestSecretInterceptorPlugin(unittest.TestCase):
             self.plugin.before_tool_call(
                 tool_name="test_tool",
                 toolcall_arguments=toolcall_arguments,
-                with_secret=["<$SECRET1$>"],  # 包含占位符而不是KEY
+                with_secret={
+                    "in_arguments": ["<$SECRET1$>"],
+                    "in_result": ["<$SECRET1$>"],
+                },  # 包含占位符而不是KEY
             )
         )
         loop.close()
@@ -701,7 +716,10 @@ class TestSecretInterceptorPlugin(unittest.TestCase):
             self.plugin.before_tool_call(
                 tool_name="test_tool",
                 toolcall_arguments=toolcall_arguments,
-                with_secret=["SECRET1"],  # 只指定了SECRET1，不替换SECRET2
+                with_secret={
+                    "in_arguments": ["SECRET1"],
+                    "in_result": ["SECRET1"],
+                },  # 只指定了SECRET1，不替换SECRET2
             )
         )
         loop.close()
@@ -737,7 +755,10 @@ class TestSecretInterceptorPlugin(unittest.TestCase):
             self.plugin.before_tool_call(
                 tool_name="test_tool",
                 toolcall_arguments=toolcall_arguments,
-                with_secret=["SECRET1", "SECRET2"],
+                with_secret={
+                    "in_arguments": ["SECRET1", "SECRET2"],
+                    "in_result": ["SECRET1", "SECRET2"],
+                },
             )
         )
         loop.close()
