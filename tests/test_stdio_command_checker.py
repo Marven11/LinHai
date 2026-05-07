@@ -1,6 +1,6 @@
 import unittest
 from unittest.mock import Mock, AsyncMock
-from linhai.plugin.sudo_bash_hint import (
+from linhai.plugin.command_hints import (
     StdioCommandCheckerPlugin,
     _is_shell_command,
 )

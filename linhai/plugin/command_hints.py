@@ -80,7 +80,28 @@ class SudoBashHintPlugin(Plugin):
                 "建议使用connect_posix_shell_as_machine工具将adb shell连接为机器"
             )
 
+        python_argv = _extract_python_argv(argv)
+        if python_argv is not None and "-c" in python_argv[1:]:
+            return (
+                "提示：检测到你使用python -c运行python命令。"
+                "你有考虑过直接启动python repl并使用吗？"
+            )
+
         return None
+
+
+PYTHON_BASENAMES = frozenset({"python", "python3"})
+
+
+def _extract_python_argv(argv: list) -> list | None:
+    base = os.path.basename(argv[0])
+    if base in PYTHON_BASENAMES:
+        return argv
+    if argv[0] == "uv" and len(argv) > 2 and argv[1] == "run":
+        sub_base = os.path.basename(argv[2])
+        if sub_base in PYTHON_BASENAMES:
+            return argv[2:]
+    return None
 
 
 SHELL_COMMANDS = frozenset(

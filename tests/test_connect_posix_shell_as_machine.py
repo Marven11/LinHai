@@ -1,6 +1,6 @@
 import unittest
 from unittest.mock import Mock, AsyncMock, patch
-from linhai.plugin.sudo_bash_hint import SudoBashHintPlugin
+from linhai.plugin.command_hints import SudoBashHintPlugin
 from linhai.tool.base import SuccessfulToolResult
 
 
@@ -180,6 +180,93 @@ class TestSudoBashHintPlugin(unittest.IsolatedAsyncioTestCase):
         )
         self.assertIsNone(result2)
         self.assertEqual(mock_agent.message_processor.add_new_message.call_count, 1)
+
+    async def test_python_c_shows_hint(self):
+        mock_agent = Mock()
+        mock_agent.message_processor = Mock()
+        mock_agent.message_processor.add_new_message = AsyncMock()
+        self.registry.get_member_typechecked = Mock(return_value=mock_agent)
+
+        result = await self.plugin.after_toolcall(
+            tool_name="process_create",
+            tool_index=0,
+            status="success",
+            message=None,
+            toolcall_arguments={"argv": ["python", "-c", "print(1)"]},
+            with_secret=None,
+            is_tool_failed_duplicated_error=False,
+        )
+        self.assertIsNone(result)
+        mock_agent.message_processor.add_new_message.assert_called_once()
+        call_args = mock_agent.message_processor.add_new_message.call_args[0][0]
+        self.assertIn("python -c", call_args.message)
+        self.assertIn("python repl", call_args.message)
+
+    async def test_python3_c_shows_hint(self):
+        mock_agent = Mock()
+        mock_agent.message_processor = Mock()
+        mock_agent.message_processor.add_new_message = AsyncMock()
+        self.registry.get_member_typechecked = Mock(return_value=mock_agent)
+
+        result = await self.plugin.after_toolcall(
+            tool_name="process_create",
+            tool_index=0,
+            status="success",
+            message=None,
+            toolcall_arguments={"argv": ["python3", "-c", "print(1)"]},
+            with_secret=None,
+            is_tool_failed_duplicated_error=False,
+        )
+        self.assertIsNone(result)
+        mock_agent.message_processor.add_new_message.assert_called_once()
+
+    async def test_venv_python_c_shows_hint(self):
+        mock_agent = Mock()
+        mock_agent.message_processor = Mock()
+        mock_agent.message_processor.add_new_message = AsyncMock()
+        self.registry.get_member_typechecked = Mock(return_value=mock_agent)
+
+        result = await self.plugin.after_toolcall(
+            tool_name="process_create",
+            tool_index=0,
+            status="success",
+            message=None,
+            toolcall_arguments={"argv": ["venv/bin/python", "-c", "print(1)"]},
+            with_secret=None,
+            is_tool_failed_duplicated_error=False,
+        )
+        self.assertIsNone(result)
+        mock_agent.message_processor.add_new_message.assert_called_once()
+
+    async def test_uv_run_python_c_shows_hint(self):
+        mock_agent = Mock()
+        mock_agent.message_processor = Mock()
+        mock_agent.message_processor.add_new_message = AsyncMock()
+        self.registry.get_member_typechecked = Mock(return_value=mock_agent)
+
+        result = await self.plugin.after_toolcall(
+            tool_name="process_create",
+            tool_index=0,
+            status="success",
+            message=None,
+            toolcall_arguments={"argv": ["uv", "run", "python", "-c", "print(1)"]},
+            with_secret=None,
+            is_tool_failed_duplicated_error=False,
+        )
+        self.assertIsNone(result)
+        mock_agent.message_processor.add_new_message.assert_called_once()
+
+    async def test_python_no_c_no_hint(self):
+        result = await self.plugin.after_toolcall(
+            tool_name="process_create",
+            tool_index=0,
+            status="success",
+            message=None,
+            toolcall_arguments={"argv": ["python", "script.py"]},
+            with_secret=None,
+            is_tool_failed_duplicated_error=False,
+        )
+        self.assertIsNone(result)
 
     def test_register_method(self):
         mock_lifecycle = Mock()

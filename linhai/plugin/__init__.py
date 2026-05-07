@@ -44,7 +44,7 @@ from .security_config import (
 from .file_permission_plugin import FileOperationPermissionPlugin
 
 from .sudo_stdio_checker import SudoStdioCheckerPlugin
-from .sudo_bash_hint import SudoBashHintPlugin, StdioCommandCheckerPlugin
+from .command_hints import SudoBashHintPlugin, StdioCommandCheckerPlugin
 
 from .afk_plugin import AfkPlugin
 from .claw import ClawHeartbeatPlugin
