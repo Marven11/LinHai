@@ -431,6 +431,15 @@ def register_machine_control_tools(machine_control: "MachineControl") -> ToolSet
                 ),
                 type="Optional[Dict[str, str]]",
             ),
+            "with_stdin": ToolArgInfo(
+                desc=t(
+                    {
+                        "zh_CN": "创建进程后立即写入stdin的内容，默认None",
+                        "en": "Content to write to stdin immediately after creation, default None",
+                    }
+                ),
+                type="Optional[str]",
+            ),
         },
         required_args=["argv"],
     )
@@ -439,36 +448,51 @@ def register_machine_control_tools(machine_control: "MachineControl") -> ToolSet
         wait_second: Optional[float] = None,
         pty: bool = False,
         env: Optional[Dict[str, str]] = None,
+        with_stdin: Optional[str] = None,
     ) -> SuccessfulToolResult | FailedToolResult:
         host_control = machine_control.machines[machine_control.target_machine]
         result = await host_control.create_process(argv, wait_second, pty=pty, env=env)
         if not result.success:
             return FailedToolResult(content=result.error or "创建进程失败")
-        if result.returncode is None:
-            if result.pid:
-                process = host_control.get_process(result.pid)
-                if (
-                    process is not None
-                    and "lifecycle" in machine_control.registry.members
-                ):
-                    from linhai.agent.lifecycle import Lifecycle
-                    from linhai.machine_control.process import ProcessCreateInfo
-
-                    lifecycle = machine_control.registry.get_member_typechecked(
-                        "lifecycle", Lifecycle
-                    )
-                    await lifecycle.after_process_create.trigger(
-                        ProcessCreateInfo(
-                            process=process,
-                            argv=argv,
-                            machine_id=machine_control.target_machine,
-                        )
-                    )
+        if result.returncode is not None:
+            if with_stdin is not None:
+                return FailedToolResult(
+                    content=f"写入with_stdin内容失败：程序过早退出\n<<pid>>{result.pid}<<pid>><<returncode>>{result.returncode}<<returncode>><<stdout>>{result.stdout}<<stdout>><<stderr>>{result.stderr}<<stderr>>"
+                )
             return SuccessfulToolResult(
-                content=f"<<pid>>{result.pid}<<pid>><<message>>{result.message}<<message>>"
+                content=f"<<pid>>{result.pid}<<pid>><<returncode>>{result.returncode}<<returncode>><<stdout>>{result.stdout}<<stdout>><<stderr>>{result.stderr}<<stderr>>"
             )
+        process = host_control.get_process(result.pid) if result.pid else None
+        if process is not None and "lifecycle" in machine_control.registry.members:
+            from linhai.agent.lifecycle import Lifecycle
+            from linhai.machine_control.process import ProcessCreateInfo
+
+            lifecycle = machine_control.registry.get_member_typechecked(
+                "lifecycle", Lifecycle
+            )
+            await lifecycle.after_process_create.trigger(
+                ProcessCreateInfo(
+                    process=process,
+                    argv=argv,
+                    machine_id=machine_control.target_machine,
+                )
+            )
+        if with_stdin is not None:
+            if process is None:
+                return FailedToolResult(
+                    content=f"写入with_stdin内容失败：进程不存在\n<<pid>>{result.pid}<<pid>>"
+                )
+            write_result = await process.stdio_write(with_stdin, with_enter=True)
+            if isinstance(write_result, ProcessIOError):
+                return FailedToolResult(
+                    content=f"写入with_stdin内容失败：{write_result.error}\n<<pid>>{result.pid}<<pid>>"
+                )
+            if not write_result.success:
+                return FailedToolResult(
+                    content=f"写入with_stdin内容失败：{write_result.error}\n<<pid>>{result.pid}<<pid>>"
+                )
         return SuccessfulToolResult(
-            content=f"<<pid>>{result.pid}<<pid>><<returncode>>{result.returncode}<<returncode>><<stdout>>{result.stdout}<<stdout>><<stderr>>{result.stderr}<<stderr>>"
+            content=f"<<pid>>{result.pid}<<pid>><<message>>{result.message}<<message>>"
         )
 
     @toolset.register_tool(

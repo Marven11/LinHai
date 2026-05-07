@@ -623,6 +623,108 @@ class TestRegisterPluginStoreProcessInfo(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(stored["argv"], ["echo", "hello"])
 
 
+class TestProcessCreateWithStdin(unittest.IsolatedAsyncioTestCase):
+
+    async def test_with_stdin_running_process_success(self):
+        from linhai.machine_control.tools import register_machine_control_tools
+        from linhai.machine_control.process import ProcessWriteResult
+        from linhai.tool.base import SuccessfulToolResult
+
+        registry = Registry()
+        mc = MachineControl(registry, remote_machines=[])
+
+        mock_process = Mock()
+        mock_process.stdio_write = AsyncMock(
+            return_value=ProcessWriteResult(pid="100", success=True, message="写入成功")
+        )
+        mc.machines["master_host"].create_process = AsyncMock(
+            return_value=ProcessCreateResult(
+                pid="100", success=True, returncode=None, message="running"
+            )
+        )
+        mc.machines["master_host"].get_process = Mock(return_value=mock_process)
+
+        toolset = register_machine_control_tools(mc)
+        result = await toolset.get_tool("process_create")(
+            argv=["python3"], with_stdin="print(1+1)"
+        )
+        self.assertIsInstance(result, SuccessfulToolResult)
+        self.assertIn("100", result.content)
+        mock_process.stdio_write.assert_called_once_with("print(1+1)", with_enter=True)
+
+    async def test_with_stdin_premature_exit(self):
+        from linhai.machine_control.tools import register_machine_control_tools
+        from linhai.tool.base import FailedToolResult
+
+        registry = Registry()
+        mc = MachineControl(registry, remote_machines=[])
+
+        mc.machines["master_host"].create_process = AsyncMock(
+            return_value=ProcessCreateResult(
+                pid="200",
+                success=True,
+                returncode=1,
+                stdout="",
+                stderr="error msg",
+            )
+        )
+
+        toolset = register_machine_control_tools(mc)
+        result = await toolset.get_tool("process_create")(
+            argv=["bad_cmd"], with_stdin="some input"
+        )
+        self.assertIsInstance(result, FailedToolResult)
+        self.assertIn("程序过早退出", result.content)
+        self.assertIn("200", result.content)
+        self.assertIn("1", result.content)
+
+    async def test_with_stdin_write_failure_returns_pid(self):
+        from linhai.machine_control.tools import register_machine_control_tools
+        from linhai.machine_control.process import ProcessIOError
+        from linhai.tool.base import FailedToolResult
+
+        registry = Registry()
+        mc = MachineControl(registry, remote_machines=[])
+
+        mock_process = Mock()
+        mock_process.stdio_write = AsyncMock(
+            return_value=ProcessIOError(error="标准输入已关闭")
+        )
+        mc.machines["master_host"].create_process = AsyncMock(
+            return_value=ProcessCreateResult(
+                pid="300", success=True, returncode=None, message="running"
+            )
+        )
+        mc.machines["master_host"].get_process = Mock(return_value=mock_process)
+
+        toolset = register_machine_control_tools(mc)
+        result = await toolset.get_tool("process_create")(
+            argv=["cat"], with_stdin="hello"
+        )
+        self.assertIsInstance(result, FailedToolResult)
+        self.assertIn("标准输入已关闭", result.content)
+        self.assertIn("300", result.content)
+
+    async def test_with_stdin_none_behaves_as_before(self):
+        from linhai.machine_control.tools import register_machine_control_tools
+        from linhai.tool.base import SuccessfulToolResult
+
+        registry = Registry()
+        mc = MachineControl(registry, remote_machines=[])
+
+        mc.machines["master_host"].create_process = AsyncMock(
+            return_value=ProcessCreateResult(
+                pid="400", success=True, returncode=None, message="running"
+            )
+        )
+        mc.machines["master_host"].get_process = Mock(return_value=Mock(pid="400"))
+
+        toolset = register_machine_control_tools(mc)
+        result = await toolset.get_tool("process_create")(argv=["sleep", "5"])
+        self.assertIsInstance(result, SuccessfulToolResult)
+        self.assertIn("400", result.content)
+
+
 class TestListProcesses(unittest.TestCase):
     """测试list_processes返回argv/status/returncode"""
 

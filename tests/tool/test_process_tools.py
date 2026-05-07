@@ -128,6 +128,19 @@ class TestProcessTools(unittest.IsolatedAsyncioTestCase):
         param = signature.parameters["pty"]
         self.assertEqual(param.default, False)
 
+    def test_process_create_with_stdin_parameter(self):
+        mock_machine_control = Mock()
+        mock_machine_control.machines = {"master_host": Mock()}
+        mock_machine_control.target_machine = "master_host"
+
+        toolset = register_machine_control_tools(mock_machine_control)
+        tool_func = toolset.get_tool("process_create")
+
+        signature = inspect.signature(tool_func)
+        self.assertIn("with_stdin", signature.parameters)
+        param = signature.parameters["with_stdin"]
+        self.assertEqual(param.default, None)
+
     def _make_io_error_toolset(self, method_name: str):
         mock_proc = AsyncMock()
         getattr(mock_proc, method_name).return_value = ProcessIOError(
