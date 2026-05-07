@@ -1,7 +1,7 @@
 import asyncio
 import time
 import unittest
-from unittest.mock import Mock
+from unittest.mock import AsyncMock, Mock
 
 from linhai.agent.lifecycle import Lifecycle
 from linhai.agent.message import AgentMessage
@@ -10,6 +10,7 @@ from linhai.base import AnswerTokenUsage
 from linhai.config import TUIConfig
 from linhai.machine_control.process import (
     ProcessCreateInfo,
+    ProcessIOError,
     ProcessKillResult,
     ProcessWaitResult,
 )
@@ -589,6 +590,13 @@ class TestProcessTabI18n(unittest.TestCase):
             source,
             "Should use i18n for 'No processes created yet.' string",
         )
+
+
+class TestProcessIOError(unittest.TestCase):
+    def test_process_io_error_is_dataclass(self):
+        err = ProcessIOError(error="连接已失效")
+        self.assertEqual(err.error, "连接已失效")
+        self.assertIsInstance(err, ProcessIOError)
 
 
 if __name__ == "__main__":

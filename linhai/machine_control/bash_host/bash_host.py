@@ -13,6 +13,7 @@ from linhai.tool.base import (
 )
 from linhai.machine_control.http_message import HttpMessage
 from linhai.machine_control.process import (
+    ProcessIOError,
     Process,
     ProcessCreateResult,
 )
@@ -146,6 +147,8 @@ class BashHostControl:
                 )
 
             write_result = await shell_proc.stdio_write(full_command, with_enter=True)
+            if isinstance(write_result, ProcessIOError):
+                return 1, "", f"IO错误: {write_result.error}"
             if not write_result.success:
                 return 1, "", f"写入命令失败: {write_result.error}"
 
@@ -155,6 +158,8 @@ class BashHostControl:
 
             while result_line is None:
                 read_result = await shell_proc.stdio_read(wait_seconds=1.0)
+                if isinstance(read_result, ProcessIOError):
+                    break
                 if not read_result.success:
                     break
                 decoded = read_result.stdout.decode(self._encoding, errors="replace")

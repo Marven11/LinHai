@@ -4,6 +4,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
+from linhai.machine_control.process import ProcessIOError
 from linhai.registry import Registry
 from linhai.task_supervisor import PlainTaskSupervisor
 from linhai.token_manager import TokenManager
@@ -264,6 +265,8 @@ class AgentSession:
         if proc is None:
             return False
         result = await proc.kill(graceful=True)
+        if isinstance(result, ProcessIOError):
+            return False
         return result.success
 
     async def stop(self) -> None:

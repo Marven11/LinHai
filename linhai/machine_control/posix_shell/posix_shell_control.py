@@ -45,6 +45,9 @@ class PosixShellControl:
             return FailedToolResult(content="未建立连接")
 
         response = await self.transport.send_request(name, args)
+        io_error = response.get("io_error")
+        if io_error:
+            return FailedToolResult(content=io_error)
         result = response.get("result")
         if isinstance(result, dict) and "message" in result:
             return SuccessfulToolResult(content=str(result["message"]))

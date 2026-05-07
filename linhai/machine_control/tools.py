@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 from typing import TYPE_CHECKING, Dict, Optional, Union, Any
+from linhai.machine_control.process import ProcessIOError
 from linhai.tool.base import (
     ToolArgInfo,
     SuccessfulToolResult,
@@ -493,6 +494,8 @@ def register_machine_control_tools(machine_control: "MachineControl") -> ToolSet
         if proc is None:
             return FailedToolResult(content=f"进程不存在: {pid}")
         write_result = await proc.stdio_write(content, with_enter)
+        if isinstance(write_result, ProcessIOError):
+            return FailedToolResult(content=write_result.error)
         if not write_result.success:
             return FailedToolResult(content=write_result.error or "写入失败")
         return SuccessfulToolResult(content=write_result.message)
@@ -529,6 +532,8 @@ def register_machine_control_tools(machine_control: "MachineControl") -> ToolSet
         if proc is None:
             return FailedToolResult(content=f"进程不存在: {pid}")
         read_result = await proc.stdio_read(timeout)
+        if isinstance(read_result, ProcessIOError):
+            return FailedToolResult(content=read_result.error)
         if not read_result.success:
             return FailedToolResult(content=read_result.error or "读取失败")
         stdout_text = Text.from_ansi(
@@ -576,6 +581,8 @@ def register_machine_control_tools(machine_control: "MachineControl") -> ToolSet
         if proc is None:
             return FailedToolResult(content=f"进程不存在: {pid}")
         wait_result = await proc.wait(timeout)
+        if isinstance(wait_result, ProcessIOError):
+            return FailedToolResult(content=wait_result.error)
         if not wait_result.success:
             return FailedToolResult(content=wait_result.error or "等待失败")
         return SuccessfulToolResult(
@@ -614,6 +621,8 @@ def register_machine_control_tools(machine_control: "MachineControl") -> ToolSet
         if proc is None:
             return FailedToolResult(content=f"进程不存在: {pid}")
         kill_result = await proc.kill(graceful)
+        if isinstance(kill_result, ProcessIOError):
+            return FailedToolResult(content=kill_result.error)
         if not kill_result.success:
             return FailedToolResult(content=kill_result.error or "终止进程失败")
         return SuccessfulToolResult(content=kill_result.message or f"进程 {pid} 已终止")

@@ -6,6 +6,7 @@ import shlex
 from typing import TYPE_CHECKING
 
 from linhai.machine_control.process import (
+    ProcessIOError,
     ProcessKillResult,
     ProcessReadResult,
     ProcessWaitResult,
@@ -32,7 +33,9 @@ class BashProcess:
     def returncode(self) -> int | None:
         return None
 
-    async def stdio_write(self, content: str, with_enter: bool) -> ProcessWriteResult:
+    async def stdio_write(
+        self, content: str, with_enter: bool
+    ) -> ProcessWriteResult | ProcessIOError:
         text = content + ("\n" if with_enter else "")
         stdin_path = shlex.quote(f"{self._proc_dir}/stdin")
         cmd = f"printf '%s' {shlex.quote(text)} >> {stdin_path}"
@@ -41,7 +44,9 @@ class BashProcess:
             return ProcessWriteResult(pid=self._pid, success=False, error=stderr)
         return ProcessWriteResult(pid=self._pid, success=True)
 
-    async def stdio_read(self, wait_seconds: float) -> ProcessReadResult:
+    async def stdio_read(
+        self, wait_seconds: float
+    ) -> ProcessReadResult | ProcessIOError:
         stdout_path = shlex.quote(f"{self._proc_dir}/stdout")
         stderr_path = shlex.quote(f"{self._proc_dir}/stderr")
 
@@ -74,7 +79,7 @@ class BashProcess:
             stderr=stderr_data,
         )
 
-    async def wait(self, timeout: float) -> ProcessWaitResult:
+    async def wait(self, timeout: float) -> ProcessWaitResult | ProcessIOError:
         loop = asyncio.get_event_loop()
         deadline = loop.time() + timeout
         rc_path = shlex.quote(f"{self._proc_dir}/rc")
@@ -116,7 +121,7 @@ class BashProcess:
             f"echo DEAD; else echo ALIVE; fi; else echo DEAD; fi"
         )
 
-    async def kill(self, graceful: bool = True) -> ProcessKillResult:
+    async def kill(self, graceful: bool = True) -> ProcessKillResult | ProcessIOError:
         sig = "TERM" if graceful else "9"
         cmd = (
             f"kill -{sig} {self._pid} 2>/dev/null"

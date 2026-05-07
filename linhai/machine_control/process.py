@@ -47,6 +47,11 @@ class ProcessKillResult(ProcessResultBase):
     message: str = ""
 
 
+@dataclasses.dataclass
+class ProcessIOError:
+    error: str
+
+
 class Process(Protocol):
     @property
     def pid(self) -> str: ...
@@ -56,13 +61,17 @@ class Process(Protocol):
 
     async def stdio_write(
         self, content: str, with_enter: bool
-    ) -> ProcessWriteResult: ...
+    ) -> ProcessWriteResult | ProcessIOError: ...
 
-    async def stdio_read(self, wait_seconds: float) -> ProcessReadResult: ...
+    async def stdio_read(
+        self, wait_seconds: float
+    ) -> ProcessReadResult | ProcessIOError: ...
 
-    async def wait(self, timeout: float) -> ProcessWaitResult: ...
+    async def wait(self, timeout: float) -> ProcessWaitResult | ProcessIOError: ...
 
-    async def kill(self, graceful: bool = True) -> ProcessKillResult: ...
+    async def kill(
+        self, graceful: bool = True
+    ) -> ProcessKillResult | ProcessIOError: ...
 
 
 @dataclasses.dataclass

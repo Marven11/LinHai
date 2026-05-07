@@ -6,7 +6,7 @@ from typing import Dict, Any, Optional
 from linhai.registry import Registry
 from linhai.utils.common import UiNotice
 from linhai.utils.pulse_encoding import PulseDecoder, PulseEncoder
-from linhai.machine_control.process import Process
+from linhai.machine_control.process import Process, ProcessIOError
 
 
 class JsonRpcResponse(Dict[str, Any]):
@@ -67,6 +67,8 @@ class TrojanTransport:
                 write_result = await self._process.stdio_write(
                     fraction.decode(), with_enter=False
                 )
+                if isinstance(write_result, ProcessIOError):
+                    raise ConnectionError(f"IO错误: {write_result.error}")
                 if not write_result.success:
                     raise ConnectionError(f"写入失败: {write_result.error}")
 
@@ -87,18 +89,18 @@ class TrojanTransport:
         result = results[0]
         if isinstance(result, (ConnectionError, MachineToolTimeoutError)):
             self._connection_valid = False
-            raise result
+            return {"io_error": str(result)}
         if isinstance(result, BaseException):
-            raise result
+            return {"io_error": str(result)}
         response = dict(result)
         if "error" in response:
             error_content = response["error"]
             if isinstance(error_content, dict) and "message" in error_content:
-                raise RuntimeError(error_content["message"])
-            raise RuntimeError(str(error_content))
+                return {"io_error": error_content["message"]}
+            return {"io_error": str(error_content)}
         resp_result = response.get("result")
         if resp_result is None:
-            raise RuntimeError("响应中缺少result字段")
+            return {"io_error": "响应中缺少result字段"}
         return response
 
     async def _read_responses(self) -> None:
@@ -113,6 +115,10 @@ class TrojanTransport:
                             future.set_result(response)
             await asyncio.sleep(0.1)
             result = await self._process.stdio_read(1.0)
+            if isinstance(result, ProcessIOError):
+                self._connection_valid = False
+                self._fail_pending_futures()
+                return
             if not result.success or (
                 not result.stdout and result.exit_note is not None
             ):

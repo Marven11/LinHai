@@ -10,7 +10,7 @@ from textual.app import ComposeResult
 from textual.containers import Horizontal, VerticalScroll
 from textual.widgets import Button, Static
 
-from linhai.machine_control.process import ProcessCreateInfo
+from linhai.machine_control.process import ProcessCreateInfo, ProcessIOError
 from linhai.registry import Registry
 from linhai.utils.i18n import t
 
@@ -188,6 +188,16 @@ class ProcessTabWidget(Static):
     @work(exclusive=True)
     async def _check_process_status(self, pid: str, info: ProcessCreateInfo) -> None:
         result = await info.process.wait(timeout=0.01)
+        if isinstance(result, ProcessIOError):
+            entry = self._entries.get(pid)
+            if entry is not None:
+                _, old_rc, _ = entry
+                if old_rc is None:
+                    self._entries[pid] = (info, -1, time.monotonic())
+            row = self._rows.get(pid)
+            if row is not None:
+                row.update_status(-1)
+            return
         if result.success:
             entry = self._entries.get(pid)
             if entry is not None:

@@ -6,6 +6,7 @@ import select
 from typing import Awaitable, Callable
 
 from linhai.machine_control.process import (
+    ProcessIOError,
     ProcessKillResult,
     ProcessReadResult,
     ProcessWaitResult,
@@ -97,19 +98,25 @@ class LocalProcess:
         self._stderr_buffer = b""
         return stdout, stderr
 
-    async def stdio_write(self, content: str, with_enter: bool) -> ProcessWriteResult:
+    async def stdio_write(
+        self, content: str, with_enter: bool
+    ) -> ProcessWriteResult | ProcessIOError:
         pid = self.pid
         if self._process.stdin is None:
             return ProcessWriteResult(
                 pid=pid, success=False, error=f"进程 {pid} 没有标准输入"
             )
+        if self._process.stdin.is_closing():
+            return ProcessIOError(error=f"进程 {pid} 标准输入已关闭")
         if with_enter:
             content = content + "\n"
         self._process.stdin.write(content.encode("utf-8"))
         await self._process.stdin.drain()
         return ProcessWriteResult(pid=pid, success=True, message="写入成功")
 
-    async def stdio_read(self, wait_seconds: float) -> ProcessReadResult:
+    async def stdio_read(
+        self, wait_seconds: float
+    ) -> ProcessReadResult | ProcessIOError:
         pid = self.pid
         await asyncio.sleep(wait_seconds)
         stdout_data = self._stdout_buffer
@@ -127,7 +134,7 @@ class LocalProcess:
             exit_note=exit_note,
         )
 
-    async def wait(self, timeout: float) -> ProcessWaitResult:
+    async def wait(self, timeout: float) -> ProcessWaitResult | ProcessIOError:
         pid = self.pid
         if timeout > 3600:
             return ProcessWaitResult(
@@ -172,7 +179,7 @@ class LocalProcess:
             stderr=stderr_data,
         )
 
-    async def kill(self, graceful: bool = True) -> ProcessKillResult:
+    async def kill(self, graceful: bool = True) -> ProcessKillResult | ProcessIOError:
         pid = self.pid
         if graceful:
             self._process.terminate()
@@ -247,8 +254,12 @@ class LocalPtyProcess:
         self._stdout_buffer = b""
         return stdout, b""
 
-    async def stdio_write(self, content: str, with_enter: bool) -> ProcessWriteResult:
+    async def stdio_write(
+        self, content: str, with_enter: bool
+    ) -> ProcessWriteResult | ProcessIOError:
         pid = self.pid
+        if self._master_fd < 0:
+            return ProcessIOError(error=f"进程 {pid} 终端已关闭")
         if with_enter:
             content = content + "\n"
         data = content.encode("utf-8")
@@ -262,7 +273,9 @@ class LocalPtyProcess:
             offset += written
         return ProcessWriteResult(pid=pid, success=True, message="写入成功")
 
-    async def stdio_read(self, wait_seconds: float) -> ProcessReadResult:
+    async def stdio_read(
+        self, wait_seconds: float
+    ) -> ProcessReadResult | ProcessIOError:
         pid = self.pid
         await asyncio.sleep(wait_seconds)
         stdout_data = self._stdout_buffer
@@ -278,7 +291,7 @@ class LocalPtyProcess:
             exit_note=exit_note,
         )
 
-    async def wait(self, timeout: float) -> ProcessWaitResult:
+    async def wait(self, timeout: float) -> ProcessWaitResult | ProcessIOError:
         pid = self.pid
         if timeout > 3600:
             return ProcessWaitResult(
@@ -327,7 +340,7 @@ class LocalPtyProcess:
             os.close(self._slave_fd)
             self._slave_fd = -1
 
-    async def kill(self, graceful: bool = True) -> ProcessKillResult:
+    async def kill(self, graceful: bool = True) -> ProcessKillResult | ProcessIOError:
         pid = self.pid
         if graceful:
             self._process.terminate()

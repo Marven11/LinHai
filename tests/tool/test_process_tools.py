@@ -9,6 +9,7 @@ from unittest.mock import AsyncMock, MagicMock, Mock, patch
 from linhai.base import ToolCallMessage
 from linhai.tool.base import ToolCallResultMessage
 from linhai.tool.base import SuccessfulToolResult, FailedToolResult
+from linhai.machine_control.process import ProcessIOError
 from linhai.machine_control.tools import register_machine_control_tools
 from linhai.machine_control import MachineControl
 from linhai.tool.main import ToolManager
@@ -126,6 +127,46 @@ class TestProcessTools(unittest.IsolatedAsyncioTestCase):
         self.assertIn("pty", signature.parameters)
         param = signature.parameters["pty"]
         self.assertEqual(param.default, False)
+
+    def _make_io_error_toolset(self, method_name: str):
+        mock_proc = AsyncMock()
+        getattr(mock_proc, method_name).return_value = ProcessIOError(
+            error="连接已失效"
+        )
+        mock_host = Mock()
+        mock_host.get_process.return_value = mock_proc
+        mock_mc = Mock()
+        mock_mc.machines = {"master_host": mock_host}
+        mock_mc.target_machine = "master_host"
+        return register_machine_control_tools(mock_mc)
+
+    async def test_stdio_write_io_error(self):
+        toolset = self._make_io_error_toolset("stdio_write")
+        tool_func = toolset.get_tool("process_stdio_write")
+        result = await tool_func(pid="123", content="hello", with_enter=True)
+        self.assertIsInstance(result, FailedToolResult)
+        self.assertIn("连接已失效", result.content)
+
+    async def test_stdio_read_io_error(self):
+        toolset = self._make_io_error_toolset("stdio_read")
+        tool_func = toolset.get_tool("process_stdio_read")
+        result = await tool_func(pid="123", timeout=1.0)
+        self.assertIsInstance(result, FailedToolResult)
+        self.assertIn("连接已失效", result.content)
+
+    async def test_wait_io_error(self):
+        toolset = self._make_io_error_toolset("wait")
+        tool_func = toolset.get_tool("process_wait")
+        result = await tool_func(pid="123", timeout=1.0)
+        self.assertIsInstance(result, FailedToolResult)
+        self.assertIn("连接已失效", result.content)
+
+    async def test_kill_io_error(self):
+        toolset = self._make_io_error_toolset("kill")
+        tool_func = toolset.get_tool("process_kill")
+        result = await tool_func(pid="123")
+        self.assertIsInstance(result, FailedToolResult)
+        self.assertIn("连接已失效", result.content)
 
 
 if __name__ == "__main__":

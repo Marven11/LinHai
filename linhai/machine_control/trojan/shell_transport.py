@@ -8,7 +8,7 @@ from typing import Optional
 from linhai.machine_control.master_host.process import LocalPtyProcess
 from linhai.registry import Registry
 from linhai.utils.common import UiNotice
-from linhai.machine_control.process import Process
+from linhai.machine_control.process import Process, ProcessIOError
 from rich.text import Text
 
 
@@ -50,6 +50,8 @@ async def _execute_in_shell(
     )
 
     write_result = await process.stdio_write(full_command, with_enter=True)
+    if isinstance(write_result, ProcessIOError):
+        return 1, "", f"IO错误: {write_result.error}"
     if not write_result.success:
         return 1, "", f"写入命令失败: {write_result.error}"
 
@@ -58,6 +60,8 @@ async def _execute_in_shell(
 
     while asyncio.get_event_loop().time() - start_time < timeout:
         read_result = await process.stdio_read(wait_seconds=1.0)
+        if isinstance(read_result, ProcessIOError):
+            break
         if not read_result.success:
             break
         decoded = read_result.stdout.decode("utf-8", errors="replace")
@@ -197,7 +201,7 @@ async def setup_trojan_in_shell(
     marker_hex = uuid.uuid4().hex[:4]
     start_command = f"python3 {remote_path} {marker_hex}"
     write_result = await process.stdio_write(start_command, with_enter=True)
-    if not write_result.success:
+    if isinstance(write_result, ProcessIOError) or not write_result.success:
         await registry.send_if_exists(
             "ui_log",
             UiNotice(level="ERROR", content="启动远程控制程序失败"),
