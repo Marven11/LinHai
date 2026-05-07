@@ -29,7 +29,7 @@ class CommandCallback:
             if parsed_input.command == "status":
                 return await self._handle_status_command()
             if parsed_input.command == "save":
-                return await self._handle_save_command(parsed_input)
+                return await self._handle_save_command()
 
         return None
 
@@ -77,7 +77,7 @@ class CommandCallback:
             "/queue <消息> - 将消息加入排队列表,在下次回答后处理\n"
             "\n"
             "/status - 显示当前状态信息\n"
-            "/save [名称] - 保存当前会话状态\n"
+            "/save - 保存当前会话状态\n"
             "/help - 显示此帮助信息\n"
             "/quit, /exit - 退出程序\n"
             "@<模型名> - 切换底层LLM模型\n"
@@ -135,15 +135,14 @@ class CommandCallback:
 
         return True
 
-    async def _handle_save_command(self, parsed_input) -> bool:
+    async def _handle_save_command(self) -> bool:
         from pathlib import Path
         from linhai.agent.conversation_save import save_conversation
 
-        save_name = parsed_input.arguments[0] if parsed_input.arguments else "default"
         conversation_folder = self.registry.get_member_typechecked(
             "conversation_folder", Path
         )
-        filepath = conversation_folder / "saves" / f"{save_name}.json"
+        filepath = conversation_folder / "saved.json"
 
         await self._show_runtime_message(
             "INFO", f"Saving conversation to {filepath}..."

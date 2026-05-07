@@ -1,6 +1,8 @@
+import argparse
 import asyncio
+from pathlib import Path
 import unittest
-from unittest.mock import AsyncMock, Mock, MagicMock
+from unittest.mock import AsyncMock, Mock, MagicMock, patch
 
 from linhai.agent.command_callback import CommandCallback
 from linhai.agent.user_message_handler import ParsedUserMessage
@@ -134,6 +136,90 @@ class TestCommandCallback(unittest.IsolatedAsyncioTestCase):
 
         self.assertTrue(result)
         mock_agent.message_processor.add_new_message.assert_called_once()
+
+    async def test_save_command_uses_saved_json(self):
+        import tempfile
+        from pathlib import Path
+        from unittest.mock import patch
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            conversation_folder = Path(tmpdir)
+            self.registry.get_member_typechecked.return_value = conversation_folder
+            self.registry.send_if_exists = AsyncMock()
+
+            with patch(
+                "linhai.agent.conversation_save.save_conversation",
+                new_callable=AsyncMock,
+            ) as mock_save:
+                parsed = make_parsed("/save")
+                result = await self.callback(parsed)
+
+                self.assertFalse(result)
+                expected_path = conversation_folder / "saved.json"
+                mock_save.assert_called_once_with(self.registry, expected_path)
+
+    async def test_save_command_no_saves_subdirectory(self):
+        import tempfile
+        from pathlib import Path
+        from unittest.mock import patch
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            conversation_folder = Path(tmpdir)
+            self.registry.get_member_typechecked.return_value = conversation_folder
+            self.registry.send_if_exists = AsyncMock()
+
+            with patch(
+                "linhai.agent.conversation_save.save_conversation",
+                new_callable=AsyncMock,
+            ):
+                parsed = make_parsed("/save")
+                await self.callback(parsed)
+
+                self.assertFalse((conversation_folder / "saves").exists())
+
+
+class TestRestoreConversationCli(unittest.TestCase):
+    def test_restore_conversation_resolves_path(self):
+        from linhai.main import main
+        import sys
+
+        with patch("sys.argv", ["linhai", "--restore-conversation", "test-uuid-123"]):
+            with patch("linhai.main.run") as mock_run:
+                with patch(
+                    "linhai.main.get_default_config_path",
+                    return_value=Path("/fake/config"),
+                ):
+                    mock_run.return_value = 0
+                    with patch("sys.exit"):
+                        main()
+
+        call_args = mock_run.call_args[0][0]
+        expected = (
+            Path.home()
+            / ".local"
+            / "share"
+            / "linhai"
+            / "conversation"
+            / "test-uuid-123"
+            / "saved.json"
+        )
+        self.assertEqual(call_args.restore_conversation, "test-uuid-123")
+
+    def test_restore_conversation_none_by_default(self):
+        from linhai.main import main
+
+        with patch("sys.argv", ["linhai"]):
+            with patch("linhai.main.run") as mock_run:
+                with patch(
+                    "linhai.main.get_default_config_path",
+                    return_value=Path("/fake/config"),
+                ):
+                    mock_run.return_value = 0
+                    with patch("sys.exit"):
+                        main()
+
+        call_args = mock_run.call_args[0][0]
+        self.assertIsNone(call_args.restore_conversation)
 
 
 if __name__ == "__main__":

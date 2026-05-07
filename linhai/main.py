@@ -94,7 +94,19 @@ async def run(args):
         "llm_name": args.llm,
         "profile_name": args.profile,
         "git_worktree": args.git_worktree,
-        "restore_path": None,
+        "restore_path": (
+            (
+                Path.home()
+                / ".local"
+                / "share"
+                / "linhai"
+                / "conversation"
+                / args.restore_conversation
+                / "saved.json"
+            )
+            if args.restore_conversation
+            else None
+        ),
     }
     context = create_agent_build_context(
         registry=registry,
@@ -188,6 +200,12 @@ def main():
         "--git-worktree",
         action="store_true",
         help="在conversation目录中创建当前git项目的worktree作为工作目录",
+    )
+    parser.add_argument(
+        "--restore-conversation",
+        type=str,
+        default=None,
+        help="指定conversation的UUID以恢复saved.json",
     )
 
     subparsers = parser.add_subparsers(dest="command", help="可用命令")
