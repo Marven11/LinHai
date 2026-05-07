@@ -160,6 +160,15 @@ class AgentSession:
 
         notification_details = compute_notification_details(mp.notification_messages)
 
+        from linhai.base import SystemMessage
+        from linhai.context_statistics import estimate_message_tokens
+
+        system_prompt_tokens: int | None = None
+        for msg in pinned_messages:
+            if isinstance(msg, SystemMessage):
+                system_prompt_tokens = estimate_message_tokens(msg)
+                break
+
         stats = compute_context_statistics(
             messages=messages,
             pinned_messages=pinned_messages,
@@ -174,6 +183,7 @@ class AgentSession:
             generation_count=generation_count,
             current_token_usage=current_token_usage,
             cumulative_token_usage=cumulative_token_usage,
+            system_prompt_tokens=system_prompt_tokens,
         )
         self._data["context"] = stats
 

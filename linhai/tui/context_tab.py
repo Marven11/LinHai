@@ -9,6 +9,7 @@ from linhai.context_statistics import (
     LongestMessageInfo,
     compute_context_statistics,
     compute_notification_details,
+    estimate_message_tokens,
 )
 
 from linhai.agent.message import AgentMessage
@@ -18,6 +19,7 @@ from linhai.agent.orchestration import (
     get_cleanable_large_messages,
 )
 from linhai.agent import Agent
+from linhai.base import SystemMessage
 from linhai.token_manager import TokenManager
 
 from linhai.registry import Registry
@@ -205,14 +207,20 @@ class ContextTabWidget(Static):
         if pinned["count"] == 0:
             stats_text.update(t({"zh_CN": "无置顶消息", "en": "No pinned messages"}))
             return
-        stats_text.update(
+        system_prompt_tokens = stats.get("system_prompt_tokens")
+        lines = [
             t({"zh_CN": "总消息数", "en": "Total messages"})
             + ": "
-            + str(pinned["count"])
-            + "\n"
-            + t({"zh_CN": "平均长度", "en": "Average length"})
-            + f": {pinned['avg_tokens']:.1f} token"
-        )
+            + str(pinned["count"]),
+            t({"zh_CN": "平均长度", "en": "Average length"})
+            + f": {pinned['avg_tokens']:.1f} token",
+        ]
+        if system_prompt_tokens is not None:
+            lines.append(
+                t({"zh_CN": "System Prompt", "en": "System Prompt"})
+                + f": {system_prompt_tokens} token"
+            )
+        stats_text.update("\n".join(lines))
 
     def _update_notification_message_statistics(self, stats: ContextStatistics) -> None:
         notif = stats["notification_messages"]
@@ -372,6 +380,12 @@ class ContextTabWidget(Static):
             agent_message.notification_messages
         )
 
+        system_prompt_tokens: int | None = None
+        for msg in pinned_messages:
+            if isinstance(msg, SystemMessage):
+                system_prompt_tokens = estimate_message_tokens(msg)
+                break
+
         stats = compute_context_statistics(
             messages=messages,
             pinned_messages=pinned_messages,
@@ -386,6 +400,7 @@ class ContextTabWidget(Static):
             generation_count=generation_count,
             current_token_usage=current_token_usage,
             cumulative_token_usage=cumulative_token_usage,
+            system_prompt_tokens=system_prompt_tokens,
         )
 
         self._update_cumulative_token_usage(stats)

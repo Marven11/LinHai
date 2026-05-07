@@ -24,6 +24,7 @@ def _build_context_statistics(
     cumulative_input_tokens=None,
     cumulative_output_tokens=None,
     cumulative_cache_miss_count=None,
+    system_prompt_tokens=None,
     large_message_count=0,
     cleanable_large_message_count=0,
     cleanable_large_message_tokens=0,
@@ -74,6 +75,7 @@ def _build_context_statistics(
         cumulative_input_tokens=cumulative_input_tokens,
         cumulative_output_tokens=cumulative_output_tokens,
         cumulative_cache_miss_count=cumulative_cache_miss_count,
+        system_prompt_tokens=system_prompt_tokens,
     )
 
 
@@ -600,6 +602,24 @@ class TestPinnedAndNotificationStats(unittest.TestCase):
         self.assertNotIn("消息平均Token数", text_arg)
         self.assertNotIn(t({"zh_CN": "最长消息", "en": "Longest message"}), text_arg)
         self.assertNotIn("大消息", text_arg)
+        self.assertNotIn("System Prompt", text_arg)
+
+    def test_pinned_with_system_message(self):
+        from linhai.base import SystemMessage, UserMessage
+        from unittest.mock import MagicMock
+
+        registry = Registry()
+        mock_system = MagicMock(spec=SystemMessage)
+        mock_system.get_content.return_value = "test system prompt content"
+        pinned = [mock_system, UserMessage(message="用户指令")]
+        widget, _, mock_pinned_text, _, _ = self._create_widget_with_mocks(
+            pinned_messages=pinned
+        )
+        widget.update_display()
+
+        text_arg = mock_pinned_text.update.call_args[0][0]
+        self.assertIn("System Prompt", text_arg)
+        self.assertIn("token", text_arg)
 
     def test_notification_with_messages(self):
         from linhai.base import UserMessage
