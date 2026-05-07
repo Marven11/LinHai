@@ -473,6 +473,7 @@ class TestToolsetsConfig(unittest.TestCase):
             "llm",
             "context_cleaning",
             "mcp",
+            "web_search",
         }
         self.assertEqual(set(AVAILABLE_TOOLSETS), expected)
 

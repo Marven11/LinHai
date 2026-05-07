@@ -1,11 +1,9 @@
 """通用工具模块，包含不与特定机器相关的工具。"""
 
-from datetime import datetime
-import asyncio
 import shutil
 import subprocess
 import tempfile
-from typing import Optional, TypedDict, List, Dict
+from typing import Optional
 
 import quickjs
 
@@ -16,13 +14,10 @@ from bs4 import BeautifulSoup
 from linhai.tool.base import (
     utils_tools,
     ToolArgInfo,
-    ToolSet,
     SuccessfulToolResult,
     FailedToolResult,
     ToolResult,
 )
-from linhai.registry import Registry
-from linhai.utils.common import generate_id
 from linhai.utils.i18n import t
 
 
@@ -198,113 +193,6 @@ markdown内容如下
 
     except (OSError, subprocess.SubprocessError) as e:
         return FailedToolResult(content=f"转换失败: {str(e)}")
-
-
-@utils_tools.register_tool(
-    name="search_web",
-    desc=t(
-        {
-            "zh_CN": "使用DuckDuckGo进行网页搜索并返回格式化结果",
-            "en": "Search the web using DuckDuckGo and return formatted results",
-        }
-    ),
-    args={
-        "query": ToolArgInfo(
-            desc=t({"zh_CN": "搜索查询", "en": "Search query"}), type="str"
-        ),
-        "max_results": ToolArgInfo(
-            desc=t(
-                {
-                    "zh_CN": "最大结果数量（默认5）",
-                    "en": "Maximum number of results (default 5)",
-                }
-            ),
-            type="int",
-        ),
-    },
-    required_args=["query"],
-)
-async def search_web(query: str, max_results: int = 5) -> ToolResult:
-    """
-    搜索DuckDuckGo并返回格式化的搜索结果
-    """
-    import urllib.parse
-
-    url = "https://html.duckduckgo.com/html"
-    headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
-    }
-    data = {
-        "q": query,
-        "b": "",
-        "kl": "",
-    }
-
-    try:
-        async with httpx.AsyncClient() as client:
-            response = await client.post(url, data=data, headers=headers, timeout=30.0)
-            response.raise_for_status()
-
-            soup = BeautifulSoup(response.text, "html.parser")
-            if not soup:
-                return FailedToolResult(content="解析HTML响应失败")
-
-            results = []
-            for result in soup.select(".result"):
-                title_elem = result.select_one(".result__title")
-                if not title_elem:
-                    continue
-
-                link_elem = title_elem.find("a")
-                if not link_elem:
-                    continue
-
-                title = link_elem.get_text(strip=True)
-                link = link_elem.get("href", "")
-
-                if link and "y.js" in link:
-                    continue
-
-                if link and str(link).startswith("//duckduckgo.com/l/?uddg="):
-                    link = urllib.parse.unquote(
-                        str(link).split("uddg=")[1].split("&")[0]
-                    )
-
-                snippet_elem = result.select_one(".result__snippet")
-                snippet = snippet_elem.get_text(strip=True) if snippet_elem else ""
-
-                results.append(
-                    {
-                        "title": title,
-                        "link": link,
-                        "snippet": snippet,
-                        "position": len(results) + 1,
-                    }
-                )
-
-                if len(results) >= max_results:
-                    break
-
-            if not results:
-                return FailedToolResult(
-                    content="未找到相关搜索结果。可能是由于DuckDuckGo的机器人检测或查询无匹配结果。请尝试重新表述搜索或稍后重试。"
-                )
-
-            output = []
-            output.append(f"找到 {len(results)} 个搜索结果：\n")
-
-            for result in results:
-                output.append(f"{result['position']}. {result['title']}")
-                output.append(f"   URL: {result['link']}")
-                output.append(f"   摘要: {result['snippet']}")
-                output.append("")
-
-            return SuccessfulToolResult(content="\n".join(output))
-
-    except httpx.RequestError as e:
-        return FailedToolResult(content=f"搜索请求失败: {str(e)}")
-    except (ConnectionError, TimeoutError, OSError) as e:
-        return FailedToolResult(content=f"搜索过程中发生错误: {str(e)}")
 
 
 @utils_tools.register_tool(

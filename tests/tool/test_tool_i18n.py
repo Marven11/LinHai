@@ -10,6 +10,13 @@ def _reload_general():
     return mod.utils_tools
 
 
+def _reload_search():
+    import linhai.tool.search as mod
+
+    importlib.reload(mod)
+    return mod.create_web_search_toolset(None)
+
+
 def _reload_mcp_connector():
     import linhai.tool.mcp_connector as mod
     import linhai.registry
@@ -33,16 +40,16 @@ class TestGeneralToolI18n(unittest.TestCase):
         self.assertIn("Fetch", tools["fetch_webpage"]["desc"])
 
     @patch("linhai.utils.i18n.locale.getlocale")
-    def test_search_web_desc_zh_cn(self, mock_getlocale):
+    def test_web_search_desc_zh_cn(self, mock_getlocale):
         mock_getlocale.return_value = ("zh_CN", "UTF-8")
-        tools = _reload_general().tools
-        self.assertIn("搜索", tools["search_web"]["desc"])
+        tools = _reload_search().tools
+        self.assertIn("搜索", tools["web_search"]["desc"])
 
     @patch("linhai.utils.i18n.locale.getlocale")
-    def test_search_web_desc_en(self, mock_getlocale):
+    def test_web_search_desc_en(self, mock_getlocale):
         mock_getlocale.return_value = ("en_US", "UTF-8")
-        tools = _reload_general().tools
-        self.assertIn("Search", tools["search_web"]["desc"])
+        tools = _reload_search().tools
+        self.assertIn("Search", tools["web_search"]["desc"])
 
     @patch("linhai.utils.i18n.locale.getlocale")
     def test_quickjs_calculator_desc_zh_cn(self, mock_getlocale):

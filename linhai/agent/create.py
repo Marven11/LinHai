@@ -518,6 +518,11 @@ async def _create_tool_manager(
     tool_manager.register_toolset("utils", utils_tools)
     tool_manager.register_toolset("multimodal", multimodal_toolset)
 
+    from linhai.tool.search import create_web_search_toolset
+
+    web_search_toolset = create_web_search_toolset(context["tool_config"].web_search)
+    tool_manager.register_toolset("web_search", web_search_toolset)
+
     if context["secret_config_path"]:
         initialize_secret_system(
             registry=registry,

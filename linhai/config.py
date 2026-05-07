@@ -313,8 +313,22 @@ AVAILABLE_TOOLSETS = frozenset(
         "llm",
         "context_cleaning",
         "mcp",
+        "web_search",
     ]
 )
+
+
+class WebSearchConfig(BaseModel):
+    """网页搜索配置类型定义。"""
+
+    type: Literal["duckduckgo_http", "bigmodel"] = Field(
+        default="duckduckgo_http",
+        description="搜索引擎类型",
+    )
+    api_key: Optional[str] = Field(
+        default=None,
+        description="API密钥，bigmodel类型需要",
+    )
 
 
 class RemoteMachineConfig(BaseModel):
@@ -335,6 +349,10 @@ class RemoteMachineConfig(BaseModel):
 class ToolConfig(BaseModel):
     """工具配置类型定义。"""
 
+    web_search: Optional[WebSearchConfig] = Field(
+        default=None,
+        description="网页搜索配置，为None时使用默认duckduckgo_http",
+    )
     remote_machines: list[RemoteMachineConfig] = Field(
         default_factory=list, description="预设的远程机器配置列表"
     )
