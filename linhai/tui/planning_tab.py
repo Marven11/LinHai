@@ -9,7 +9,6 @@ from textual.widgets import Collapsible, Markdown, Static
 
 from linhai.registry import Registry
 
-
 FILE_NAMES = ["STATUS.md", "TODOLIST.md", "DESIGN.md"]
 
 FILE_IDS = {name: name.lower().replace(".", "-") for name in FILE_NAMES}
@@ -22,7 +21,6 @@ class PlanningTabWidget(Static):
     PlanningTabWidget {
         width: 100%;
         height: 100%;
-        background: #2E3440;
     }
 
     PlanningTabWidget VerticalScroll {

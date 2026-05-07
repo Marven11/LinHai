@@ -56,7 +56,6 @@ class TUIApp(App):
     CSS = """
     Screen {
         layout: vertical;
-        background: #2E3440;
     }
     TabbedContent {
         height: 1fr;
@@ -66,15 +65,12 @@ class TUIApp(App):
     }
     TabPane {
         height: 1fr;
-        background: #2E3440;
     }
     #chat-container {
         min-height: 60%;
-        background: #2E3440;
         scrollbar-size-vertical: 1;
     }
     #notes-container {
-        background: #2E3440;
         padding: 1;
         scrollbar-size-vertical: 1;
     }

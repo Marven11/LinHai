@@ -45,7 +45,6 @@ class ContextTabWidget(Static):
     ContextTabWidget {
         width: 100%;
         height: 100%;
-        background: #2E3440;
     }
 
     ContextTabWidget VerticalScroll {

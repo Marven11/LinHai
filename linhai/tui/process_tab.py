@@ -114,7 +114,6 @@ class ProcessTabWidget(Static):
     ProcessTabWidget {
         width: 100%;
         height: 100%;
-        background: #2E3440;
     }
     ProcessTabWidget VerticalScroll {
         scrollbar-size-vertical: 1;

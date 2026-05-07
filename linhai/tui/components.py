@@ -41,7 +41,6 @@ def _syntax_or_text(content: str, lexer: str, theme: str | None) -> Syntax | Tex
             content,
             lexer=lexer,
             theme=theme,
-            background_color="#2E3440",
             word_wrap=True,
         )
     return Text(content)
