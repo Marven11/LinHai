@@ -34,7 +34,7 @@ async def _disable_pty_echo(process: Process) -> None:
 
 
 async def _execute_in_shell(
-    process: Process, command: str, timeout: float = 10.0
+    process: Process, command: str, timeout: float = 30.0
 ) -> tuple[int, str, str]:
     marker_hex = uuid.uuid4().hex[:4]
     marker_open = f"<linhai_cmd_{marker_hex}>"
