@@ -222,10 +222,14 @@ class LocalPtyProcess:
 
     async def _background_reader(self) -> None:
         while True:
-            readable, _, _ = select.select([self._master_fd], [], [], 0.5)
+            readable, _, _ = await asyncio.to_thread(
+                select.select, [self._master_fd], [], [], 0.5
+            )
             if not readable:
                 if self._process.returncode is not None:
-                    readable, _, _ = select.select([self._master_fd], [], [], 0.1)
+                    readable, _, _ = await asyncio.to_thread(
+                        select.select, [self._master_fd], [], [], 0.1
+                    )
                     if readable:
                         chunk = os.read(self._master_fd, 65536)
                         if chunk:
