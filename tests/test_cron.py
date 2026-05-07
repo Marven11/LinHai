@@ -1,5 +1,7 @@
 import unittest
 import asyncio
+import tempfile
+from pathlib import Path
 from unittest.mock import Mock, AsyncMock, patch
 
 from linhai.cron import CronPlugin, CronDiffMessage, _format_result, parse_cron_arg
@@ -12,7 +14,7 @@ class TestCronDiffMessage(unittest.TestCase):
         msg = CronDiffMessage(
             cron_expression="* * * * *",
             command="curl http://example.com/feed",
-            result="stdout:\n\nhello\n\nstderr:\n\n\n\npid:\n\n123",
+            result="hello",
         )
         self.assertEqual(msg.cron_expression, "* * * * *")
         self.assertEqual(msg.command, "curl http://example.com/feed")
@@ -46,13 +48,14 @@ class TestCronDiffMessage(unittest.TestCase):
 class TestFormatResult(unittest.TestCase):
 
     def test_format(self):
-        result = _format_result("hello out", "hello err", 42)
-        self.assertIn("stdout:", result)
+        result = _format_result("hello out", 0)
         self.assertIn("hello out", result)
-        self.assertIn("stderr:", result)
-        self.assertIn("hello err", result)
-        self.assertIn("pid:", result)
-        self.assertIn("42", result)
+        self.assertIn("returncode", result)
+        self.assertIn("0", result)
+
+    def test_format_empty(self):
+        result = _format_result("", 1)
+        self.assertIn("1", result)
 
 
 class TestParseCronArg(unittest.TestCase):
@@ -88,6 +91,9 @@ class TestCronPlugin(unittest.TestCase):
         self.agent = Mock()
         self.agent.message_processor = Mock()
         self.agent.message_processor.add_new_message = AsyncMock()
+        self.temp_dir = tempfile.mkdtemp()
+        self.conversation_folder = Path(self.temp_dir)
+        (self.conversation_folder / "cron").mkdir(exist_ok=True)
 
         def get_member_typechecked_side_effect(name, cls):
             if name == "task_supervisor":
@@ -96,17 +102,24 @@ class TestCronPlugin(unittest.TestCase):
                 return self.state_machine
             if name == "agent":
                 return self.agent
+            if name == "conversation_folder":
+                return self.conversation_folder
             return None
 
         self.registry.get_member_typechecked = Mock(
             side_effect=get_member_typechecked_side_effect
         )
 
+    def tearDown(self):
+        import shutil
+
+        shutil.rmtree(self.temp_dir, ignore_errors=True)
+
     def test_initialization(self):
         plugin = CronPlugin(self.registry, "* * * * *", "echo hello")
         self.assertEqual(plugin.cron_expression, "* * * * *")
         self.assertEqual(plugin.command, "echo hello")
-        self.assertIsNone(plugin._last_result)
+        self.assertIsNone(plugin._read_last_result())
 
     def test_register(self):
         plugin = CronPlugin(self.registry, "* * * * *", "echo hello")
@@ -124,25 +137,31 @@ class TestCronPlugin(unittest.TestCase):
 
     def test_run_command_with_timeout_success(self):
         plugin = CronPlugin(self.registry, "* * * * *", "echo hello")
-        stdout, stderr, pid = asyncio.run(plugin._run_command_with_timeout(10))
+        stdout, returncode = asyncio.run(plugin._run_command_with_timeout(10))
         self.assertIn("hello", stdout)
-        self.assertEqual(stderr, "")
-        self.assertIsInstance(pid, int)
+        self.assertEqual(returncode, 0)
 
     def test_run_command_with_timeout_timeout(self):
         plugin = CronPlugin(self.registry, "* * * * *", "sleep 60")
-        stdout, stderr, pid = asyncio.run(plugin._run_command_with_timeout(0.5))
-        self.assertIsInstance(pid, int)
+        stdout, returncode = asyncio.run(plugin._run_command_with_timeout(0.5))
+        self.assertEqual(returncode, -9)
+
+    def test_save_and_read_result(self):
+        plugin = CronPlugin(self.registry, "* * * * *", "echo hello")
+        self.assertIsNone(plugin._read_last_result())
+        plugin._save_result("test content")
+        self.assertEqual(plugin._read_last_result(), "test content")
 
     def test_run_loop_sends_diff_on_change(self):
         plugin = CronPlugin(self.registry, "* * * * *", "echo hello")
-        plugin._last_result = "old result"
+        plugin._save_result("old result")
 
         with patch.object(plugin, "_run_command_with_timeout") as mock_run:
-            mock_run.return_value = ("new stdout", "new stderr", 123)
+            mock_run.return_value = ("new stdout", 0)
 
             async def run_one_iteration():
                 from linhai.cron import _format_result
+                import difflib
 
                 from unittest.mock import patch as async_patch
 
@@ -156,25 +175,35 @@ class TestCronPlugin(unittest.TestCase):
                     ]
                     mock_croniter.return_value = mock_cron
 
-                    stdout, stderr, pid = await plugin._run_command_with_timeout(
+                    stdout, returncode = await plugin._run_command_with_timeout(
                         timeout=3600
                     )
-                    current_result = _format_result(stdout, stderr, pid)
-                    if (
-                        plugin._last_result is not None
-                        and current_result != plugin._last_result
-                    ):
+                    current_result = _format_result(stdout, returncode)
+                    last_result = plugin._read_last_result()
+                    if last_result is not None and current_result != last_result:
+                        diff_lines = list(
+                            difflib.unified_diff(
+                                last_result.splitlines(keepends=True),
+                                current_result.splitlines(keepends=True),
+                                fromfile="previous",
+                                tofile="current",
+                            )
+                        )
+                        diff_text = "".join(diff_lines)
                         msg = CronDiffMessage(
                             cron_expression=plugin.cron_expression,
                             command=plugin.command,
-                            result=current_result,
+                            result=diff_text,
                         )
                         await self.agent.message_processor.add_new_message(msg)
                         self.state_machine.interrupt_to_working()
-                    plugin._last_result = current_result
+                    plugin._save_result(current_result)
 
             asyncio.run(run_one_iteration())
             self.agent.message_processor.add_new_message.assert_called_once()
+            call_args = self.agent.message_processor.add_new_message.call_args[0][0]
+            self.assertIn("new stdout", call_args.result)
+            self.assertIn("-old result", call_args.result)
             self.state_machine.interrupt_to_working.assert_called_once()
 
     def test_run_loop_no_diff_no_message(self):
@@ -182,22 +211,20 @@ class TestCronPlugin(unittest.TestCase):
 
         from linhai.cron import _format_result
 
-        plugin._last_result = _format_result("hello\n", "", 0)
+        plugin._save_result(_format_result("hello\n", 0))
 
         with patch.object(plugin, "_run_command_with_timeout") as mock_run:
-            mock_run.return_value = ("hello\n", "", 0)
+            mock_run.return_value = ("hello\n", 0)
 
             async def run_check():
-                stdout, stderr, pid = await plugin._run_command_with_timeout(
+                stdout, returncode = await plugin._run_command_with_timeout(
                     timeout=3600
                 )
-                current_result = _format_result(stdout, stderr, pid)
-                if (
-                    plugin._last_result is not None
-                    and current_result != plugin._last_result
-                ):
+                current_result = _format_result(stdout, returncode)
+                last_result = plugin._read_last_result()
+                if last_result is not None and current_result != last_result:
                     self.agent.message_processor.add_new_message(Mock())
-                plugin._last_result = current_result
+                plugin._save_result(current_result)
 
             asyncio.run(run_check())
             self.agent.message_processor.add_new_message.assert_not_called()
@@ -206,25 +233,23 @@ class TestCronPlugin(unittest.TestCase):
         plugin = CronPlugin(self.registry, "* * * * *", "echo hello")
 
         with patch.object(plugin, "_run_command_with_timeout") as mock_run:
-            mock_run.return_value = ("hello", "", 123)
+            mock_run.return_value = ("hello", 0)
 
             async def run_check():
                 from linhai.cron import _format_result
 
-                stdout, stderr, pid = await plugin._run_command_with_timeout(
+                stdout, returncode = await plugin._run_command_with_timeout(
                     timeout=3600
                 )
-                current_result = _format_result(stdout, stderr, pid)
-                if (
-                    plugin._last_result is not None
-                    and current_result != plugin._last_result
-                ):
+                current_result = _format_result(stdout, returncode)
+                last_result = plugin._read_last_result()
+                if last_result is not None and current_result != last_result:
                     self.agent.message_processor.add_new_message(Mock())
-                plugin._last_result = current_result
+                plugin._save_result(current_result)
 
             asyncio.run(run_check())
             self.agent.message_processor.add_new_message.assert_not_called()
-            self.assertIsNotNone(plugin._last_result)
+            self.assertEqual(plugin._read_last_result(), _format_result("hello", 0))
 
 
 if __name__ == "__main__":

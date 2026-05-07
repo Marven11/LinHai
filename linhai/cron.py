@@ -1,6 +1,9 @@
 import asyncio
+import difflib
 import json
+import secrets
 from datetime import datetime
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 from croniter import croniter
@@ -52,8 +55,8 @@ class CronDiffMessage(Message):
         )
 
 
-def _format_result(stdout: str, stderr: str, pid: int) -> str:
-    return f"stdout:\n\n{stdout}\n\nstderr:\n\n{stderr}\n\npid:\n\n{pid}"
+def _format_result(stdout: str, returncode: int) -> str:
+    return f"returncode:\n\n{returncode}\n\nstdout:\n\n{stdout}"
 
 
 def parse_cron_arg(cron_arg: str) -> tuple[str, str]:
@@ -74,9 +77,24 @@ class CronPlugin:
         self.registry = registry
         self.cron_expression = cron_expression
         self.command = command
-        self._last_result: str | None = None
+        conversation_folder = registry.get_member_typechecked(
+            "conversation_folder", Path
+        )
+        cron_dir = conversation_folder / "cron"
+        cron_dir.mkdir(parents=True, exist_ok=True)
+        self._result_file = cron_dir / secrets.token_hex(8)
 
-    async def _run_command_with_timeout(self, timeout: float) -> tuple[str, str, int]:
+    def _read_last_result(self) -> str | None:
+        if self._result_file.exists():
+            content = self._result_file.read_text(encoding="utf-8")
+            if content:
+                return content
+        return None
+
+    def _save_result(self, content: str) -> None:
+        self._result_file.write_text(content, encoding="utf-8")
+
+    async def _run_command_with_timeout(self, timeout: float) -> tuple[str, int]:
         proc = await asyncio.create_subprocess_shell(
             self.command,
             stdout=asyncio.subprocess.PIPE,
@@ -85,13 +103,12 @@ class CronPlugin:
         communicate_task = asyncio.ensure_future(proc.communicate())
         done, _ = await asyncio.wait({communicate_task}, timeout=timeout)
         if communicate_task in done:
-            stdout_bytes, stderr_bytes = communicate_task.result()
+            stdout_bytes, _ = communicate_task.result()
         else:
             proc.kill()
-            stdout_bytes, stderr_bytes = await communicate_task
+            stdout_bytes, _ = await communicate_task
         stdout = stdout_bytes.decode("utf-8", errors="replace")
-        stderr = stderr_bytes.decode("utf-8", errors="replace")
-        return stdout, stderr, proc.pid
+        return stdout, proc.returncode if proc.returncode is not None else -9
 
     async def _run_loop(self) -> None:
         from linhai.agent import Agent as AgentType
@@ -109,15 +126,26 @@ class CronPlugin:
             next_time = cron.get_next(datetime)
             timeout = max((next_time - datetime.now()).total_seconds(), 1.0)
 
-            stdout, stderr, pid = await self._run_command_with_timeout(timeout)
-            current_result = _format_result(stdout, stderr, pid)
+            stdout, returncode = await self._run_command_with_timeout(timeout)
+            current_result = _format_result(stdout, returncode)
 
-            if self._last_result is not None and current_result != self._last_result:
+            last_result = self._read_last_result()
+            if last_result is not None and current_result != last_result:
+                diff_lines = list(
+                    difflib.unified_diff(
+                        last_result.splitlines(keepends=True),
+                        current_result.splitlines(keepends=True),
+                        fromfile="previous",
+                        tofile="current",
+                    )
+                )
+                diff_text = "".join(diff_lines)
+
                 if agent:
                     msg = CronDiffMessage(
                         cron_expression=self.cron_expression,
                         command=self.command,
-                        result=current_result,
+                        result=diff_text,
                     )
                     await agent.message_processor.add_new_message(msg)
                     state_machine = self.registry.get_member_typechecked(
@@ -125,7 +153,7 @@ class CronPlugin:
                     )
                     state_machine.interrupt_to_working()
 
-            self._last_result = current_result
+            self._save_result(current_result)
 
     async def before_agent_loop(self, _agent: "Agent") -> None:
         from linhai.task_supervisor import TaskSupervisor

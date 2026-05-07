@@ -24,11 +24,11 @@ def register_conversation_folder(registry: Registry) -> Path:
     conversation_dir = base_dir / conversation_id
     conversation_dir.mkdir(parents=True, exist_ok=True)
 
-    # 创建子目录
     (conversation_dir / "cleaned_messages").mkdir(exist_ok=True)
     (conversation_dir / "large_messages").mkdir(exist_ok=True)
     (conversation_dir / "long_toolcall").mkdir(exist_ok=True)
     (conversation_dir / "secret_intercepted").mkdir(exist_ok=True)
+    (conversation_dir / "cron").mkdir(exist_ok=True)
 
     registry.register_member("conversation_folder", conversation_dir)
     return conversation_dir
