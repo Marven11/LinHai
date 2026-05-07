@@ -2,61 +2,15 @@ from __future__ import annotations
 
 import asyncio
 import time
-from typing import TYPE_CHECKING, Optional, Literal, Union
+from typing import TYPE_CHECKING
 from linhai.agent import Agent
-from linhai.agent.lifecycle import AfterToolcallResult, Lifecycle
-from linhai.base import Message
-from linhai.agent.messages import RuntimeMessage
+from linhai.agent.lifecycle import Lifecycle
 from linhai.registry import Registry
-from linhai.utils.i18n import t
 
 from linhai.tool.base import FailedToolResult
 
 if TYPE_CHECKING:
     from .main import MachineControl
-
-
-class MachineControlPlugin:
-    """MachineControl的插件，用于添加当前机器提示。"""
-
-    def __init__(self, registry: Registry, machine_control: MachineControl):
-        self.registry = registry
-        self.machine_control = machine_control
-
-    async def before_message_generation(self):
-        """在消息生成前更新notification_message。"""
-        if len(self.machine_control.machines) <= 1:
-            return
-        agent = self.registry.get_member_typechecked("agent", Agent)
-        agent.message_processor.update_notification_message(
-            RuntimeMessage(
-                t(
-                    {
-                        "zh_CN": f"当前在{self.machine_control.target_machine}上",
-                        "en": f"Currently on {self.machine_control.target_machine}",
-                    }
-                )
-            ),
-            source="machine_control",
-            sort_value=0,
-        )
-
-    async def after_toolcall(
-        self,
-        tool_name: str,
-        tool_index: int,
-        status: Literal["skipped", "success", "failed"],
-        message: Message | None,
-        toolcall_arguments: dict,
-        with_secret: list[str] | None,
-        is_tool_failed_duplicated_error: bool,
-    ) -> AfterToolcallResult | None:
-        return None
-
-    def register(self, lifecycle: "Lifecycle"):
-        """注册插件回调。"""
-        lifecycle.before_message_generation.register(self.before_message_generation)
-        lifecycle.after_toolcall.register(self.after_toolcall)
 
 
 class MachineHeartbeatPlugin:

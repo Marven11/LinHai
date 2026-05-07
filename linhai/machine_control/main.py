@@ -12,7 +12,7 @@ from .protocol import HostControl
 from .master_host.master_host import MasterHostControl
 from .posix_shell.posix_shell_control import PosixShellControl
 from .bash_host.bash_host import BashHostControl
-from .plugin import MachineControlPlugin, MachineHeartbeatPlugin
+from .plugin import MachineHeartbeatPlugin
 from .process import Process, ProcessCreateInfo
 
 
@@ -462,8 +462,6 @@ class MachineControl:
 
     def register_plugin(self, lifecycle: "Lifecycle"):
         """注册插件到lifecycle。"""
-        plugin = MachineControlPlugin(self.registry, self)
-        plugin.register(lifecycle)
         heartbeat_plugin = MachineHeartbeatPlugin(self.registry, self)
         heartbeat_plugin.register(lifecycle)
         lifecycle.after_conversation_restore.register(self._after_conversation_restore)

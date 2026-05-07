@@ -45,6 +45,15 @@ def register_machine_control_tools(machine_control: "MachineControl") -> ToolSet
         return await machine_control.list_machines()
 
     @toolset.register_tool(
+        name="current_machine",
+        desc=t({"zh_CN": "返回当前机器名", "en": "Return the current machine name"}),
+        args={},
+        required_args=[],
+    )
+    async def current_machine_tool() -> SuccessfulToolResult:
+        return SuccessfulToolResult(content=machine_control.target_machine)
+
+    @toolset.register_tool(
         name="switch_machine",
         desc=t({"zh_CN": "切换到指定机器", "en": "Switch to a specified machine"}),
         args={

@@ -8,7 +8,6 @@ from linhai.machine_control.master_host.master_host import MasterHostControl
 from linhai.registry import Registry
 from linhai.tool.main import ToolManager
 from linhai.tool.base import ToolSet
-from linhai.machine_control.main import MachineControlPlugin
 from linhai.base import ToolCallMessage
 from linhai.machine_control.process import ProcessCreateResult, ProcessCreateInfo
 from linhai.utils.common import UiNotice
@@ -98,16 +97,16 @@ class TestMachineControl(unittest.IsolatedAsyncioTestCase):
         tool_names = list(toolset.tools.keys())
         self.assertIn("list_machines", tool_names)
         self.assertIn("switch_machine", tool_names)
+        self.assertIn("current_machine", tool_names)
         self.assertIn("transfer_file", tool_names)
 
     def test_register_plugin(self):
         """测试注册插件"""
         mock_lifecycle = Mock()
-        mock_lifecycle.before_message_generation.register = Mock()
+        mock_lifecycle.before_agent_loop.register = Mock()
         self.machine_control.register_plugin(mock_lifecycle)
-        mock_lifecycle.before_message_generation.register.assert_called_once()
-        # 检查是否被调用了一次，并且参数是 callable
-        call_args = mock_lifecycle.before_message_generation.register.call_args
+        mock_lifecycle.before_agent_loop.register.assert_called_once()
+        call_args = mock_lifecycle.before_agent_loop.register.call_args
         self.assertIsNotNone(call_args)
         self.assertEqual(len(call_args[0]), 1)
         self.assertTrue(callable(call_args[0][0]))
@@ -757,32 +756,32 @@ class TestListProcesses(unittest.TestCase):
         self.assertEqual(result[0]["status"], "running")
 
 
-class TestMachineControlPlugin(unittest.IsolatedAsyncioTestCase):
-    """MachineControlPlugin测试类"""
+class TestCurrentMachineTool(unittest.IsolatedAsyncioTestCase):
+    """current_machine工具测试类"""
 
     def setUp(self):
-        """测试前准备"""
         self.registry = Mock(spec=Registry)
-        self.machine_control = Mock(spec=MachineControl)
-        self.machine_control.target_machine = "master_host"
-        self.plugin = MachineControlPlugin(self.registry, self.machine_control)
+        self.machine_control = MachineControl(self.registry, remote_machines=[])
 
-    def test_initialization(self):
-        """测试插件初始化"""
-        self.assertEqual(self.plugin.registry, self.registry)
-        self.assertEqual(self.plugin.machine_control, self.machine_control)
+    async def test_current_machine_default(self):
+        from linhai.machine_control.tools import register_machine_control_tools
 
-    def test_register_method(self):
-        """测试插件的register方法是否正确注册回调"""
-        mock_lifecycle = Mock()
-        self.plugin.register(mock_lifecycle)
+        toolset = register_machine_control_tools(self.machine_control)
+        result = await toolset.get_tool("current_machine")()
+        self.assertEqual(result.content, "master_host")
 
-        mock_lifecycle.before_message_generation.register.assert_called_once_with(
-            self.plugin.before_message_generation
-        )
-        mock_lifecycle.after_toolcall.register.assert_called_once_with(
-            self.plugin.after_toolcall
-        )
+    async def test_current_machine_after_switch(self):
+        from linhai.machine_control.tools import register_machine_control_tools
+
+        mock_host = Mock()
+        mock_host.ping = AsyncMock(return_value=None)
+        self.machine_control.machines["remote"] = mock_host
+        self.machine_control.machine_descriptions["remote"] = "test"
+        await self.machine_control.switch_machine("remote")
+
+        toolset = register_machine_control_tools(self.machine_control)
+        result = await toolset.get_tool("current_machine")()
+        self.assertEqual(result.content, "remote")
 
 
 class TestToolResultFormat(unittest.IsolatedAsyncioTestCase):
