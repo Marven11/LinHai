@@ -400,8 +400,8 @@ class SecretInterceptorPlugin:
                 keys_str = ", ".join(matched_keys)
                 return_message = (
                     f"工具结果中包含以下secret键的内容: {keys_str}。"
-                    f"请将以上secret键添加到with_secret字段中以查看掩码后的结果。"
                     f"原始内容已保存到文件: {filepath}"
+                    f"你可以: 1. 带上合适的secret键重新调用工具 2. 带上合适的secret键查看原始内容文件"
                 )
                 return AfterToolcallResult(replacement=RuntimeMessage(return_message))
 
