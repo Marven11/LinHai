@@ -118,10 +118,9 @@ class TestStdioCommandCheckerPlugin(unittest.IsolatedAsyncioTestCase):
             with_secret=None,
             is_tool_failed_duplicated_error=False,
         )
-        self.assertIsNone(result)
-        mock_agent.message_processor.add_new_message.assert_called_once()
-        call_args = mock_agent.message_processor.add_new_message.call_args[0][0]
-        self.assertIn("connect_posix_shell_as_machine", call_args.message)
+        self.assertIsNotNone(result)
+        self.assertEqual(len(result.warnings), 1)
+        self.assertIn("connect_posix_shell_as_machine", result.warnings[0].message)
 
     async def test_time_window_suppresses_repeat(self):
         mock_agent = Mock()
@@ -142,8 +141,8 @@ class TestStdioCommandCheckerPlugin(unittest.IsolatedAsyncioTestCase):
             with_secret=None,
             is_tool_failed_duplicated_error=False,
         )
-        self.assertIsNone(result1)
-        self.assertEqual(mock_agent.message_processor.add_new_message.call_count, 1)
+        self.assertIsNotNone(result1)
+        self.assertEqual(len(result1.warnings), 1)
 
         result2 = await self.plugin.after_toolcall(
             tool_name="process_stdio_write",
@@ -159,7 +158,6 @@ class TestStdioCommandCheckerPlugin(unittest.IsolatedAsyncioTestCase):
             is_tool_failed_duplicated_error=False,
         )
         self.assertIsNone(result2)
-        self.assertEqual(mock_agent.message_processor.add_new_message.call_count, 1)
 
     def test_register_method(self):
         mock_lifecycle = Mock()

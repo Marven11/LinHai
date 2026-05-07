@@ -4,7 +4,6 @@ import re
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Literal, Union
 
-from linhai.agent import Agent
 from linhai.agent.lifecycle import AfterToolcallResult, Lifecycle
 from linhai.agent.messages import RuntimeMessage
 from linhai.registry import Registry
@@ -52,10 +51,12 @@ class WithSecretParameterPositionPlugin(Plugin):
             UiNotice(level="WARNING", content="检测到with_secret参数位置错误"),
         )
         return AfterToolcallResult(
-            replacement=RuntimeMessage(
-                "错误：with_secret参数应该在工具调用的顶层，与name、arguments平级，而不是在arguments内部！\n"
-                '正确格式：{"name": "tool_name", "with_secret": ["KEY"], "arguments": {...}}'
-            )
+            warnings=[
+                RuntimeMessage(
+                    "错误：with_secret参数应该在工具调用的顶层，与name、arguments平级，而不是在arguments内部！\n"
+                    '正确格式：{"name": "tool_name", "with_secret": ["KEY"], "arguments": {...}}'
+                )
+            ]
         )
 
     def register(self, lifecycle: "Lifecycle"):
@@ -203,6 +204,7 @@ class ProcessArgvCheckerPlugin(Plugin):
 
     def register(self, lifecycle):
         lifecycle.before_tool_call.register(self.before_tool_call)
+        lifecycle.after_toolcall.register(self.after_toolcall)
 
     async def before_tool_call(
         self,
@@ -226,24 +228,39 @@ class ProcessArgvCheckerPlugin(Plugin):
                         content=f"argv参数的第{i}个元素必须是字符串类型，但收到{type(arg).__name__}"
                     )
 
-            warnings = [
-                f"参数[{i}]: '{arg}' 包含可能的bash操作符"
-                for i, arg in enumerate(argv)
-                if any(p.search(arg) for p in self.BASH_OPERATOR_PATTERNS)
-            ]
+        return None
 
-            if warnings:
-                from linhai.agent import Agent
-                from linhai.agent.messages import RuntimeMessage
+    async def after_toolcall(
+        self,
+        tool_name: str,
+        tool_index: int,
+        status: str,
+        message,
+        toolcall_arguments: dict,
+        with_secret: list[str] | None,
+        is_tool_failed_duplicated_error: bool,
+    ) -> AfterToolcallResult | None:
+        _ = (tool_index, message, with_secret, is_tool_failed_duplicated_error)
+        if tool_name != "process_create":
+            return None
 
-                warning_msg = (
-                    "警告：process_create的argv参数中包含可能的bash语法操作符:"
-                    + repr(warnings)
-                    + "注意：这些操作符在直接执行进程时可能不会被解释，但如果执行shell可能会被解释。请确认参数安全性。"
-                )
-                agent = self.registry.get_member_typechecked("agent", Agent)
-                await agent.message_processor.add_new_message(
-                    RuntimeMessage(warning_msg)
-                )
+        argv = toolcall_arguments.get("argv")
+        if not argv or not isinstance(argv, list):
+            return None
+
+        warnings_list = [
+            f"参数[{i}]: '{arg}' 包含可能的bash操作符"
+            for i, arg in enumerate(argv)
+            if isinstance(arg, str)
+            and any(p.search(arg) for p in self.BASH_OPERATOR_PATTERNS)
+        ]
+
+        if warnings_list:
+            warning_msg = (
+                "警告：process_create的argv参数中包含可能的bash语法操作符:"
+                + repr(warnings_list)
+                + "注意：这些操作符在直接执行进程时可能不会被解释，但如果执行shell可能会被解释。请确认参数安全性。"
+            )
+            return AfterToolcallResult(warnings=[RuntimeMessage(warning_msg)])
 
         return None

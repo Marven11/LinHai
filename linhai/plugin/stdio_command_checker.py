@@ -1,6 +1,5 @@
 import os
 import time
-from linhai.agent import Agent
 from linhai.agent.messages import RuntimeMessage
 from linhai.agent.lifecycle import AfterToolcallResult, Lifecycle
 from linhai.registry import Registry
@@ -171,16 +170,16 @@ class StdioCommandCheckerPlugin(Plugin):
                 return None
 
         self._last_warning_time = time.time()
-        agent = self.registry.get_member_typechecked("agent", Agent)
-        await agent.message_processor.add_new_message(
-            RuntimeMessage(
-                "警告：检测到你通过process_stdio_write向进程发送了shell命令。"
-                "这会导致使用次优方式读写文件（例如滥用sed写入）并可能造成文件损坏。"
-                "请使用connect_posix_shell_as_machine工具将该shell进程连接为机器，"
-                "然后直接使用read_file、write_file、replace_file_content等工具操作文件。"
-            )
+        return AfterToolcallResult(
+            warnings=[
+                RuntimeMessage(
+                    "警告：检测到你通过process_stdio_write向进程发送了shell命令。"
+                    "这会导致使用次优方式读写文件（例如滥用sed写入）并可能造成文件损坏。"
+                    "请使用connect_posix_shell_as_machine工具将该shell进程连接为机器，"
+                    "然后直接使用read_file、write_file、replace_file_content等工具操作文件。"
+                )
+            ]
         )
-        return None
 
 
 def _is_shell_command(content: str) -> bool:

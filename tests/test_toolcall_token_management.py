@@ -331,4 +331,5 @@ class TestToolcallTokenManagementTDD(unittest.IsolatedAsyncioTestCase):
             tool_call, 1, tool_result
         )
 
-        self.assertEqual(result, replacement_message)
+        self.assertIsInstance(result, ToolCallResultMessage)
+        self.assertIn("替换消息", result.result.content)

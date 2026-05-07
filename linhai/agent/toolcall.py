@@ -322,7 +322,16 @@ class AgentToolcall:
         )
         if callback_result is not None:
             if callback_result.replacement is not None:
-                replaced_tool_result = callback_result.replacement
+                replacement_content = callback_result.replacement.get_content()
+                if (
+                    isinstance(replaced_tool_result, ToolCallResultMessage)
+                    and replacement_content is not None
+                ):
+                    replaced_tool_result.result = SuccessfulToolResult(
+                        content=replacement_content
+                    )
+                else:
+                    replaced_tool_result = callback_result.replacement
             self._pending_warnings.extend(callback_result.warnings)
 
         return replaced_tool_result
@@ -457,6 +466,8 @@ class AgentToolcall:
             should_early_return = await self._call_openai_tool(tool_call, tc["id"], i)
             if should_early_return:
                 self.early_return = True
+
+        await self.flush_warnings()
 
     async def _call_openai_tool(
         self,

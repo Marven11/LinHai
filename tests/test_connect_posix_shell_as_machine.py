@@ -108,10 +108,9 @@ class TestSudoBashHintPlugin(unittest.IsolatedAsyncioTestCase):
             with_secret=None,
             is_tool_failed_duplicated_error=False,
         )
-        self.assertIsNone(result)
-        mock_agent.message_processor.add_new_message.assert_called_once()
-        call_args = mock_agent.message_processor.add_new_message.call_args[0][0]
-        self.assertIn("connect_posix_shell_as_machine", call_args.message)
+        self.assertIsNotNone(result)
+        self.assertEqual(len(result.warnings), 1)
+        self.assertIn("connect_posix_shell_as_machine", result.warnings[0].message)
 
     async def test_after_toolcall_sudo_path_bash_no_hint(self):
         mock_agent = Mock()
@@ -166,8 +165,8 @@ class TestSudoBashHintPlugin(unittest.IsolatedAsyncioTestCase):
             with_secret=None,
             is_tool_failed_duplicated_error=False,
         )
-        self.assertIsNone(result1)
-        self.assertEqual(mock_agent.message_processor.add_new_message.call_count, 1)
+        self.assertIsNotNone(result1)
+        self.assertEqual(len(result1.warnings), 1)
 
         result2 = await self.plugin.after_toolcall(
             tool_name="process_create",
@@ -179,7 +178,6 @@ class TestSudoBashHintPlugin(unittest.IsolatedAsyncioTestCase):
             is_tool_failed_duplicated_error=False,
         )
         self.assertIsNone(result2)
-        self.assertEqual(mock_agent.message_processor.add_new_message.call_count, 1)
 
     async def test_python_c_shows_hint(self):
         mock_agent = Mock()
@@ -196,11 +194,10 @@ class TestSudoBashHintPlugin(unittest.IsolatedAsyncioTestCase):
             with_secret=None,
             is_tool_failed_duplicated_error=False,
         )
-        self.assertIsNone(result)
-        mock_agent.message_processor.add_new_message.assert_called_once()
-        call_args = mock_agent.message_processor.add_new_message.call_args[0][0]
-        self.assertIn("python -c", call_args.message)
-        self.assertIn("python repl", call_args.message)
+        self.assertIsNotNone(result)
+        self.assertEqual(len(result.warnings), 1)
+        self.assertIn("python -c", result.warnings[0].message)
+        self.assertIn("python repl", result.warnings[0].message)
 
     async def test_python3_c_shows_hint(self):
         mock_agent = Mock()
@@ -217,8 +214,8 @@ class TestSudoBashHintPlugin(unittest.IsolatedAsyncioTestCase):
             with_secret=None,
             is_tool_failed_duplicated_error=False,
         )
-        self.assertIsNone(result)
-        mock_agent.message_processor.add_new_message.assert_called_once()
+        self.assertIsNotNone(result)
+        self.assertEqual(len(result.warnings), 1)
 
     async def test_venv_python_c_shows_hint(self):
         mock_agent = Mock()
@@ -235,8 +232,8 @@ class TestSudoBashHintPlugin(unittest.IsolatedAsyncioTestCase):
             with_secret=None,
             is_tool_failed_duplicated_error=False,
         )
-        self.assertIsNone(result)
-        mock_agent.message_processor.add_new_message.assert_called_once()
+        self.assertIsNotNone(result)
+        self.assertEqual(len(result.warnings), 1)
 
     async def test_uv_run_python_c_shows_hint(self):
         mock_agent = Mock()
@@ -253,8 +250,8 @@ class TestSudoBashHintPlugin(unittest.IsolatedAsyncioTestCase):
             with_secret=None,
             is_tool_failed_duplicated_error=False,
         )
-        self.assertIsNone(result)
-        mock_agent.message_processor.add_new_message.assert_called_once()
+        self.assertIsNotNone(result)
+        self.assertEqual(len(result.warnings), 1)
 
     async def test_python_no_c_no_hint(self):
         result = await self.plugin.after_toolcall(
