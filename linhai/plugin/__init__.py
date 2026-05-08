@@ -44,7 +44,11 @@ from .security_config import (
 from .file_permission_plugin import FileOperationPermissionPlugin
 
 from .sudo_stdio_checker import SudoStdioCheckerPlugin
-from .command_hints import SudoBashHintPlugin, StdioCommandCheckerPlugin
+from .command_hints import (
+    SudoBashHintPlugin,
+    StdioCommandCheckerPlugin,
+    PkillCheckerPlugin,
+)
 
 from .afk_plugin import AfkPlugin
 from .claw import ClawHeartbeatPlugin
@@ -114,5 +118,6 @@ __all__ = [
     "CatgirlTonePlugin",
     "SudoBashHintPlugin",
     "StdioCommandCheckerPlugin",
+    "PkillCheckerPlugin",
     "CustomToolcallFormatPlugin",
 ]

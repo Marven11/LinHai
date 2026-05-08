@@ -5,6 +5,7 @@ from linhai.agent.messages import RuntimeMessage
 from linhai.agent.lifecycle import AfterToolcallResult, Lifecycle
 from linhai.registry import Registry
 from linhai.plugin import Plugin
+from linhai.tool.base import SuccessfulToolResult, FailedToolResult
 
 
 class SudoBashHintPlugin(Plugin):
@@ -277,6 +278,35 @@ class StdioCommandCheckerPlugin(Plugin):
                 )
             ]
         )
+
+
+class PkillCheckerPlugin(Plugin):
+    BLOCKED_COMMANDS = frozenset({"pkill"})
+
+    def register(self, lifecycle: Lifecycle) -> None:
+        lifecycle.before_tool_call.register(self.before_tool_call)
+
+    async def before_tool_call(
+        self,
+        tool_name: str,
+        toolcall_arguments: dict,
+        with_secret: list[str] | None,
+    ) -> SuccessfulToolResult | FailedToolResult | dict | None:
+        if tool_name != "process_create":
+            return None
+
+        argv = toolcall_arguments.get("argv")
+        if not argv or not isinstance(argv, list) or len(argv) == 0:
+            return None
+
+        if os.path.basename(argv[0]) in self.BLOCKED_COMMANDS:
+            return FailedToolResult(
+                content="错误：禁止使用pkill杀死进程。如果你需要杀死进程，**优先**手动找到对应的PID, "
+                "在**确认进程的cmd后**使用kill杀死；如果你确实需要使用pkill, "
+                "使用which pkill找到绝对路径并使用绝对路径重新调用"
+            )
+
+        return None
 
 
 def _is_shell_command(content: str) -> bool:
