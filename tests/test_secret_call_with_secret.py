@@ -80,7 +80,7 @@ class TestCreateCallWithSecretToolset(unittest.TestCase):
             func(
                 tool_name="test_tool",
                 tool_arguments={"key": "val"},
-                with_secret={"in_arguments": ["SECRET1"], "in_result": ["SECRET1"]},
+                with_secret=["SECRET1"],
             )
         )
         loop.close()
@@ -104,10 +104,7 @@ class TestCreateCallWithSecretToolset(unittest.TestCase):
             func(
                 tool_name="test_tool",
                 tool_arguments={"key": "val"},
-                with_secret={
-                    "in_arguments": ["NONEXISTENT"],
-                    "in_result": ["NONEXISTENT"],
-                },
+                with_secret=["NONEXISTENT"],
             )
         )
         loop.close()
@@ -126,10 +123,7 @@ class TestCreateCallWithSecretToolset(unittest.TestCase):
             func(
                 tool_name="test_tool",
                 tool_arguments={"key": "val"},
-                with_secret={
-                    "in_arguments": ["DISABLED_SECRET"],
-                    "in_result": ["DISABLED_SECRET"],
-                },
+                with_secret=["DISABLED_SECRET"],
             )
         )
         loop.close()
@@ -148,10 +142,7 @@ class TestCreateCallWithSecretToolset(unittest.TestCase):
             func(
                 tool_name="test_tool",
                 tool_arguments={"key": "val"},
-                with_secret={
-                    "in_arguments": ["<$SECRET1$>"],
-                    "in_result": ["<$SECRET1$>"],
-                },
+                with_secret=["<$SECRET1$>"],
             )
         )
         loop.close()
@@ -176,7 +167,7 @@ class TestCreateCallWithSecretToolset(unittest.TestCase):
             func(
                 tool_name="test_tool",
                 tool_arguments={"key": "val"},
-                with_secret={"in_arguments": ["SECRET1"], "in_result": ["SECRET1"]},
+                with_secret=["SECRET1"],
             )
         )
         loop.close()
@@ -208,7 +199,7 @@ class TestCreateCallWithSecretToolset(unittest.TestCase):
             func(
                 tool_name="test_tool",
                 tool_arguments={"key": "val"},
-                with_secret={"in_arguments": ["SECRET1"], "in_result": ["SECRET1"]},
+                with_secret=["SECRET1"],
             )
         )
         loop.close()

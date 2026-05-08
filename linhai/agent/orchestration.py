@@ -28,7 +28,7 @@ from linhai.tool.base import (
 )
 from linhai.utils.common import UiNotice
 from linhai.utils.i18n import t
-from linhai.type_hints import ThresholdInfo, WithSecret
+from linhai.type_hints import ThresholdInfo
 from linhai.token_manager import TokenManager
 from linhai.base import Message
 from .messages import RuntimeMessage
@@ -583,7 +583,7 @@ class RedStateToolBlockPlugin:
         self,
         tool_name: str,
         toolcall_arguments: dict,
-        with_secret: WithSecret | None,
+        with_secret: list[str] | None,
     ) -> Union[SuccessfulToolResult, FailedToolResult, dict, None]:
         """在工具调用前检查是否需要阻止工具调用。
 

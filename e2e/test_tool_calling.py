@@ -128,11 +128,8 @@ def test_tool_call_message_assert_success():
         function_name="read_file",
         function_arguments={"filepath": "/tmp/test"},
         assert_success=False,
-        with_secret={"in_arguments": ["SECRET_KEY"], "in_result": ["SECRET_KEY"]},
+        with_secret=["SECRET_KEY"],
     )
     assert msg_false.assert_success is False
     assert msg_false.function_name == "read_file"
-    assert msg_false.with_secret == {
-        "in_arguments": ["SECRET_KEY"],
-        "in_result": ["SECRET_KEY"],
-    }
+    assert msg_false.with_secret == ["SECRET_KEY"]

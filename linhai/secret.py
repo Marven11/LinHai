@@ -3,8 +3,6 @@
 import re
 from typing import Any, TypedDict, Literal, Union, TypeVar, TYPE_CHECKING, overload
 
-from .type_hints import WithSecret
-
 import tomllib
 from pathlib import Path
 
@@ -233,20 +231,20 @@ def _create_call_with_secret_toolset(
                 type="dict",
             ),
             "with_secret": ToolArgInfo(
-                desc="with_secret字典，包含in_arguments和in_result两个列表",
-                type="dict",
+                desc='secret键列表，不含包裹符号，如 ["SECRET_PASSWORD"]',
+                type="list",
             ),
         },
         required_args=["tool_name", "tool_arguments", "with_secret"],
     )
     async def call_with_secret(
-        tool_name: str, tool_arguments: dict, with_secret: WithSecret
+        tool_name: str, tool_arguments: dict, with_secret: list[str]
     ):
         from linhai.base import ToolCallMessage
         from linhai.tool.main import ToolManager
 
         cleaned_keys: list[str] = []
-        for key in with_secret["in_arguments"]:
+        for key in with_secret:
             if key.startswith("<$") and key.endswith("$>"):
                 return FailedToolResult(
                     content=(
@@ -271,10 +269,7 @@ def _create_call_with_secret_toolset(
             function_name=tool_name,
             function_arguments=replaced_args,
             assert_success=True,
-            with_secret=WithSecret(
-                in_arguments=cleaned_keys,
-                in_result=with_secret["in_result"],
-            ),
+            with_secret=None,
         )
         result_msg = await tool_manager.process_tool_call(tool_call, 0)
 
@@ -299,7 +294,7 @@ def _create_call_with_secret_toolset(
             )
 
         masked_content = mask_secrets_in_object(
-            result_content, secrets_dict, with_secret["in_result"]
+            result_content, secrets_dict, cleaned_keys
         )
         return SuccessfulToolResult(content=masked_content)
 
@@ -373,7 +368,7 @@ class SecretInterceptorPlugin:
         status: Literal["skipped", "success", "failed"],
         message: Message | None,
         toolcall_arguments: dict,
-        with_secret: WithSecret | None,
+        with_secret: list[str] | None,
         is_tool_failed_duplicated_error: bool,
     ) -> AfterToolcallResult | None:
         _ = (tool_index, toolcall_arguments, is_tool_failed_duplicated_error)
@@ -390,7 +385,7 @@ class SecretInterceptorPlugin:
 
             if with_secret:
                 result_content = mask_secrets_in_object(
-                    result_content, self.secrets_dict, with_secret["in_result"]
+                    result_content, self.secrets_dict, with_secret
                 )
 
             matched_keys = find_matching_secret_keys(result_content, self.secrets_dict)
@@ -411,7 +406,7 @@ class SecretInterceptorPlugin:
                 return AfterToolcallResult(replacement=RuntimeMessage(return_message))
 
             if with_secret:
-                return_message = f"<<masked>><<message>>工具内容包含{with_secret['in_result']!r}secret的内容，已替换<<message>><<content>>{result_content}<<content>><<masked>>"
+                return_message = f"<<masked>><<message>>工具内容包含{with_secret!r}secret的内容，已替换<<message>><<content>>{result_content}<<content>><<masked>>"
                 return AfterToolcallResult(replacement=RuntimeMessage(return_message))
 
             return None
@@ -422,14 +417,14 @@ class SecretInterceptorPlugin:
         self,
         tool_name: str,
         toolcall_arguments: dict,
-        with_secret: WithSecret | None,
+        with_secret: list[str] | None,
     ) -> Union[SuccessfulToolResult, FailedToolResult, dict, None]:
-        _ = tool_name
+        _ = tool_name  # unused parameter
         if with_secret is None:
             return None
 
         cleaned_keys: list[str] = []
-        for key in with_secret["in_arguments"]:
+        for key in with_secret:
             cleaned_key = key
             if key.startswith("<$") and key.endswith("$>"):
                 return FailedToolResult(

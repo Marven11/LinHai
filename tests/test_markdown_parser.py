@@ -50,7 +50,7 @@ invalid json
         self.assertIn("缺少必需的'name'字段", errors[3])
 
     def test_extract_tool_calls_with_secret(self):
-        """Test extracting tool calls with with_secret field (list format backward compat)."""
+        """Test extracting tool calls with with_secret field."""
         markdown_text = """
 ```json toolcall
 {"name": "secret_tool", "arguments": {}, "with_secret": ["API_KEY"]}
@@ -66,29 +66,11 @@ invalid json
 
         self.assertEqual(tool_calls[0]["name"], "secret_tool")
         self.assertEqual(tool_calls[0]["arguments"], {})
-        ws = tool_calls[0]["with_secret"]
-        self.assertEqual(ws["in_arguments"], ["API_KEY"])
-        self.assertEqual(ws["in_result"], ["API_KEY"])
+        self.assertEqual(tool_calls[0].get("with_secret"), ["API_KEY"])
 
         self.assertEqual(tool_calls[1]["name"], "assertive_tool")
         self.assertEqual(tool_calls[1]["arguments"], {"x": 1})
         self.assertEqual(tool_calls[1].get("assert_success"), False)
-
-    def test_extract_tool_calls_with_secret_dict_format(self):
-        """Test extracting tool calls with with_secret in new dict format."""
-        markdown_text = """
-```json toolcall
-{"name": "secret_tool", "arguments": {}, "with_secret": {"in_arguments": ["KEY1"], "in_result": ["KEY1", "KEY2"]}}
-```
-"""
-        tool_calls, errors = extract_tool_calls_with_errors(markdown_text)
-
-        self.assertEqual(len(errors), 0)
-        self.assertEqual(len(tool_calls), 1)
-
-        ws = tool_calls[0]["with_secret"]
-        self.assertEqual(ws["in_arguments"], ["KEY1"])
-        self.assertEqual(ws["in_result"], ["KEY1", "KEY2"])
 
     def test_extract_tool_calls_returns_toolcalldict(self):
         """Test that returned dict has ToolCallDict structure."""

@@ -164,7 +164,7 @@ class CommandCallback:
             function_name=parsed_input.command,
             function_arguments={},
             assert_success=False,
-            with_secret=None,
+            with_secret=[],
         )
 
         await agent.toolcall_processor.call_tool(tool_call, tool_index=1)

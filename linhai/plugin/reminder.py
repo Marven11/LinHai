@@ -3,7 +3,6 @@ from typing import Union
 
 from linhai.agent import Agent
 from linhai.agent.lifecycle import Lifecycle
-from linhai.type_hints import WithSecret
 from linhai.agent.messages import RuntimeMessage
 from linhai.plugin.message_checkers import Plugin
 from linhai.registry import Registry
@@ -55,7 +54,7 @@ class ReminderWriteGuardPlugin(Plugin):
         self,
         tool_name: str,
         toolcall_arguments: dict,
-        _with_secret: WithSecret | None,
+        _with_secret: list[str] | None,
     ) -> Union[SuccessfulToolResult, FailedToolResult, dict, None]:
         if tool_name == "write_file":
             return self._check_write_file(toolcall_arguments)

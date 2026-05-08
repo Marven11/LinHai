@@ -21,7 +21,7 @@ from linhai.tool.base import (
     ToolResult,
 )
 from linhai.tool.main import ToolManager
-from linhai.type_hints import OpenAiToolCall, WithSecret
+from linhai.type_hints import OpenAiToolCall
 from linhai.utils.tokenizer import count_tokens, get_cl100k_base_tokenizer
 from linhai.utils.i18n import t
 

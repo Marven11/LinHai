@@ -21,7 +21,6 @@ from linhai.type_hints import (
     UserMessage as UserMsgType,
     AssistantMessage as AsstMsgType,
     ToolResultMsg,
-    WithSecret,
 )
 
 import linhai
@@ -367,7 +366,7 @@ class ToolCallMessage:
         function_name: str,
         function_arguments: dict,
         assert_success: bool,
-        with_secret: WithSecret | None,
+        with_secret: list[str] | None,
     ):
         """初始化工具调用消息。"""
         self.function_name = function_name

@@ -165,7 +165,7 @@ class TestSecretExceptionLeak(unittest.TestCase):
             function_name="failing_tool_with_secret",
             function_arguments={"param": "test_value"},
             assert_success=False,
-            with_secret={"in_arguments": ["TEST_SECRET"], "in_result": ["TEST_SECRET"]},
+            with_secret=["TEST_SECRET"],
         )
 
         async def mock_process_tool_call(tool_call_msg, tool_index):
@@ -202,10 +202,7 @@ class TestSecretExceptionLeak(unittest.TestCase):
                 status="failed",
                 message=message,
                 toolcall_arguments=tool_call.function_arguments,
-                with_secret={
-                    "in_arguments": ["TEST_SECRET"],
-                    "in_result": ["TEST_SECRET"],
-                },
+                with_secret=["TEST_SECRET"],
                 is_tool_failed_duplicated_error=False,
             )
 
