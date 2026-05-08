@@ -410,7 +410,9 @@ class OpenAi:
         self.model = model
         self._api_key = api_key
         self._base_url = base_url
-        self._openai_config = openai_config
+        self._openai_config = dict(openai_config)
+        self._openai_config.pop("timeout", None)
+        self._openai_config.pop("max_retries", None)
         self.openai = AsyncOpenAI(
             api_key=self._api_key,
             base_url=self._base_url,
