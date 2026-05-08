@@ -3,7 +3,7 @@
 import json
 from reprlib import Repr
 from typing import Any, List, Tuple
-from linhai.type_hints import ToolCallDict
+from linhai.type_hints import ToolCallDict, WithSecret
 import mistune
 
 repr_obj = Repr()
@@ -152,7 +152,17 @@ def extract_tool_calls_with_errors(
                 if "assert_success" in data:
                     tc["assert_success"] = data["assert_success"]
                 if "with_secret" in data:
-                    tc["with_secret"] = data["with_secret"]
+                    ws = data["with_secret"]
+                    if isinstance(ws, list):
+                        tc["with_secret"] = WithSecret(
+                            in_arguments=list(ws),
+                            in_result=list(ws),
+                        )
+                    elif isinstance(ws, dict):
+                        tc["with_secret"] = WithSecret(
+                            in_arguments=ws.get("in_arguments", []),
+                            in_result=ws.get("in_result", []),
+                        )
                 tool_calls.append(tc)
             except json.JSONDecodeError as e:
                 context_str = _extract_json_error_context(e, block["content"])

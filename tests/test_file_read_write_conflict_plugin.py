@@ -43,12 +43,12 @@ class TestFileReadWriteConflictPlugin(unittest.IsolatedAsyncioTestCase):
             function_name="read_file",
             function_arguments={"filepath": str(self.test_file)},
             assert_success=True,
-            with_secret=[],
+            with_secret=None,
         )
         read_result = SuccessfulToolResult(
             content="文件内容",
             original_tool_call=read_tool_call,
-            with_secret=[],
+            with_secret=None,
         )
         # 调用on_tool_result处理读取
         result = await self.plugin.after_toolcall(
@@ -72,12 +72,12 @@ class TestFileReadWriteConflictPlugin(unittest.IsolatedAsyncioTestCase):
                 "override": True,
             },
             assert_success=True,
-            with_secret=[],
+            with_secret=None,
         )
         write_result = SuccessfulToolResult(
             content="写入成功",
             original_tool_call=write_tool_call,
-            with_secret=[],
+            with_secret=None,
         )
         # 调用on_tool_result处理写入
         result = await self.plugin.after_toolcall(
@@ -143,12 +143,12 @@ class TestFileReadWriteConflictPlugin(unittest.IsolatedAsyncioTestCase):
             function_name="read_file",
             function_arguments={"filepath": str(self.test_file)},
             assert_success=True,
-            with_secret=[],
+            with_secret=None,
         )
         read_result = SuccessfulToolResult(
             content="文件内容",
             original_tool_call=read_tool_call,
-            with_secret=[],
+            with_secret=None,
         )
         result = await self.plugin.after_toolcall(
             "read_file",
@@ -181,12 +181,12 @@ class TestFileReadWriteConflictPlugin(unittest.IsolatedAsyncioTestCase):
                 "override": True,
             },
             assert_success=True,
-            with_secret=[],
+            with_secret=None,
         )
         write_result = SuccessfulToolResult(
             content="写入成功",
             original_tool_call=write_tool_call,
-            with_secret=[],
+            with_secret=None,
         )
         result = await self.plugin.after_toolcall(
             "write_file",
@@ -224,12 +224,12 @@ class TestFileReadWriteConflictPlugin(unittest.IsolatedAsyncioTestCase):
                 "expression": "1p",
             },
             assert_success=True,
-            with_secret=[],
+            with_secret=None,
         )
         read_result = SuccessfulToolResult(
             content="第一行",
             original_tool_call=read_tool_call,
-            with_secret=[],
+            with_secret=None,
         )
         result = await self.plugin.after_toolcall(
             "read_file",
@@ -262,12 +262,12 @@ class TestFileReadWriteConflictPlugin(unittest.IsolatedAsyncioTestCase):
                 "new": "新内容",
             },
             assert_success=True,
-            with_secret=[],
+            with_secret=None,
         )
         write_result = SuccessfulToolResult(
             content="替换成功",
             original_tool_call=write_tool_call,
-            with_secret=[],
+            with_secret=None,
         )
         result = await self.plugin.after_toolcall(
             "write_file",
@@ -302,7 +302,7 @@ class TestFileReadWriteConflictPlugin(unittest.IsolatedAsyncioTestCase):
             function_name="read_file",
             function_arguments={"filepath": str(self.test_file)},
             assert_success=True,
-            with_secret=[],
+            with_secret=None,
         )
         # 调用on_tool_result，status="failed"
         result = await self.plugin.after_toolcall(

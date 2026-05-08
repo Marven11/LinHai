@@ -215,16 +215,16 @@ Secret系统也用于掩盖工具输出中的密码等信息，让你在不查�
 
 ### 使用说明
 
-with_secret字段: 值为一个list[str]，包含所有secret键，不含`<$`包裹，如`["SECRET_PASSWORD"]`
+with_secret字段: 值为一个字典，包含两个列表：`in_arguments`和`in_result`
 
 在工具参数中使用secret时：
 
-1. 使用with_secret包含需要使用的secret
+1. 将secret键放入with_secret.in_arguments
 2. 在工具参数中使用占位符<$KEY$>引用secret值，这些引用会被自动替换为实际值。
 
 查看包含secret的工具返回值时
 
-1. 使用with_secret包含需要使用的secret
+1. 将secret键放入with_secret.in_result
 2. 调用工具查看结果，结果中的secret值会被占位符替代，保证你看不到secret
 
 如果你没有指定正确的secret值，则工具结果会被全部隐藏
@@ -233,8 +233,8 @@ with_secret字段: 值为一个list[str]，包含所有secret键，不含`<$`包
 
 某些secret可能被标记为disabled_in_toolcall_argument=True。这意味着这些secret禁止在工具调用参数中使用，以防止泄漏。
 
-- 如果secret的disabled_in_toolcall_argument=True，你无法在工具参数中使用该secret（即无法用<$KEY$>占位符）。
-- 你仍然可以在with_secret中指定这些secret来查看被掩码的工具结果。
+- 如果secret的disabled_in_toolcall_argument=True，你无法在with_secret.in_arguments中使用该secret（即无法用<$KEY$>占位符）。
+- 你仍然可以在with_secret.in_result中指定这些secret来查看被掩码的工具结果。
 - 在secret列表显示时，disabled_in_toolcall_argument=True的secret会带有标记“(disabled_in_toolcall_argument=True)”。
 """,
         "en": """
@@ -250,16 +250,16 @@ The Secret system is also used to mask passwords and other information in tool o
 
 ### Usage Instructions
 
-with_secret field: value is a list[str], containing all secret keys, without `<$` wrapping, e.g. `["SECRET_PASSWORD"]`
+with_secret field: value is a dictionary with two lists: `in_arguments` and `in_result`
 
 When using secrets in tool parameters:
 
-1. Use with_secret to include the secrets you need
+1. Put secret keys in with_secret.in_arguments
 2. Use the placeholder <$KEY$> in tool parameters to reference the secret value, these references will be automatically replaced with actual values.
 
 When viewing tool return values containing secrets:
 
-1. Use with_secret to include the secrets you need
+1. Put secret keys in with_secret.in_result
 2. Call the tool to view results, secret values in the results will be replaced with placeholders, ensuring you cannot see the secrets
 
 If you don't specify the correct secret values, the tool results will be completely hidden.
@@ -268,8 +268,8 @@ If you don't specify the correct secret values, the tool results will be complet
 
 Some secrets may be marked as disabled_in_toolcall_argument=True. This means these secrets are prohibited from being used in tool call parameters to prevent leakage.
 
-- If a secret's disabled_in_toolcall_argument=True, you cannot use that secret in tool parameters (i.e., cannot use the <$KEY$> placeholder).
-- You can still specify these secrets in with_secret to view masked tool results.
+- If a secret's disabled_in_toolcall_argument=True, you cannot use that secret in with_secret.in_arguments (i.e., cannot use the <$KEY$> placeholder).
+- You can still specify these secrets in with_secret.in_result to view masked tool results.
 - In the secret list display, secrets with disabled_in_toolcall_argument=True will have the marker "(disabled_in_toolcall_argument=True)".
 """,
     }

@@ -125,13 +125,20 @@ class ThresholdInfo(TypedDict):
     usage_ratio: float
 
 
+class WithSecret(TypedDict):
+    """with_secret参数的TypedDict，分别控制参数替换和结果掩码。"""
+
+    in_arguments: list[str]
+    in_result: list[str]
+
+
 class ToolCallDict(TypedDict):
     """工具调用TypedDict，用于extract_tool_calls_with_errors的返回值。"""
 
     name: str
     arguments: dict
     assert_success: NotRequired[bool]
-    with_secret: NotRequired[list[str]]
+    with_secret: NotRequired[WithSecret]
 
 
 class CumulativeTokenUsage(TypedDict):
@@ -159,4 +166,5 @@ __all__ = [
     "UserMultiModalMessage",
     "ToolCallDict",
     "ToolResultMsg",
+    "WithSecret",
 ]
