@@ -1,6 +1,8 @@
 """Python注释检查插件，检测agent自发添加的注释并提醒。"""
 
 import io
+
+from linhai.type_hints import WithSecret
 import tokenize
 from pathlib import Path
 from typing import TYPE_CHECKING, Literal
@@ -77,7 +79,7 @@ class PythonCommentCheckerPlugin:
         status: Literal["skipped", "success", "failed"],
         message: Message | None,
         toolcall_arguments: dict,
-        with_secret: list[str] | None,
+        with_secret: WithSecret | None,
         is_tool_failed_duplicated_error: bool,
     ) -> AfterToolcallResult | None:
         machine_control = self.registry.get_member_typechecked(

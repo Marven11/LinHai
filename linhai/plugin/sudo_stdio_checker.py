@@ -1,6 +1,8 @@
 """sudo标准输入和bash -c命令检查插件，用于拦截缺少-S标志的sudo命令并提醒agent避免使用bash -c。"""
 
 import time
+
+from linhai.type_hints import WithSecret
 from typing import TYPE_CHECKING, Union
 from linhai.agent.messages import RuntimeMessage
 from linhai.agent.lifecycle import AfterToolcallResult, Lifecycle
@@ -31,7 +33,7 @@ class SudoStdioCheckerPlugin(Plugin):
         self,
         tool_name: str,
         toolcall_arguments: dict,
-        with_secret: list[str] | None,
+        with_secret: WithSecret | None,
     ) -> Union[SuccessfulToolResult, FailedToolResult, dict, None]:
         """在工具调用前检查sudo命令。"""
         if tool_name != "process_create":
@@ -72,7 +74,7 @@ class SudoStdioCheckerPlugin(Plugin):
         status: str,
         message,
         toolcall_arguments: dict,
-        with_secret: list[str] | None,
+        with_secret: WithSecret | None,
         is_tool_failed_duplicated_error: bool,
     ) -> AfterToolcallResult | None:
         """在工具调用后检查bash -c命令。"""

@@ -53,7 +53,7 @@ invalid json
         """Test extracting tool calls with with_secret field."""
         markdown_text = """
 ```json toolcall
-{"name": "secret_tool", "arguments": {}, "with_secret": ["API_KEY"]}
+{"name": "secret_tool", "arguments": {}, "with_secret": {"in_arguments": ["API_KEY"], "in_result": ["API_KEY"]}}
 ```
 ```json toolcall
 {"name": "assertive_tool", "arguments": {"x": 1}, "assert_success": false}
@@ -66,11 +66,54 @@ invalid json
 
         self.assertEqual(tool_calls[0]["name"], "secret_tool")
         self.assertEqual(tool_calls[0]["arguments"], {})
-        self.assertEqual(tool_calls[0].get("with_secret"), ["API_KEY"])
+        self.assertEqual(
+            tool_calls[0].get("with_secret"),
+            {"in_arguments": ["API_KEY"], "in_result": ["API_KEY"]},
+        )
 
         self.assertEqual(tool_calls[1]["name"], "assertive_tool")
         self.assertEqual(tool_calls[1]["arguments"], {"x": 1})
         self.assertEqual(tool_calls[1].get("assert_success"), False)
+
+    def test_extract_tool_calls_with_secret_old_list_format_rejected(self):
+        """Test that old list format for with_secret is rejected."""
+        markdown_text = """
+```json toolcall
+{"name": "test_tool", "arguments": {}, "with_secret": ["API_KEY"]}
+```
+"""
+        tool_calls, errors = extract_tool_calls_with_errors(markdown_text)
+
+        self.assertEqual(len(tool_calls), 0)
+        self.assertEqual(len(errors), 1)
+        self.assertIn("with_secret", errors[0])
+        self.assertIn("字典", errors[0])
+
+    def test_extract_tool_calls_with_secret_missing_fields_rejected(self):
+        """Test that with_secret without in_arguments or in_result is rejected."""
+        markdown_text = """
+```json toolcall
+{"name": "test_tool", "arguments": {}, "with_secret": {"in_arguments": ["KEY"]}}
+```
+"""
+        tool_calls, errors = extract_tool_calls_with_errors(markdown_text)
+
+        self.assertEqual(len(tool_calls), 0)
+        self.assertEqual(len(errors), 1)
+        self.assertIn("in_result", errors[0])
+
+    def test_extract_tool_calls_with_secret_non_list_values_rejected(self):
+        """Test that with_secret with non-list in_arguments is rejected."""
+        markdown_text = """
+```json toolcall
+{"name": "test_tool", "arguments": {}, "with_secret": {"in_arguments": "KEY", "in_result": []}}
+```
+"""
+        tool_calls, errors = extract_tool_calls_with_errors(markdown_text)
+
+        self.assertEqual(len(tool_calls), 0)
+        self.assertEqual(len(errors), 1)
+        self.assertIn("列表", errors[0])
 
     def test_extract_tool_calls_returns_toolcalldict(self):
         """Test that returned dict has ToolCallDict structure."""

@@ -9,6 +9,7 @@ from typing import (
     TYPE_CHECKING,
 )
 from linhai.base import Answer, Message
+from linhai.type_hints import WithSecret
 
 if TYPE_CHECKING:
     from linhai.agent.messages import RuntimeMessage
@@ -49,7 +50,7 @@ AfterToolcallCallback: TypeAlias = Callable[
         Literal["skipped", "success", "failed"],
         Message | None,
         dict,
-        list[str] | None,
+        WithSecret | None,
         bool,
     ],
     Awaitable[Union[None, AfterToolcallResult]],
@@ -103,7 +104,7 @@ BeforeWaitingUserCallback: TypeAlias = Callable[
 BeforeAgentLoopCallback: TypeAlias = Callable[["Agent"], Awaitable[None]]
 
 BeforeToolCallCallback: TypeAlias = Callable[
-    [str, dict, list[str] | None],
+    [str, dict, WithSecret | None],
     Awaitable[Union[SuccessfulToolResult, FailedToolResult, dict, None]],
 ]
 

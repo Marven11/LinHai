@@ -3,7 +3,7 @@
 import json
 from reprlib import Repr
 from typing import Any, List, Tuple
-from linhai.type_hints import ToolCallDict
+from linhai.type_hints import ToolCallDict, WithSecret
 import mistune
 
 repr_obj = Repr()
@@ -152,7 +152,30 @@ def extract_tool_calls_with_errors(
                 if "assert_success" in data:
                     tc["assert_success"] = data["assert_success"]
                 if "with_secret" in data:
-                    tc["with_secret"] = data["with_secret"]
+                    ws = data["with_secret"]
+                    if not isinstance(ws, dict):
+                        errors.append(
+                            f"工具调用解析出错：第{i+1}个code block中的'with_secret'字段必须是字典类型，"
+                            f'格式为 {{"in_arguments": [...], "in_result": [...]}}，'
+                            f"实际类型: {type(ws).__name__}"
+                        )
+                        continue
+                    if "in_arguments" not in ws or "in_result" not in ws:
+                        errors.append(
+                            f"工具调用解析出错：第{i+1}个code block中的'with_secret'缺少'in_arguments'或'in_result'字段"
+                        )
+                        continue
+                    if not isinstance(ws["in_arguments"], list) or not isinstance(
+                        ws["in_result"], list
+                    ):
+                        errors.append(
+                            f"工具调用解析出错：第{i+1}个code block中的'with_secret'的'in_arguments'和'in_result'必须是列表"
+                        )
+                        continue
+                    tc["with_secret"] = {
+                        "in_arguments": ws["in_arguments"],
+                        "in_result": ws["in_result"],
+                    }
                 tool_calls.append(tc)
             except json.JSONDecodeError as e:
                 context_str = _extract_json_error_context(e, block["content"])

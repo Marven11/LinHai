@@ -215,16 +215,20 @@ Secret系统也用于掩盖工具输出中的密码等信息，让你在不查�
 
 ### 使用说明
 
-with_secret字段: 值为一个list[str]，包含所有secret键，不含`<$`包裹，如`["SECRET_PASSWORD"]`
+with_secret字段: 值为一个字典，包含两个字段：
+- `in_arguments`: list[str] - 用于工具参数中secret值的替换
+- `in_result`: list[str] - 用于工具结果中secret值的掩码
+
+示例: `{{"in_arguments": ["SECRET_PASSWORD"], "in_result": ["SECRET_PASSWORD"]}}`
 
 在工具参数中使用secret时：
 
-1. 使用with_secret包含需要使用的secret
-2. 在工具参数中使用占位符<$KEY$>引用secret值，这些引用会被自动替换为实际值。
+1. 将secret键放入with_secret的`in_arguments`列表
+2. 在工具参数中使用占位符引用secret值，这些引用会被自动替换为实际值。
 
-查看包含secret的工具返回值时
+查看包含secret的工具返回值时：
 
-1. 使用with_secret包含需要使用的secret
+1. 将secret键放入with_secret的`in_result`列表
 2. 调用工具查看结果，结果中的secret值会被占位符替代，保证你看不到secret
 
 如果你没有指定正确的secret值，则工具结果会被全部隐藏
@@ -233,8 +237,8 @@ with_secret字段: 值为一个list[str]，包含所有secret键，不含`<$`包
 
 某些secret可能被标记为disabled_in_toolcall_argument=True。这意味着这些secret禁止在工具调用参数中使用，以防止泄漏。
 
-- 如果secret的disabled_in_toolcall_argument=True，你无法在工具参数中使用该secret（即无法用<$KEY$>占位符）。
-- 你仍然可以在with_secret中指定这些secret来查看被掩码的工具结果。
+- 如果secret的disabled_in_toolcall_argument=True，你无法在`in_arguments`中指定该secret（即无法用占位符）。
+- 你仍然可以在`in_result`中指定这些secret来查看被掩码的工具结果。
 - 在secret列表显示时，disabled_in_toolcall_argument=True的secret会带有标记“(disabled_in_toolcall_argument=True)”。
 """,
         "en": """
@@ -250,16 +254,20 @@ The Secret system is also used to mask passwords and other information in tool o
 
 ### Usage Instructions
 
-with_secret field: value is a list[str], containing all secret keys, without `<$` wrapping, e.g. `["SECRET_PASSWORD"]`
+with_secret field: value is a dict with two fields:
+- `in_arguments`: list[str] - for secret value replacement in tool arguments
+- `in_result`: list[str] - for secret value masking in tool results
+
+Example: `{{"in_arguments": ["SECRET_PASSWORD"], "in_result": ["SECRET_PASSWORD"]}}`
 
 When using secrets in tool parameters:
 
-1. Use with_secret to include the secrets you need
-2. Use the placeholder <$KEY$> in tool parameters to reference the secret value, these references will be automatically replaced with actual values.
+1. Put secret keys in the `in_arguments` list of with_secret
+2. Use the placeholder in tool parameters to reference the secret value, these references will be automatically replaced with actual values.
 
 When viewing tool return values containing secrets:
 
-1. Use with_secret to include the secrets you need
+1. Put secret keys in the `in_result` list of with_secret
 2. Call the tool to view results, secret values in the results will be replaced with placeholders, ensuring you cannot see the secrets
 
 If you don't specify the correct secret values, the tool results will be completely hidden.
@@ -268,8 +276,8 @@ If you don't specify the correct secret values, the tool results will be complet
 
 Some secrets may be marked as disabled_in_toolcall_argument=True. This means these secrets are prohibited from being used in tool call parameters to prevent leakage.
 
-- If a secret's disabled_in_toolcall_argument=True, you cannot use that secret in tool parameters (i.e., cannot use the <$KEY$> placeholder).
-- You can still specify these secrets in with_secret to view masked tool results.
+- If a secret's disabled_in_toolcall_argument=True, you cannot specify it in `in_arguments` (i.e., cannot use the placeholder).
+- You can still specify these secrets in `in_result` to view masked tool results.
 - In the secret list display, secrets with disabled_in_toolcall_argument=True will have the marker "(disabled_in_toolcall_argument=True)".
 """,
     }
@@ -712,12 +720,12 @@ EXAMPLES_SECRET_USAGE = t(
     {
         "zh_CN": """
 ```json toolcall
-{"name": "write_file", "with_secret": ["DEEPSEEK_API_KEY"], "arguments": {"filepath": "config.py", "content": "api_key = '<$DEEPSEEK_API_KEY$>'"}}
+{"name": "write_file", "with_secret": {"in_arguments": ["DEEPSEEK_API_KEY"], "in_result": ["DEEPSEEK_API_KEY"]}, "arguments": {"filepath": "config.py", "content": "api_key = 'PLACEHOLDER'"}}
 ```
 """,
         "en": """
 ```json toolcall
-{"name": "write_file", "with_secret": ["DEEPSEEK_API_KEY"], "arguments": {"filepath": "config.py", "content": "api_key = '<$DEEPSEEK_API_KEY$>'"}}
+{"name": "write_file", "with_secret": {"in_arguments": ["DEEPSEEK_API_KEY"], "in_result": ["DEEPSEEK_API_KEY"]}, "arguments": {"filepath": "config.py", "content": "api_key = 'PLACEHOLDER'"}}
 ```
 """,
     }
@@ -749,7 +757,7 @@ EXAMPLE_MULTIHOP_MACHINES = t(
 ```json toolcall
 {
   "name": "process_stdio_write",
-  "with_secret": ["EXAMPLECOM_FOOBAR_PASSWORD"],
+  "with_secret": {"in_arguments": ["EXAMPLECOM_FOOBAR_PASSWORD"], "in_result": ["EXAMPLECOM_FOOBAR_PASSWORD"]},
   "arguments": {"pid": "1145141919", "content": "<$EXAMPLECOM_FOOBAR_PASSWORD$>"}
 }
 ```
@@ -792,7 +800,7 @@ Now wait for `sudo -S bash` to start.
 ```json toolcall
 {
   "name": "process_stdio_write",
-  "with_secret": ["EXAMPLECOM_FOOBAR_PASSWORD"],
+  "with_secret": {"in_arguments": ["EXAMPLECOM_FOOBAR_PASSWORD"], "in_result": ["EXAMPLECOM_FOOBAR_PASSWORD"]},
   "arguments": {"pid": "1145141919", "content": "<$EXAMPLECOM_FOOBAR_PASSWORD$>"}
 }
 ```

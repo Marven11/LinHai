@@ -11,6 +11,7 @@ from .agent.messages import RuntimeMessage
 from .agent.conversation import save_secret_intercepted
 from .base import Message
 from .agent.lifecycle import AfterToolcallResult, Lifecycle
+from .type_hints import WithSecret
 from .tool.base import SuccessfulToolResult, FailedToolResult, ToolSet, ToolArgInfo
 
 if TYPE_CHECKING:
@@ -123,17 +124,17 @@ def recursive_string_replace(obj: T, replace_map: dict[str, str]) -> Any:
 
 
 def replace_secrets_in_object(
-    obj: T, secrets_dict: dict[str, SecretInfo], secret_keys: list[str]
+    obj: T, secrets_dict: dict[str, SecretInfo], in_arguments: list[str]
 ) -> T:
-    replace_map = filter_secrets_by_keys(secrets_dict, secret_keys)
+    replace_map = filter_secrets_by_keys(secrets_dict, in_arguments)
     return recursive_string_replace(obj, replace_map)
 
 
 def mask_secrets_in_object(
-    obj: T, secrets_dict: dict[str, SecretInfo], with_secret: list[str]
+    obj: T, secrets_dict: dict[str, SecretInfo], in_result: list[str]
 ) -> T:
     replace_map: dict[str, str] = {}
-    for key in with_secret:
+    for key in in_result:
         if key in secrets_dict:
             secret_value = secrets_dict[key]["value"]
             replace_map[secret_value] = f"<${key}$>"
@@ -231,20 +232,18 @@ def _create_call_with_secret_toolset(
                 type="dict",
             ),
             "with_secret": ToolArgInfo(
-                desc='secret键列表，不含包裹符号，如 ["SECRET_PASSWORD"]',
-                type="list",
+                desc="secret配置字典，包含in_arguments(参数替换)和in_result(结果掩码)两个列表",
+                type="dict",
             ),
         },
         required_args=["tool_name", "tool_arguments", "with_secret"],
     )
-    async def call_with_secret(
-        tool_name: str, tool_arguments: dict, with_secret: list[str]
-    ):
-        from linhai.base import ToolCallMessage
-        from linhai.tool.main import ToolManager
+    async def call_with_secret(tool_name: str, tool_arguments: dict, with_secret: dict):
+        in_arguments: list[str] = with_secret.get("in_arguments", [])
+        in_result_keys: list[str] = with_secret.get("in_result", [])
 
-        cleaned_keys: list[str] = []
-        for key in with_secret:
+        cleaned_arg_keys: list[str] = []
+        for key in in_arguments:
             if key.startswith("<$") and key.endswith("$>"):
                 return FailedToolResult(
                     content=(
@@ -258,11 +257,14 @@ def _create_call_with_secret_toolset(
                 return FailedToolResult(
                     content=f"Secret键 '{key}' 被禁止在工具调用参数中使用"
                 )
-            cleaned_keys.append(key)
+            cleaned_arg_keys.append(key)
 
         replaced_args = replace_secrets_in_object(
-            tool_arguments, secrets_dict, cleaned_keys
+            tool_arguments, secrets_dict, cleaned_arg_keys
         )
+
+        from linhai.base import ToolCallMessage
+        from linhai.tool.main import ToolManager
 
         tool_manager = registry.get_member_typechecked("tool_manager", ToolManager)
         tool_call = ToolCallMessage(
@@ -294,7 +296,7 @@ def _create_call_with_secret_toolset(
             )
 
         masked_content = mask_secrets_in_object(
-            result_content, secrets_dict, cleaned_keys
+            result_content, secrets_dict, in_result_keys
         )
         return SuccessfulToolResult(content=masked_content)
 
@@ -308,13 +310,13 @@ _CALL_WITH_SECRET_RULE = """\
 
 1. 将目标工具名放入tool_name参数
 2. 将目标工具的参数放入tool_arguments参数，secret值用占位符
-3. 将需要的secret键列表放入with_secret参数
+3. 将secret配置放入with_secret参数，格式为 {{"in_arguments": [...], "in_result": [...]}}
 
 示例：调用write_file工具并使用SECRET_PASSWORD
 
 tool_name: write_file
 tool_arguments: filepath和content等参数，其中secret用占位符
-with_secret: ["SECRET_PASSWORD"]
+with_secret: {{"in_arguments": ["SECRET_PASSWORD"], "in_result": ["SECRET_PASSWORD"]}}
 
 可用secret键: {secrets_list}"""
 
@@ -368,7 +370,7 @@ class SecretInterceptorPlugin:
         status: Literal["skipped", "success", "failed"],
         message: Message | None,
         toolcall_arguments: dict,
-        with_secret: list[str] | None,
+        with_secret: WithSecret | None,
         is_tool_failed_duplicated_error: bool,
     ) -> AfterToolcallResult | None:
         _ = (tool_index, toolcall_arguments, is_tool_failed_duplicated_error)
@@ -385,7 +387,7 @@ class SecretInterceptorPlugin:
 
             if with_secret:
                 result_content = mask_secrets_in_object(
-                    result_content, self.secrets_dict, with_secret
+                    result_content, self.secrets_dict, with_secret["in_result"]
                 )
 
             matched_keys = find_matching_secret_keys(result_content, self.secrets_dict)
@@ -406,7 +408,7 @@ class SecretInterceptorPlugin:
                 return AfterToolcallResult(replacement=RuntimeMessage(return_message))
 
             if with_secret:
-                return_message = f"<<masked>><<message>>工具内容包含{with_secret!r}secret的内容，已替换<<message>><<content>>{result_content}<<content>><<masked>>"
+                return_message = f"<<masked>><<message>>工具内容包含{with_secret['in_result']!r}secret的内容，已替换<<message>><<content>>{result_content}<<content>><<masked>>"
                 return AfterToolcallResult(replacement=RuntimeMessage(return_message))
 
             return None
@@ -417,14 +419,14 @@ class SecretInterceptorPlugin:
         self,
         tool_name: str,
         toolcall_arguments: dict,
-        with_secret: list[str] | None,
+        with_secret: WithSecret | None,
     ) -> Union[SuccessfulToolResult, FailedToolResult, dict, None]:
         _ = tool_name  # unused parameter
         if with_secret is None:
             return None
 
         cleaned_keys: list[str] = []
-        for key in with_secret:
+        for key in with_secret["in_arguments"]:
             cleaned_key = key
             if key.startswith("<$") and key.endswith("$>"):
                 return FailedToolResult(

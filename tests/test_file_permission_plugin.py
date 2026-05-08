@@ -104,7 +104,7 @@ class TestFileOperationPermissionPlugin(unittest.IsolatedAsyncioTestCase):
         result = await self.plugin.before_tool_call(
             tool_name="read_file",
             toolcall_arguments={"filepath": str(self.test_file)},
-            with_secret=[],
+            with_secret={"in_arguments": [], "in_result": []},
         )
         self.assertIsNone(result)
 
@@ -121,7 +121,7 @@ class TestFileOperationPermissionPlugin(unittest.IsolatedAsyncioTestCase):
                 "content": "新内容",
                 "override": True,
             },
-            with_secret=[],
+            with_secret={"in_arguments": [], "in_result": []},
         )
         self.assertIsInstance(result, FailedToolResult)
         self.assertIn("文件操作被阻止", result.content)
@@ -133,7 +133,9 @@ class TestFileOperationPermissionPlugin(unittest.IsolatedAsyncioTestCase):
             self.registry, self.pwd, self.tool_config
         )
         result = await self.plugin.before_tool_call(
-            tool_name="unsupported_tool", toolcall_arguments={}, with_secret=[]
+            tool_name="unsupported_tool",
+            toolcall_arguments={},
+            with_secret={"in_arguments": [], "in_result": []},
         )
         self.assertIsNone(result)
 

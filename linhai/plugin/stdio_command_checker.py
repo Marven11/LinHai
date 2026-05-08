@@ -1,5 +1,7 @@
 import os
 import time
+
+from linhai.type_hints import WithSecret
 from linhai.agent.messages import RuntimeMessage
 from linhai.agent.lifecycle import AfterToolcallResult, Lifecycle
 from linhai.registry import Registry
@@ -152,7 +154,7 @@ class StdioCommandCheckerPlugin(Plugin):
         status: str,
         message,
         toolcall_arguments: dict,
-        with_secret: list[str] | None,
+        with_secret: WithSecret | None,
         is_tool_failed_duplicated_error: bool,
     ) -> AfterToolcallResult | None:
         if tool_name != "process_stdio_write":

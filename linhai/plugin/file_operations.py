@@ -1,6 +1,8 @@
 """文件操作管理插件。"""
 
 from abc import ABC, abstractmethod
+
+from linhai.type_hints import WithSecret
 from pathlib import Path
 from typing import TYPE_CHECKING, Literal
 import reprlib
@@ -58,7 +60,7 @@ class DuplicateFileReadPlugin(Plugin):
         status: Literal["skipped", "success", "failed"],
         message: Message | None,
         toolcall_arguments: dict,
-        with_secret: list[str] | None,
+        with_secret: WithSecret | None,
         is_tool_failed_duplicated_error: bool,
     ) -> AfterToolcallResult | None:
         """工具调用结果回调，检查是否重复读取文件。"""
@@ -175,7 +177,7 @@ class UnnecessarySedReadPlugin(Plugin):
         status: Literal["skipped", "success", "failed"],
         message: Message | None,
         toolcall_arguments: dict,
-        with_secret: list[str] | None,
+        with_secret: WithSecret | None,
         is_tool_failed_duplicated_error: bool,
     ) -> AfterToolcallResult | None:
         """工具调用后回调，检查是否不必要的小块读取。"""
@@ -259,7 +261,7 @@ class UnnecessaryRunCommandPlugin(Plugin):
         status: Literal["skipped", "success", "failed"],
         message: Message | None,
         toolcall_arguments: dict,
-        with_secret: list[str] | None,
+        with_secret: WithSecret | None,
         is_tool_failed_duplicated_error: bool,
     ) -> AfterToolcallResult | None:
         """工具调用后回调，检查是否不必要的process_create用于读取已读文件。"""
@@ -349,7 +351,7 @@ class FileReadWriteConflictPlugin(Plugin):
         status: Literal["skipped", "success", "failed"],
         message: Message | None,
         toolcall_arguments: dict,
-        with_secret: list[str] | None,
+        with_secret: WithSecret | None,
         is_tool_failed_duplicated_error: bool,
     ) -> AfterToolcallResult | None:
         """工具结果回调，检查读写文件冲突。"""
@@ -451,7 +453,7 @@ class SedFragmentedReadPlugin(Plugin):
         status: Literal["skipped", "success", "failed"],
         message: Message | None,
         toolcall_arguments: dict,
-        with_secret: list[str] | None,
+        with_secret: WithSecret | None,
         is_tool_failed_duplicated_error: bool,
     ) -> AfterToolcallResult | None:
         machine_control = self.registry.get_member_typechecked(
