@@ -4,7 +4,6 @@ import fnmatch
 from pathlib import Path
 from typing import Any
 
-from linhai.type_hints import WithSecret
 from linhai.agent.lifecycle import Lifecycle
 from linhai.config import ToolConfig, FileOperationRule
 from linhai.tool.base import FailedToolResult
@@ -55,7 +54,7 @@ class FileOperationPermissionPlugin:
         self,
         tool_name: str,
         toolcall_arguments: dict[str, Any],
-        with_secret: WithSecret | None,
+        with_secret: list[str] | None,
     ) -> FailedToolResult | None:
         file_operations = {
             "read_file": "read",

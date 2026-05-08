@@ -44,7 +44,7 @@ class TestToolManager(unittest.IsolatedAsyncioTestCase):
             function_name="add_numbers",
             function_arguments={"a": 3, "b": 5},
             assert_success=False,
-            with_secret={"in_arguments": [], "in_result": []},
+            with_secret=[],
         )
 
         with (
@@ -67,7 +67,7 @@ class TestToolManager(unittest.IsolatedAsyncioTestCase):
             function_name="invalid_tool",
             function_arguments={},
             assert_success=False,
-            with_secret={"in_arguments": [], "in_result": []},
+            with_secret=[],
         )
 
         with unittest.mock.patch(
@@ -95,7 +95,7 @@ class TestToolManager(unittest.IsolatedAsyncioTestCase):
                 function_name="mock_async_tool",
                 function_arguments={"arg1": 2, "arg2": 3},
                 assert_success=False,
-                with_secret={"in_arguments": [], "in_result": []},
+                with_secret=[],
             )
             result = await self.manager.process_tool_call(mock_tool_call, tool_index=1)
 
@@ -146,7 +146,7 @@ class TestToolManager(unittest.IsolatedAsyncioTestCase):
             function_name="test_tool",
             function_arguments={},
             assert_success=False,
-            with_secret={"in_arguments": [], "in_result": []},
+            with_secret=[],
         )
 
         with (
@@ -199,7 +199,7 @@ class TestToolManager(unittest.IsolatedAsyncioTestCase):
             function_name="test_tool",
             function_arguments={},
             assert_success=False,
-            with_secret={"in_arguments": [], "in_result": []},
+            with_secret=[],
         )
 
         with (
@@ -232,7 +232,7 @@ class TestToolManager(unittest.IsolatedAsyncioTestCase):
             function_name="test_tool",
             function_arguments={},
             assert_success=False,
-            with_secret={"in_arguments": [], "in_result": []},
+            with_secret=[],
         )
 
         with (

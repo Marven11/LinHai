@@ -53,7 +53,7 @@ invalid json
         """Test extracting tool calls with with_secret field."""
         markdown_text = """
 ```json toolcall
-{"name": "secret_tool", "arguments": {}, "with_secret": {"in_arguments": ["API_KEY"], "in_result": ["API_KEY"]}}
+{"name": "secret_tool", "arguments": {}, "with_secret": ["API_KEY"]}
 ```
 ```json toolcall
 {"name": "assertive_tool", "arguments": {"x": 1}, "assert_success": false}
@@ -66,10 +66,7 @@ invalid json
 
         self.assertEqual(tool_calls[0]["name"], "secret_tool")
         self.assertEqual(tool_calls[0]["arguments"], {})
-        self.assertEqual(
-            tool_calls[0].get("with_secret"),
-            {"in_arguments": ["API_KEY"], "in_result": ["API_KEY"]},
-        )
+        self.assertEqual(tool_calls[0].get("with_secret"), ["API_KEY"])
 
         self.assertEqual(tool_calls[1]["name"], "assertive_tool")
         self.assertEqual(tool_calls[1]["arguments"], {"x": 1})

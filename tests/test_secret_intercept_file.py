@@ -100,10 +100,7 @@ class TestSecretInterceptorPluginWithFileSaving(unittest.TestCase):
                 status="success",
                 message=RuntimeMessage(result_content),
                 toolcall_arguments=None,
-                with_secret={
-                    "in_arguments": ["DEEPSEEK_API_KEY"],
-                    "in_result": ["DEEPSEEK_API_KEY"],
-                },
+                with_secret=["DEEPSEEK_API_KEY"],
                 is_tool_failed_duplicated_error=False,
             )
 

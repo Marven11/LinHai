@@ -147,7 +147,7 @@ class TestCallWithSecretE2e(unittest.IsolatedAsyncioTestCase):
                     {
                         "id": "call_1",
                         "name": "call_with_secret",
-                        "args": '{"tool_name": "echo", "tool_arguments": {"text": "pass is <$TEST_PASSWORD$>"}, "with_secret": {"in_arguments": ["TEST_PASSWORD"], "in_result": ["TEST_PASSWORD"]}}',
+                        "args": '{"tool_name": "echo", "tool_arguments": {"text": "pass is <$TEST_PASSWORD$>"}, "with_secret": ["TEST_PASSWORD"]}',
                     }
                 ],
             )
