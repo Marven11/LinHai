@@ -45,7 +45,7 @@ from linhai.sandbox import (
     MacOsSandbox,
     NoSandbox,
 )
-from .messages import GlobalPrompt, PathPrompt
+from .messages import GlobalPrompt, PathPrompt, RuntimeMessage
 
 from .main import Agent
 from .orchestration import AgentContextOrchestration
@@ -304,6 +304,11 @@ async def create_agent_from_context(
         pinned_messages=await _create_pinned_messages(context),
         max_toolcall_token_in_round=context["max_toolcall_token_in_round"],
     )
+    startup_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    agent.message_processor.messages.append(
+        RuntimeMessage(f"Agent启动时间: {startup_time}")
+    )
+
     orchestration = context["registry"].get_member_typechecked(
         "agent_context_orchestration", AgentContextOrchestration
     )
@@ -542,11 +547,7 @@ async def _create_pinned_messages(context: "AgentBuildContext") -> list[Message]
     Returns:
         固定消息列表
     """
-    from linhai.agent.messages import RuntimeMessage
-
     pinned_messages: list[Message] = [SystemMessage(context["registry"])]
-    startup_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    pinned_messages.append(RuntimeMessage(f"Agent启动时间: {startup_time}"))
 
     if context["user_prompt"] is not None:
         pinned_messages.append(GlobalPrompt(Path(context["user_prompt"])))

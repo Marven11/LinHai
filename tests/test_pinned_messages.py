@@ -89,13 +89,10 @@ class TestPinnedMessages(unittest.IsolatedAsyncioTestCase):
 
         pinned_messages = await _create_pinned_messages(context)
 
-        # 应该至少包含系统消息、启动时间消息和全局指导消息
-        self.assertGreaterEqual(len(pinned_messages), 3)
+        self.assertGreaterEqual(len(pinned_messages), 2)
         self.assertIsInstance(pinned_messages[0], SystemMessage)
-        self.assertIsInstance(pinned_messages[1], RuntimeMessage)
-        self.assertIsInstance(pinned_messages[2], GlobalPrompt)
-        # 检查GlobalPrompt的filepath属性
-        self.assertIn("AGENTS.md", str(pinned_messages[2].filepath))
+        self.assertIsInstance(pinned_messages[1], GlobalPrompt)
+        self.assertIn("AGENTS.md", str(pinned_messages[1].filepath))
 
     async def test_pinned_messages_with_prompt_config(self):
         """测试有prompt配置时，使用配置的全局指导路径。"""
@@ -110,13 +107,11 @@ class TestPinnedMessages(unittest.IsolatedAsyncioTestCase):
 
         pinned_messages = await _create_pinned_messages(context)
 
-        self.assertGreaterEqual(len(pinned_messages), 3)
+        self.assertGreaterEqual(len(pinned_messages), 2)
         self.assertIsInstance(pinned_messages[0], SystemMessage)
-        self.assertIsInstance(pinned_messages[1], RuntimeMessage)
-        self.assertIsInstance(pinned_messages[2], GlobalPrompt)
-        # 检查GlobalPrompt的filepath属性
+        self.assertIsInstance(pinned_messages[1], GlobalPrompt)
         expected_path = self.config_basedir / "custom_prompt.md"
-        self.assertEqual(str(pinned_messages[2].filepath), str(expected_path))
+        self.assertEqual(str(pinned_messages[1].filepath), str(expected_path))
 
     async def test_pinned_messages_with_user_messages(self):
         """测试通过-m参数添加用户消息。"""
@@ -125,15 +120,13 @@ class TestPinnedMessages(unittest.IsolatedAsyncioTestCase):
 
         pinned_messages = await _create_pinned_messages(context)
 
-        # 系统消息 + 启动时间消息 + 全局指导消息 + 2条用户消息
-        self.assertEqual(len(pinned_messages), 5)
+        self.assertEqual(len(pinned_messages), 4)
         self.assertIsInstance(pinned_messages[0], SystemMessage)
-        self.assertIsInstance(pinned_messages[1], RuntimeMessage)
-        self.assertIsInstance(pinned_messages[2], GlobalPrompt)
+        self.assertIsInstance(pinned_messages[1], GlobalPrompt)
+        self.assertIsInstance(pinned_messages[2], UserMessage)
         self.assertIsInstance(pinned_messages[3], UserMessage)
-        self.assertIsInstance(pinned_messages[4], UserMessage)
-        self.assertEqual(pinned_messages[3].message, "Hello")
-        self.assertEqual(pinned_messages[4].message, "World")
+        self.assertEqual(pinned_messages[2].message, "Hello")
+        self.assertEqual(pinned_messages[3].message, "World")
 
     async def test_pinned_messages_with_file_messages(self):
         """测试通过-f参数添加文件内容消息。"""
@@ -151,13 +144,11 @@ class TestPinnedMessages(unittest.IsolatedAsyncioTestCase):
 
             pinned_messages = await _create_pinned_messages(context)
 
-            # 系统消息 + 启动时间消息 + 全局指导消息 + 文件内容消息
-            self.assertEqual(len(pinned_messages), 4)
+            self.assertEqual(len(pinned_messages), 3)
             self.assertIsInstance(pinned_messages[0], SystemMessage)
-            self.assertIsInstance(pinned_messages[1], RuntimeMessage)
-            self.assertIsInstance(pinned_messages[2], GlobalPrompt)
-            self.assertIsInstance(pinned_messages[3], ToolCallResultMessage)
-            self.assertEqual(pinned_messages[3].result.content, "File content")
+            self.assertIsInstance(pinned_messages[1], GlobalPrompt)
+            self.assertIsInstance(pinned_messages[2], ToolCallResultMessage)
+            self.assertEqual(pinned_messages[2].result.content, "File content")
         finally:
             temp_file_path.unlink()
 
@@ -168,12 +159,9 @@ class TestPinnedMessages(unittest.IsolatedAsyncioTestCase):
 
         pinned_messages = await _create_pinned_messages(context)
 
-        # 系统消息 + 启动时间消息 + 全局指导消息 + 可能的PathPrompt
-        self.assertGreaterEqual(len(pinned_messages), 4)
+        self.assertGreaterEqual(len(pinned_messages), 3)
         self.assertIsInstance(pinned_messages[0], SystemMessage)
-        self.assertIsInstance(pinned_messages[1], RuntimeMessage)
-        self.assertIsInstance(pinned_messages[2], GlobalPrompt)
-        # 检查是否有PathPrompt
+        self.assertIsInstance(pinned_messages[1], GlobalPrompt)
         path_messages = [msg for msg in pinned_messages if isinstance(msg, PathPrompt)]
         self.assertGreaterEqual(len(path_messages), 1)
 
@@ -397,31 +385,6 @@ class TestPinnedMessages(unittest.IsolatedAsyncioTestCase):
             self.exists_patcher.start()
             text_path.unlink(missing_ok=True)
             image_path.unlink(missing_ok=True)
-
-    async def test_pinned_messages_includes_startup_time(self):
-        """测试pinned messages包含启动时间。"""
-        context = self.create_context()
-
-        pinned_messages = await _create_pinned_messages(context)
-
-        # 应该至少包含：SystemMessage + RuntimeMessage(启动时间) + GlobalPrompt
-        self.assertGreaterEqual(len(pinned_messages), 3)
-        self.assertIsInstance(pinned_messages[0], SystemMessage)
-
-        # 检查第二条消息是RuntimeMessage且包含启动时间
-        self.assertIsInstance(pinned_messages[1], RuntimeMessage)
-        runtime_message = pinned_messages[1]
-        self.assertIn("Agent启动时间:", runtime_message.message)
-
-        # 验证时间格式 YYYY-MM-DD HH:MM:SS
-        import re
-
-        time_pattern = r"\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}"
-        match = re.search(time_pattern, runtime_message.message)
-        self.assertIsNotNone(match, f"时间格式不正确: {runtime_message.message}")
-
-        # 第三条消息应该是GlobalPrompt
-        self.assertIsInstance(pinned_messages[2], GlobalPrompt)
 
 
 if __name__ == "__main__":
