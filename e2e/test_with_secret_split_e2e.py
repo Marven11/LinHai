@@ -103,10 +103,9 @@ def test_secret_write_file_tmux_e2e():
                 str(config_path),
                 "-m",
                 (
-                    f"Write a file at path {test_file} with content: api_key = '<$TEST_API_KEY$>'. "
-                    f"You have access to TEST_API_KEY secret. "
-                    f"Use write_file tool with with_secret field "
-                    f'to substitute the secret: {{"in_arguments": ["TEST_API_KEY"], "in_result": []}}'
+                    f"Write a file at path {test_file} containing "
+                    f"the TEST_API_KEY secret value in the format: "
+                    f"api_key = '<the secret value>'"
                 ),
             ],
             check=True,
@@ -184,9 +183,8 @@ def test_secret_masked_in_result_tmux_e2e():
                 "-m",
                 (
                     f"Read the file at {test_file} and tell me its content. "
-                    f"The file contains TEST_API_KEY secret. "
-                    f"Use read_file tool with with_secret field "
-                    f'to mask the secret: {{"in_arguments": [], "in_result": ["TEST_API_KEY"]}}'
+                    f"The file contains the TEST_API_KEY secret - "
+                    f"make sure to protect it from being exposed."
                 ),
             ],
             check=True,

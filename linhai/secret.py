@@ -483,7 +483,7 @@ def initialize_secret_system(
             rule_content = INTRODUCTION_SECRET_SYSTEM.format(
                 secrets_list=secrets_message
             )
-            system_message.add_rule("SECRET SYSTEM", rule_content)
+            system_message.add_introduction("SECRET SYSTEM", rule_content)
 
         registry.add_postinit(add_secret_rule)
 

@@ -224,7 +224,7 @@ with_secret字段: 值为一个字典，包含两个字段：
 在工具参数中使用secret时：
 
 1. 将secret键放入with_secret的`in_arguments`列表
-2. 在工具参数中使用占位符引用secret值，这些引用会被自动替换为实际值。
+2. 在工具参数中使用`<$KEY$>`格式的占位符（KEY为secret键名），占位符会被自动替换为实际值
 
 查看包含secret的工具返回值时：
 
@@ -263,7 +263,7 @@ Example: `{{"in_arguments": ["SECRET_PASSWORD"], "in_result": ["SECRET_PASSWORD"
 When using secrets in tool parameters:
 
 1. Put secret keys in the `in_arguments` list of with_secret
-2. Use the placeholder in tool parameters to reference the secret value, these references will be automatically replaced with actual values.
+2. Use `<$KEY$>` format placeholder in tool parameters (where KEY is the secret key name), placeholders will be automatically replaced with actual values.
 
 When viewing tool return values containing secrets:
 
@@ -596,7 +596,6 @@ INTRODUCTION_ITEMS = [
     ("WAITING USER AND AUTO RUN", INTRODUCTION_WAITING_USER),
     ("GLOBAL PROMPT", INTRODUCTION_GLOBAL_PROMPT),
     ("CONTEXT MANAGEMENT", INTRODUCTION_CONTEXT_MANAGEMENT),
-    ("SECRET SYSTEM", INTRODUCTION_SECRET_SYSTEM),
     ("MACHINE CONTROL BASIC", INTRODUCTION_MACHINE_CONTROL_BASIC),
 ]
 
@@ -720,12 +719,12 @@ EXAMPLES_SECRET_USAGE = t(
     {
         "zh_CN": """
 ```json toolcall
-{"name": "write_file", "with_secret": {"in_arguments": ["DEEPSEEK_API_KEY"], "in_result": ["DEEPSEEK_API_KEY"]}, "arguments": {"filepath": "config.py", "content": "api_key = 'PLACEHOLDER'"}}
+{"name": "write_file", "with_secret": {"in_arguments": ["DEEPSEEK_API_KEY"], "in_result": ["DEEPSEEK_API_KEY"]}, "arguments": {"filepath": "config.py", "content": "api_key = '<$DEEPSEEK_API_KEY$>'"}}
 ```
 """,
         "en": """
 ```json toolcall
-{"name": "write_file", "with_secret": {"in_arguments": ["DEEPSEEK_API_KEY"], "in_result": ["DEEPSEEK_API_KEY"]}, "arguments": {"filepath": "config.py", "content": "api_key = 'PLACEHOLDER'"}}
+{"name": "write_file", "with_secret": {"in_arguments": ["DEEPSEEK_API_KEY"], "in_result": ["DEEPSEEK_API_KEY"]}, "arguments": {"filepath": "config.py", "content": "api_key = '<$DEEPSEEK_API_KEY$>'"}}
 ```
 """,
     }
