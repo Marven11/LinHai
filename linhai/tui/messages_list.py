@@ -35,6 +35,7 @@ class MessagesList(VerticalScroll):
         registry: Registry,
         tui_config: TUIConfig,
         pygments_theme: str,
+        syntax_background: str | None,
         lifecycle: Lifecycle,
         get_refresh_interval,
         *args,
@@ -44,6 +45,7 @@ class MessagesList(VerticalScroll):
         self.registry = registry
         self.tui_config = tui_config
         self.pygments_theme = pygments_theme
+        self.syntax_background = syntax_background
         self.get_refresh_interval = get_refresh_interval
         self.messages: List[
             Union[MessageWidget, UserMessageWidget, MessageGenerationWidget]
@@ -116,6 +118,7 @@ class MessagesList(VerticalScroll):
             role="assistant",
             sender_name=llm_name,
             pygments_theme=self.pygments_theme,
+            syntax_background=self.syntax_background,
             parsed_answer=parsed_answer,
             get_refresh_interval=self.get_refresh_interval,
         )
@@ -247,6 +250,7 @@ class MessagesList(VerticalScroll):
                     role="assistant",
                     sender_name=msg_data["sender_name"],
                     pygments_theme=self.pygments_theme,
+                    syntax_background=self.syntax_background,
                     parsed_answer=None,
                     get_refresh_interval=self.get_refresh_interval,
                 )

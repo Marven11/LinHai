@@ -99,6 +99,8 @@ class TUIApp(App):
         if tui_config.textual_theme is not None:
             self.theme = tui_config.textual_theme
         self.pygments_theme = tui_config.pygments_theme
+        theme = self.get_theme(self.theme)
+        self.syntax_background = theme.background if theme else None
         self.registry = registry
         self.registry.register_queue("exit_signal")
         TextualTaskSupervisor(self, registry)
@@ -139,6 +141,7 @@ class TUIApp(App):
                     registry=self.registry,
                     tui_config=self.tui_config,
                     pygments_theme=self.pygments_theme,
+                    syntax_background=self.syntax_background,
                     lifecycle=lifecycle,
                     get_refresh_interval=self.get_refresh_interval,
                     id="chat-container",

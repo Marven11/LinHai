@@ -43,7 +43,10 @@ class TestWidgetsAcceptPygmentsTheme(unittest.TestCase):
             "tool_name": "",
         }
         widget = ToolCallWidget(
-            pygments_theme="nord", segment=segment, get_refresh_interval=lambda: 0.05
+            pygments_theme="nord",
+            syntax_background=None,
+            segment=segment,
+            get_refresh_interval=lambda: 0.05,
         )
         self.assertEqual(widget.pygments_theme, "nord")
 
@@ -53,6 +56,7 @@ class TestWidgetsAcceptPygmentsTheme(unittest.TestCase):
             role="assistant",
             sender_name="test",
             pygments_theme="nord",
+            syntax_background=None,
             segment=segment,
             get_refresh_interval=lambda: 0.05,
         )
@@ -85,7 +89,10 @@ class TestWidgetsAcceptPygmentsTheme(unittest.TestCase):
             "tool_name": "test",
         }
         widget = ToolCallWidget(
-            pygments_theme="nord", segment=segment, get_refresh_interval=lambda: 0.05
+            pygments_theme="nord",
+            syntax_background=None,
+            segment=segment,
+            get_refresh_interval=lambda: 0.05,
         )
         widget.update = Mock()
         widget.update_display()
@@ -100,6 +107,7 @@ class TestWidgetsAcceptPygmentsTheme(unittest.TestCase):
             role="assistant",
             sender_name="test",
             pygments_theme="nord",
+            syntax_background=None,
             segment=segment,
             get_refresh_interval=lambda: 0.05,
         )

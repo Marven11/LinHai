@@ -24,6 +24,7 @@ class TestReasoningContentWidget(unittest.TestCase):
             role=self.role,
             sender_name=self.sender_name,
             pygments_theme="nord",
+            syntax_background=None,
             segment=self.mock_segment,
             get_refresh_interval=lambda: 0.05,
         )
@@ -128,6 +129,7 @@ class TestReasoningContentWidget(unittest.TestCase):
             role="assistant",
             sender_name="test",
             pygments_theme="nord",
+            syntax_background=None,
             segment=mock_segment,
             get_refresh_interval=lambda: 0.05,
         )
@@ -157,6 +159,7 @@ class TestReasoningContentWidget(unittest.TestCase):
             role="assistant",
             sender_name="test",
             pygments_theme="nord",
+            syntax_background=None,
             segment=mock_segment,
             get_refresh_interval=lambda: 0.05,
         )
@@ -182,6 +185,7 @@ class TestReasoningContentWidget(unittest.TestCase):
             role="assistant",
             sender_name="test",
             pygments_theme="nord",
+            syntax_background=None,
             segment=mock_segment,
             get_refresh_interval=lambda: 0.05,
         )
@@ -219,6 +223,7 @@ class TestReasoningContentWidget(unittest.TestCase):
             role="assistant",
             sender_name="test",
             pygments_theme="nord",
+            syntax_background=None,
             segment=mock_segment,
             get_refresh_interval=lambda: 0.05,
         )
@@ -257,6 +262,7 @@ class TestReasoningContentWidget(unittest.TestCase):
             role="assistant",
             sender_name="test",
             pygments_theme="nord",
+            syntax_background=None,
             segment=mock_segment,
             get_refresh_interval=lambda: 0.05,
         )
@@ -286,6 +292,7 @@ class TestReasoningContentWidget(unittest.TestCase):
             role="assistant",
             sender_name="test",
             pygments_theme="nord",
+            syntax_background=None,
             segment=mock_segment,
             get_refresh_interval=lambda: 0.05,
         )
@@ -312,6 +319,7 @@ class TestReasoningContentWidget(unittest.TestCase):
             role="assistant",
             sender_name="test",
             pygments_theme="nord",
+            syntax_background=None,
             segment=mock_segment,
             get_refresh_interval=lambda: 0.05,
         )
@@ -342,6 +350,7 @@ class TestReasoningContentWidget(unittest.TestCase):
             role="assistant",
             sender_name="test",
             pygments_theme="nord",
+            syntax_background=None,
             segment=mock_segment,
             get_refresh_interval=lambda: 0.05,
         )

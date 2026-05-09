@@ -341,11 +341,13 @@ class ToolCallWidget(Static):
     def __init__(
         self,
         pygments_theme: str,
+        syntax_background: str | None,
         segment: ToolCallSegment | OpenAiToolCallSegment,
         get_refresh_interval: Callable[[], float],
     ):
         super().__init__()
         self.pygments_theme = pygments_theme
+        self.syntax_background = syntax_background
         self._segment = segment
         self._last_rendered = ""
         self.is_collapsed = False
@@ -375,9 +377,7 @@ class ToolCallWidget(Static):
                     self._segment["markdown_representation"],
                     lexer="markdown",
                     theme=self.pygments_theme,
-                    background_color=(
-                        "#121212" if self.pygments_theme == "lightbulb" else None
-                    ),
+                    background_color=self.syntax_background,
                     word_wrap=True,
                 )
             )
@@ -397,9 +397,7 @@ class ToolCallWidget(Static):
                     md,
                     lexer="markdown",
                     theme=self.pygments_theme,
-                    background_color=(
-                        "#121212" if self.pygments_theme == "lightbulb" else None
-                    ),
+                    background_color=self.syntax_background,
                     word_wrap=True,
                 )
             )
@@ -433,9 +431,7 @@ class ToolCallWidget(Static):
                 simplified,
                 lexer="python",
                 theme=self.pygments_theme,
-                background_color=(
-                    "#121212" if self.pygments_theme == "lightbulb" else None
-                ),
+                background_color=self.syntax_background,
                 word_wrap=True,
             )
         )
@@ -463,9 +459,7 @@ class ToolCallWidget(Static):
                     self._segment["markdown_representation"],
                     lexer="markdown",
                     theme=self.pygments_theme,
-                    background_color=(
-                        "#121212" if self.pygments_theme == "lightbulb" else None
-                    ),
+                    background_color=self.syntax_background,
                     word_wrap=True,
                 )
             )
@@ -515,11 +509,13 @@ class ReasoningContentWidget(Static):
         role: str,
         sender_name: str,
         pygments_theme: str,
+        syntax_background: str | None,
         segment: ReasoningSegment,
         get_refresh_interval: Callable[[], float],
     ):
         super().__init__()
         self.pygments_theme = pygments_theme
+        self.syntax_background = syntax_background
         self._segment = segment
         self.role = f"{role}-reasoning"
         self.content_str = ""
@@ -572,9 +568,7 @@ class ReasoningContentWidget(Static):
                 content_to_display,
                 lexer="markdown",
                 theme=self.pygments_theme,
-                background_color=(
-                    "#121212" if self.pygments_theme == "lightbulb" else None
-                ),
+                background_color=self.syntax_background,
                 word_wrap=True,
             )
         else:
@@ -741,6 +735,7 @@ class MessageWidget(Static):
         role: str,
         sender_name: str,
         pygments_theme: str,
+        syntax_background: str | None,
         parsed_answer: ParsedAnswer | None,
         get_refresh_interval: Callable[[], float],
     ):
@@ -748,6 +743,7 @@ class MessageWidget(Static):
         self.role = role
         self.sender_name = sender_name
         self.pygments_theme = pygments_theme
+        self.syntax_background = syntax_background
         self.parsed_answer = parsed_answer
         self.get_refresh_interval = get_refresh_interval
         self._restored_segments: list[dict] | None = None
@@ -803,6 +799,7 @@ class MessageWidget(Static):
                     )
                 widget = ToolCallWidget(
                     pygments_theme=self.pygments_theme,
+                    syntax_background=self.syntax_background,
                     segment=seg,
                     get_refresh_interval=self.get_refresh_interval,
                 )
@@ -829,6 +826,7 @@ class MessageWidget(Static):
                     role=self.role,
                     sender_name=self.sender_name,
                     pygments_theme=self.pygments_theme,
+                    syntax_background=self.syntax_background,
                     segment=seg,
                     get_refresh_interval=self.get_refresh_interval,
                 )
@@ -865,6 +863,7 @@ class MessageWidget(Static):
             ):
                 widget = ToolCallWidget(
                     pygments_theme=self.pygments_theme,
+                    syntax_background=self.syntax_background,
                     segment=segment,
                     get_refresh_interval=self.get_refresh_interval,
                 )
@@ -881,6 +880,7 @@ class MessageWidget(Static):
                     role=self.role,
                     sender_name=self.sender_name,
                     pygments_theme=self.pygments_theme,
+                    syntax_background=self.syntax_background,
                     segment=segment,
                     get_refresh_interval=self.get_refresh_interval,
                 )

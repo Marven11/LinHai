@@ -31,6 +31,7 @@ def _mount_toolcall(msg, name, is_finished=True, has_error=False):
         seg["tool_name"] = ""
     tc = ToolCallWidget(
         pygments_theme="lightbulb",
+        syntax_background=None,
         segment=seg,
         get_refresh_interval=lambda: 1.0,
     )
@@ -75,6 +76,7 @@ class _MessageTestApp(App):
             role="assistant",
             sender_name="test",
             pygments_theme="lightbulb",
+            syntax_background=None,
             parsed_answer=mock_parsed,
             get_refresh_interval=lambda: 1.0,
         )
@@ -351,6 +353,7 @@ class TestMessageCollapseInteraction(unittest.TestCase):
                 role="assistant",
                 sender_name="test",
                 pygments_theme="lightbulb",
+                syntax_background=None,
                 segment=_make_reasoning_segment("thinking content"),
                 get_refresh_interval=lambda: 1.0,
             )
