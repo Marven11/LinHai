@@ -375,6 +375,9 @@ class ToolCallWidget(Static):
                     self._segment["markdown_representation"],
                     lexer="markdown",
                     theme=self.pygments_theme,
+                    background_color=(
+                        "#121212" if self.pygments_theme == "lightbulb" else None
+                    ),
                     word_wrap=True,
                 )
             )
@@ -394,6 +397,9 @@ class ToolCallWidget(Static):
                     md,
                     lexer="markdown",
                     theme=self.pygments_theme,
+                    background_color=(
+                        "#121212" if self.pygments_theme == "lightbulb" else None
+                    ),
                     word_wrap=True,
                 )
             )
@@ -427,6 +433,9 @@ class ToolCallWidget(Static):
                 simplified,
                 lexer="python",
                 theme=self.pygments_theme,
+                background_color=(
+                    "#121212" if self.pygments_theme == "lightbulb" else None
+                ),
                 word_wrap=True,
             )
         )
@@ -454,6 +463,9 @@ class ToolCallWidget(Static):
                     self._segment["markdown_representation"],
                     lexer="markdown",
                     theme=self.pygments_theme,
+                    background_color=(
+                        "#121212" if self.pygments_theme == "lightbulb" else None
+                    ),
                     word_wrap=True,
                 )
             )
@@ -560,6 +572,9 @@ class ReasoningContentWidget(Static):
                 content_to_display,
                 lexer="markdown",
                 theme=self.pygments_theme,
+                background_color=(
+                    "#121212" if self.pygments_theme == "lightbulb" else None
+                ),
                 word_wrap=True,
             )
         else:
