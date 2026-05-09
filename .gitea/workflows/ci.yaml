@@ -21,6 +21,10 @@ jobs:
           echo "Checking if PR has any changes..."
           bash .gitea/scripts/check_empty_pr.sh
 
+      - name: Check PR body length
+        run: |
+          python3 .gitea/scripts/check_pr_body.py
+
       - name: Check if branch is behind main
         run: |
           echo "Checking if branch is behind main..."

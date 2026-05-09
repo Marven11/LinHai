@@ -1,3 +1,4 @@
+import json
 import os
 import sys
 import subprocess
@@ -90,6 +91,115 @@ def test_check_python_comments():
             return False
 
         print("PASS: check_python_comments.py test")
+        return True
+
+    finally:
+        os.chdir(original_dir)
+        shutil.rmtree(test_dir)
+
+
+def test_check_pr_body():
+    """
+    Test the check_pr_body.py script.
+    """
+    test_dir = tempfile.mkdtemp()
+    original_dir = os.getcwd()
+    try:
+        event_file = os.path.join(test_dir, "event.json")
+        script_path = os.path.join(original_dir, ".gitea/scripts/check_pr_body.py")
+
+        env = os.environ.copy()
+        env.pop("GITHUB_EVENT_PATH", None)
+        result = subprocess.run(
+            [sys.executable, script_path],
+            capture_output=True,
+            text=True,
+            env=env,
+        )
+        if result.returncode != 0:
+            print("FAIL: check_pr_body.py should skip without event file")
+            print(f"Output: {result.stdout}")
+            print(f"Error: {result.stderr}")
+            return False
+
+        with open(event_file, "w") as f:
+            json.dump({"pull_request": {"body": "short desc\n"}}, f)
+        env["GITHUB_EVENT_PATH"] = event_file
+        result = subprocess.run(
+            [sys.executable, script_path],
+            capture_output=True,
+            text=True,
+            env=env,
+        )
+        if result.returncode != 1:
+            print("FAIL: check_pr_body.py should fail with < 3 lines")
+            print(f"Output: {result.stdout}")
+            print(f"Error: {result.stderr}")
+            return False
+
+        with open(event_file, "w") as f:
+            json.dump(
+                {"pull_request": {"body": "line 1\nline 2\nline 3\n"}},
+                f,
+            )
+        result = subprocess.run(
+            [sys.executable, script_path],
+            capture_output=True,
+            text=True,
+            env=env,
+        )
+        if result.returncode != 0:
+            print("FAIL: check_pr_body.py should pass with 3+ lines")
+            print(f"Output: {result.stdout}")
+            print(f"Error: {result.stderr}")
+            return False
+
+        with open(event_file, "w") as f:
+            json.dump({"pull_request": {"body": ""}}, f)
+        result = subprocess.run(
+            [sys.executable, script_path],
+            capture_output=True,
+            text=True,
+            env=env,
+        )
+        if result.returncode != 1:
+            print("FAIL: check_pr_body.py should fail with empty body")
+            print(f"Output: {result.stdout}")
+            print(f"Error: {result.stderr}")
+            return False
+
+        with open(event_file, "w") as f:
+            json.dump({"pull_request": {}}, f)
+        result = subprocess.run(
+            [sys.executable, script_path],
+            capture_output=True,
+            text=True,
+            env=env,
+        )
+        if result.returncode != 1:
+            print("FAIL: check_pr_body.py should fail with None body")
+            print(f"Output: {result.stdout}")
+            print(f"Error: {result.stderr}")
+            return False
+
+        with open(event_file, "w") as f:
+            json.dump(
+                {"pull_request": {"body": "line 1\n   \nline 2\n"}},
+                f,
+            )
+        result = subprocess.run(
+            [sys.executable, script_path],
+            capture_output=True,
+            text=True,
+            env=env,
+        )
+        if result.returncode != 1:
+            print("FAIL: check_pr_body.py should fail with whitespace-only lines")
+            print(f"Output: {result.stdout}")
+            print(f"Error: {result.stderr}")
+            return False
+
+        print("PASS: check_pr_body.py test")
         return True
 
     finally:
@@ -191,6 +301,7 @@ def main():
     """
     tests = [
         test_check_python_comments,
+        test_check_pr_body,
         test_check_git_diff,
     ]
 
