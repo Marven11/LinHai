@@ -114,6 +114,8 @@ def test_secret_write_file_tmux_e2e():
             ["tmux", "set-option", "-t", session_name, "remain-on-exit", "on"],
             check=False,
         )
+        time.sleep(5)
+        secret_path.unlink(missing_ok=True)
 
         start = time.time()
         last_output = ""
@@ -193,6 +195,8 @@ def test_secret_masked_in_result_tmux_e2e():
             ["tmux", "set-option", "-t", session_name, "remain-on-exit", "on"],
             check=False,
         )
+        time.sleep(5)
+        secret_path.unlink(missing_ok=True)
 
         start = time.time()
         last_output = ""

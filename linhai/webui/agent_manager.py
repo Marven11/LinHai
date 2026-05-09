@@ -313,6 +313,7 @@ class AgentManager:
         )
 
         agent = await create_agent_from_context(context)
+        registry.call_postinit()
 
         restore_path = build_args.get("restore_path")
         if restore_path is not None:
