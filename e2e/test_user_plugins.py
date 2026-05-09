@@ -19,8 +19,8 @@ from conftest import retry_llm_call, slim_system_message
 
 pytestmark = pytest.mark.asyncio
 
-DEEPSEEK_BASE_URL = "http://192.168.114.149:8124/v1/deepseek"
-DEEPSEEK_MODEL = "deepseek-reasoner"
+DEEPSEEK_BASE_URL = "http://192.168.114.149:8124/v1"
+DEEPSEEK_MODEL = "deepseek/deepseek-v4-flash"
 LLM_NAME = "ds"
 
 
@@ -125,7 +125,7 @@ async def test_user_plugin_injects_runtime_message():
     tmpdir = tempfile.mkdtemp()
 
     async def try_once():
-        agent = _create_test_agent_with_plugin(tmpdir, "x")
+        agent = _create_test_agent_with_plugin(tmpdir, "gomodel-master-key")
         await agent.message_processor.add_new_message(
             UserMessage("How old is litiansuo?")
         )

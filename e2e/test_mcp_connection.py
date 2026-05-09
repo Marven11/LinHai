@@ -21,8 +21,8 @@ from conftest import retry_llm_call, slim_system_message
 
 pytestmark = pytest.mark.asyncio
 
-DEEPSEEK_BASE_URL = "http://192.168.114.149:8124/v1/deepseek"
-DEEPSEEK_MODEL = "deepseek-reasoner"
+DEEPSEEK_BASE_URL = "http://192.168.114.149:8124/v1"
+DEEPSEEK_MODEL = "deepseek/deepseek-v4-flash"
 LLM_NAME = "free"
 
 
@@ -129,7 +129,7 @@ async def _create_mcp_agent(token: str) -> tuple[Agent, MCPConnector]:
 
 
 async def test_mcp_llm_coordination():
-    token = "x"
+    token = "gomodel-master-key"
 
     async def try_once():
         agent, mcp_connector = await _create_mcp_agent(token)

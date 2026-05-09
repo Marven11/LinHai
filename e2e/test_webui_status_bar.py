@@ -24,9 +24,9 @@ def _write_e2e_config() -> Path:
 
     llm_config = LLMConfig(
         name="deepseek",
-        base_url="http://192.168.114.149:8124/v1/deepseek",
-        api_key="x",
-        model="deepseek-chat",
+        base_url="http://192.168.114.149:8124/v1",
+        api_key="gomodel-master-key",
+        model="deepseek/deepseek-v4-flash",
     )
     config_data = {
         "llm": [llm_config.model_dump(exclude_none=True)],

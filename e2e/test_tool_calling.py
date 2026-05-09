@@ -52,7 +52,7 @@ async def _get_tool_call_response(client: AsyncOpenAI) -> str:
 
     async def try_once():
         response = await client.chat.completions.create(
-            model="deepseek-reasoner",
+            model="deepseek/deepseek-v4-flash",
             messages=[
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": "What is the weather in Tokyo?"},
@@ -98,7 +98,7 @@ async def test_tool_result_processing(llm_client: AsyncOpenAI):
 
     async def try_once():
         response2 = await llm_client.chat.completions.create(
-            model="deepseek-reasoner",
+            model="deepseek/deepseek-v4-flash",
             messages=[
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": "What is the weather in Tokyo?"},

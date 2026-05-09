@@ -103,8 +103,8 @@ class AsyncEventFeeder:
 @pytest_asyncio.fixture
 async def llm_client() -> AsyncOpenAI:
     return AsyncOpenAI(
-        api_key="x",
-        base_url="http://192.168.114.149:8124/v1/deepseek",
+        api_key="gomodel-master-key",
+        base_url="http://192.168.114.149:8124/v1",
     )
 
 

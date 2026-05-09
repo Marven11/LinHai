@@ -7,8 +7,8 @@ from pathlib import Path
 
 import pytest
 
-BASE_URL = "http://192.168.114.149:8124/v1/deepseek"
-MODEL = "deepseek-chat"
+BASE_URL = "http://192.168.114.149:8124/v1"
+MODEL = "deepseek/deepseek-v4-flash"
 TIMEOUT = 600
 POLL_INTERVAL = 10
 
@@ -22,7 +22,7 @@ def _create_test_config(config_path: Path, secret_path: str) -> None:
         f"[[llm]]\n"
         f'name = "test-secret"\n'
         f'base_url = "{BASE_URL}"\n'
-        f'api_key = "x"\n'
+        f'api_key = "gomodel-master-key"\n'
         f'model = "{MODEL}"\n'
         f"custom_toolcall_format = true\n"
         f"\n"

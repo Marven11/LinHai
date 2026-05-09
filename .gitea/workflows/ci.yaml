@@ -45,9 +45,9 @@ jobs:
           cat > /root/.config/linhai/config.toml << 'EOF'
           [[llm]]
           name = "deepseek"
-          base_url = "https://api.deepseek.com/v1"
-          api_key = "sk-xxx"
-          model = "deepseek-reasoner"
+          base_url = "http://192.168.114.149:8124/v1"
+          api_key = "gomodel-master-key"
+          model = "deepseek/deepseek-v4-flash"
           [memory]
           file_path = "./AGENTS.md"
           [[agent]]
@@ -202,9 +202,9 @@ jobs:
           cat > /root/.config/linhai/config.toml << 'EOF'
           [[llm]]
           name = "deepseek"
-          base_url = "https://api.deepseek.com/v1"
-          api_key = "sk-xxx"
-          model = "deepseek-reasoner"
+          base_url = "http://192.168.114.149:8124/v1"
+          api_key = "gomodel-master-key"
+          model = "deepseek/deepseek-v4-flash"
           [memory]
           file_path = "./AGENTS.md"
           [[agent]]
@@ -247,9 +247,9 @@ jobs:
           cat > /root/.config/linhai/config.toml << 'EOF'
           [[llm]]
           name = "deepseek"
-          base_url = "https://api.deepseek.com/v1"
-          api_key = "sk-xxx"
-          model = "deepseek-reasoner"
+          base_url = "http://192.168.114.149:8124/v1"
+          api_key = "gomodel-master-key"
+          model = "deepseek/deepseek-v4-flash"
           [memory]
           file_path = "./AGENTS.md"
           [[agent]]
