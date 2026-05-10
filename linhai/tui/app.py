@@ -100,7 +100,7 @@ class TUIApp(App):
             self.theme = tui_config.textual_theme
         self.pygments_theme = tui_config.pygments_theme
         theme = self.get_theme(self.theme)
-        self.syntax_background = theme.background if theme else None
+        self.syntax_background = theme.background if theme else "#121212"
         self.registry = registry
         self.registry.register_queue("exit_signal")
         TextualTaskSupervisor(self, registry)
