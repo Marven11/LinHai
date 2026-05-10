@@ -117,7 +117,7 @@ class DuplicateFileReadPlugin(Plugin):
                     await self.registry.send_if_exists(
                         "ui_log",
                         UiNotice(
-                            level="WARNING",
+                            level="INFO",
                             content="模型第一次重复读取相同文件，已警告",
                         ),
                     )
@@ -136,7 +136,7 @@ class DuplicateFileReadPlugin(Plugin):
                     await self.registry.send_if_exists(
                         "ui_log",
                         UiNotice(
-                            level="WARNING",
+                            level="INFO",
                             content="模型第二次重复读取相同文件，已阻止",
                         ),
                     )
@@ -215,7 +215,7 @@ class UnnecessarySedReadPlugin(Plugin):
             await self.registry.send_if_exists(
                 "ui_log",
                 UiNotice(
-                    level="WARNING",
+                    level="INFO",
                     content="模型多次小块读取代码文件，已阻止",
                 ),
             )
@@ -231,7 +231,7 @@ class UnnecessarySedReadPlugin(Plugin):
             await self.registry.send_if_exists(
                 "ui_log",
                 UiNotice(
-                    level="WARNING",
+                    level="INFO",
                     content="模型多次小块读取代码文件，已警告",
                 ),
             )
@@ -303,7 +303,7 @@ class UnnecessaryRunCommandPlugin(Plugin):
                     await self.registry.send_if_exists(
                         "ui_log",
                         UiNotice(
-                            level="WARNING",
+                            level="INFO",
                             content="模型多次使用process_create读取已读文件，已阻止",
                         ),
                     )
@@ -319,7 +319,7 @@ class UnnecessaryRunCommandPlugin(Plugin):
                     await self.registry.send_if_exists(
                         "ui_log",
                         UiNotice(
-                            level="WARNING",
+                            level="INFO",
                             content=f"模型使用process_create读取已读文件，已警告（第{self.warning_count}次）",
                         ),
                     )
@@ -400,7 +400,7 @@ class FileReadWriteConflictPlugin(Plugin):
                 await self.registry.send_if_exists(
                     "ui_log",
                     UiNotice(
-                        level="WARNING",
+                        level="INFO",
                         content=f"检测到读写文件冲突：在读取文件后立即尝试写入同一文件 {filepath}，已警告",
                     ),
                 )
@@ -520,7 +520,7 @@ class SedFragmentedReadPlugin(Plugin):
         await self.registry.send_if_exists(
             "ui_log",
             UiNotice(
-                level="WARNING",
+                level="INFO",
                 content=f"模型连续{count}次使用sed重复读取文件{filepath}的细碎重叠内容",
             ),
         )

@@ -63,7 +63,7 @@ class TestOnlyReasoningPlugin(unittest.IsolatedAsyncioTestCase):
         ui_call_args = self.registry.send_if_exists.call_args
         self.assertEqual(ui_call_args[0][0], "ui_log")
         self.assertIsInstance(ui_call_args[0][1], UiNotice)
-        self.assertEqual(ui_call_args[0][1].level, "WARNING")
+        self.assertEqual(ui_call_args[0][1].level, "INFO")
         self.assertIn("只思考不输出", ui_call_args[0][1].content)
 
     async def test_after_message_generation_with_reasoning_and_content_deepseek(self):

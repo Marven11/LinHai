@@ -101,7 +101,7 @@ class SudoStdioCheckerPlugin(Plugin):
         await self.registry.send_if_exists(
             "ui_log",
             UiNotice(
-                level="WARNING",
+                level="INFO",
                 content="Agent使用了bash -c运行命令，已提醒agent避免使用",
             ),
         )

@@ -113,7 +113,7 @@ class PromptFastAgentPlugin(Plugin):
             await self.registry.send_if_exists(
                 "ui_log",
                 UiNotice(
-                    level="WARNING",
+                    level="INFO",
                     content=f"针对性优化: 阻止{model_name}调用巨量工具",
                 ),
             )
@@ -150,7 +150,7 @@ class SlowStartPlugin(Plugin):
             self.enabled = False
             await self.registry.send_if_exists(
                 "ui_log",
-                UiNotice(level="WARNING", content="过量工具调用，已打断"),
+                UiNotice(level="INFO", content="过量工具调用，已打断"),
             )
             answer.truncate()
             return False
@@ -318,7 +318,7 @@ class ToolCallInReasoningPlugin(Plugin):
         )
         await self.registry.send_if_exists(
             "ui_log",
-            UiNotice(level="WARNING", content=ui_warning_message),
+            UiNotice(level="INFO", content=ui_warning_message),
         )
 
     def register(self, lifecycle: "Lifecycle"):
@@ -359,7 +359,7 @@ class LoadImageUrlWarningPlugin(Plugin):
             await self.registry.send_if_exists(
                 "ui_log",
                 UiNotice(
-                    level="WARNING",
+                    level="INFO",
                     content="load_image工具的参数为URL，已警告agent",
                 ),
             )

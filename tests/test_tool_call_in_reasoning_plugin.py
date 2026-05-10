@@ -66,7 +66,7 @@ class TestToolCallInReasoningPlugin(unittest.IsolatedAsyncioTestCase):
         self.registry.send_if_exists.assert_called_once()
         ui_call_args = self.registry.send_if_exists.call_args
         self.assertEqual(ui_call_args[0][0], "ui_log")
-        self.assertEqual(ui_call_args[0][1].level, "WARNING")
+        self.assertEqual(ui_call_args[0][1].level, "INFO")
         self.assertIn("read_file", ui_call_args[0][1].content)
         self.assertIn("list_files", ui_call_args[0][1].content)
 
@@ -178,7 +178,7 @@ class TestToolCallInReasoningPlugin(unittest.IsolatedAsyncioTestCase):
         self.registry.send_if_exists.assert_called_once()
         ui_call_args = self.registry.send_if_exists.call_args
         self.assertEqual(ui_call_args[0][0], "ui_log")
-        self.assertEqual(ui_call_args[0][1].level, "WARNING")
+        self.assertEqual(ui_call_args[0][1].level, "INFO")
         self.assertIn("read_file", ui_call_args[0][1].content)
         self.assertEqual(ui_call_args[0][1].content.count("read_file"), 1)
 

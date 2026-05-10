@@ -72,7 +72,7 @@ class TestGlmToolCallPlugin(unittest.IsolatedAsyncioTestCase):
 
         call_args = self.registry.send_if_exists.call_args
         self.assertEqual(call_args[0][0], "ui_log")
-        self.assertEqual(call_args[0][1].level, "WARNING")
+        self.assertEqual(call_args[0][1].level, "INFO")
         self.assertIn("GLM错误工具调用格式", call_args[0][1].content)
 
     async def test_after_message_generation_glm_model_with_error_format_leading_spaces(
