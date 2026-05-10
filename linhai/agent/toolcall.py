@@ -454,7 +454,19 @@ class AgentToolcall:
                 await message_processor.add_new_message(result_msg)
                 continue
 
-            arguments = json.loads(tc["function"]["arguments"])
+            try:
+                arguments = json.loads(tc["function"]["arguments"])
+            except json.JSONDecodeError as e:
+                message_processor = self.registry.get_member_typechecked(
+                    "agent_message", AgentMessage
+                )
+                result_msg = OpenAiToolResultMessage(
+                    tool_call_id=tc["id"],
+                    content=f"工具调用参数JSON解析失败: {e}",
+                )
+                await message_processor.add_new_message(result_msg)
+                self.early_return = True
+                continue
 
             tool_call = ToolCallMessage(
                 function_name=tc["function"]["name"],
