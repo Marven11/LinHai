@@ -1,6 +1,6 @@
 # LinHai
 
-A personal coding agent, framework inspired by Claude Code.
+A Multi-Machine Control Coding/Hacking Agent running on Mac/Linux/Android.
 
 [中文文档](./README_zh-CN.md)
 

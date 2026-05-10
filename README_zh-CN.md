@@ -1,6 +1,6 @@
 # 林海漫游
 
-自用编程Agent，设计框架参考Claude Code
+自用多机器控制编程/渗透Agent，支持Linux/Mac/Android
 
 ![social-preview](./assets/social-preview.jpg)
 
