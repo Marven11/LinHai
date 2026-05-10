@@ -172,6 +172,7 @@ AGENTS_MD_DEFAULT = "你是一个AI Agent助手"
 
 def write_agents_md(config_dir: Path, cat_mode: bool = False) -> Path:
     agents_path = config_dir / "AGENTS.md"
+    assert not agents_path.exists()
     content = AGENTS_MD_CAT if cat_mode else AGENTS_MD_DEFAULT
     agents_path.write_text(content)
     return agents_path
