@@ -331,30 +331,12 @@ class WebSearchConfig(BaseModel):
     )
 
 
-class RemoteMachineConfig(BaseModel):
-
-    name: str = Field(..., min_length=1, description="远程机器的唯一标识名称")
-    argv: list[str] = Field(..., min_length=1, description="运行后产生bash的命令列表")
-    description: Optional[str] = Field(default=None, description="机器描述")
-
-    @field_validator("name")
-    def validate_name(cls, v):
-        if not re.match(r"^[a-zA-Z0-9_-]+$", v):
-            raise ConfigValidationError(
-                "Remote machine name can only contain letters, numbers, hyphens, and underscores"
-            )
-        return v
-
-
 class ToolConfig(BaseModel):
     """工具配置类型定义。"""
 
     web_search: Optional[WebSearchConfig] = Field(
         default=None,
         description="网页搜索配置，为None时使用默认duckduckgo_http",
-    )
-    remote_machines: list[RemoteMachineConfig] = Field(
-        default_factory=list, description="预设的远程机器配置列表"
     )
     max_toolcall_token_in_round: Union[int, float] = Field(
         default=0.3,

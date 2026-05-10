@@ -75,14 +75,14 @@ class TestMachineControlSerializeRestore(unittest.TestCase):
         from linhai.machine_control.main import MachineControl
 
         registry = _make_registry()
-        mc = MachineControl(registry, remote_machines=[])
+        mc = MachineControl(registry)
         self.assertIsInstance(mc, SavableState)
 
     def test_serialize_master_host_only(self):
         from linhai.machine_control.main import MachineControl
 
         registry = _make_registry()
-        mc = MachineControl(registry, remote_machines=[])
+        mc = MachineControl(registry)
         data = mc.serialize()
         self.assertEqual(data, {"machines": {}})
 
@@ -90,7 +90,7 @@ class TestMachineControlSerializeRestore(unittest.TestCase):
         from linhai.machine_control.main import MachineControl
 
         registry = _make_registry()
-        mc = MachineControl(registry, remote_machines=[])
+        mc = MachineControl(registry)
         mc.machine_descriptions["remote1"] = "Test remote"
         mc.source_machines["remote1"] = "master_host"
         mc._process_infos["remote1:123"] = {
@@ -109,7 +109,7 @@ class TestMachineControlSerializeRestore(unittest.TestCase):
         from linhai.machine_control.main import MachineControl
 
         registry = _make_registry()
-        mc = MachineControl(registry, remote_machines=[])
+        mc = MachineControl(registry)
         mc.machine_descriptions["remote1"] = "Test remote"
         mc.source_machines["remote1"] = "master_host"
         mock_host = MagicMock()
@@ -198,7 +198,7 @@ class TestAfterConversationRestoreCallbacks(unittest.IsolatedAsyncioTestCase):
 
         registry = self._make_full_registry()
         am = AgentMessage(registry, [])
-        mc = MachineControl(registry, remote_machines=[])
+        mc = MachineControl(registry)
         mc._saved_machine_info = {
             "remote1": {
                 "description": "Test machine",
@@ -220,7 +220,7 @@ class TestAfterConversationRestoreCallbacks(unittest.IsolatedAsyncioTestCase):
 
         registry = self._make_full_registry()
         am = AgentMessage(registry, [])
-        mc = MachineControl(registry, remote_machines=[])
+        mc = MachineControl(registry)
         mc._saved_machine_info = {}
         lifecycle = registry.get_member_typechecked("lifecycle", Lifecycle)
         mc.register_plugin(lifecycle)

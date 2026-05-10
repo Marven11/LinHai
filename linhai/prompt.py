@@ -733,8 +733,10 @@ EXAMPLES_SECRET_USAGE = t(
 EXAMPLE_MULTIHOP_MACHINES = t(
     {
         "zh_CN": """
+使用`process_create`连接到远程ssh主机，然后通过`connect_posix_shell_as_machine`将其添加为新机器
+
 ```json toolcall
-{"name": "connect_remote_config", "arguments": {"name": "ssh_hop1"}}
+{"name": "process_create", "arguments": {"argv": ["ssh", "user@host"]}}
 ```
 
 ```json toolcall
@@ -776,8 +778,10 @@ EXAMPLE_MULTIHOP_MACHINES = t(
 ```
 """,
         "en": """
+Use `process_create` to connect to a remote ssh host, then add it as a new machine via `connect_posix_shell_as_machine`
+
 ```json toolcall
-{"name": "connect_remote_config", "arguments": {"name": "ssh_hop1"}}
+{"name": "process_create", "arguments": {"argv": ["ssh", "user@host"]}}
 ```
 
 ```json toolcall

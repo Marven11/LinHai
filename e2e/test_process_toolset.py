@@ -15,7 +15,7 @@ from linhai.tool.base import SuccessfulToolResult, FailedToolResult
 def _create_toolset():
     registry = Registry()
     registry.register_member("process_sandbox", NoSandbox())
-    mc = MachineControl(registry, remote_machines=[], tmux_terminal=False)
+    mc = MachineControl(registry, tmux_terminal=False)
     toolset = register_machine_control_tools(mc)
     return mc, toolset
 

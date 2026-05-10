@@ -513,7 +513,6 @@ async def _create_tool_manager(
         machine_control = MachineControl(
             registry,
             tmux_terminal=context["tool_config"].tmux_terminal,
-            remote_machines=context["config"].tools.remote_machines,
             remote_shell_control=context["config"].tools.remote_shell_control,
         )
         tool_manager.register_toolset(
@@ -565,18 +564,6 @@ async def _create_pinned_messages(context: "AgentBuildContext") -> list[Message]
     for filepath in project_prompt_filepaths:
         if filepath.exists():
             pinned_messages.append(PathPrompt(filepath))
-
-    config = context.get("config")
-    if config is not None:
-        remote_machines = config.tools.remote_machines
-        if isinstance(remote_machines, list) and remote_machines:
-            lines = []
-            for rm in remote_machines:
-                desc = rm.description or "无描述"
-                lines.append(f"- {rm.name}: {desc}")
-            pinned_messages.append(
-                RuntimeMessage("可用远程机器配置:\n" + "\n".join(lines))
-            )
 
     if context.get("planning", False):
         from .planning import setup_planning_for_agent

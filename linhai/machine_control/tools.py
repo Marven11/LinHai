@@ -144,32 +144,6 @@ def register_machine_control_tools(machine_control: "MachineControl") -> ToolSet
         )
 
     @toolset.register_tool(
-        name="connect_remote_config",
-        desc=t(
-            {
-                "zh_CN": "根据预设的远程机器配置连接远程机器",
-                "en": "Connect to remote machine using a preset configuration",
-            }
-        ),
-        args={
-            "name": ToolArgInfo(
-                desc=t(
-                    {
-                        "zh_CN": "远程机器配置的名称",
-                        "en": "Name of the remote machine configuration",
-                    }
-                ),
-                type="str",
-            ),
-        },
-        required_args=["name"],
-    )
-    async def connect_remote_config_tool(
-        name: str,
-    ) -> SuccessfulToolResult | FailedToolResult:
-        return await machine_control.connect_remote_config(name)
-
-    @toolset.register_tool(
         name="connect_ether_ghost_machine",
         desc=t(
             {

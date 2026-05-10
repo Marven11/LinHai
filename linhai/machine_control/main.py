@@ -4,7 +4,6 @@ import time
 
 from typing import Any, Dict, Optional, TypedDict
 from linhai.agent.lifecycle import Lifecycle
-from linhai.config import RemoteMachineConfig
 from linhai.registry import Registry
 from linhai.tool.base import SuccessfulToolResult, FailedToolResult
 from linhai.utils.common import UiNotice
@@ -35,16 +34,12 @@ class MachineControl:
     def __init__(
         self,
         registry: Registry,
-        remote_machines: list[RemoteMachineConfig],
         tmux_terminal: bool = True,
         remote_shell_control: str = "python",
     ):
         self.registry = registry
         self.target_machine = "master_host"
         self.remote_shell_control = remote_shell_control
-        self.remote_machines: Dict[str, RemoteMachineConfig] = {
-            cfg.name: cfg for cfg in (remote_machines or [])
-        }
         self.machines: Dict[str, HostControl] = {
             "master_host": MasterHostControl(registry, tmux_terminal=tmux_terminal),
         }
@@ -188,57 +183,6 @@ class MachineControl:
         return SuccessfulToolResult(
             content=f"已成功连接bash shell进程为机器: {machine_id} (PID: {pid})"
         )
-
-    async def connect_remote_config(
-        self, name: str
-    ) -> SuccessfulToolResult | FailedToolResult:
-        if name not in self.remote_machines:
-            available = ", ".join(self.remote_machines.keys()) or "无"
-            return FailedToolResult(
-                content=f"远程机器配置未找到: {name}。可用配置: {available}"
-            )
-        if name in self.machines:
-            return FailedToolResult(content=f"机器ID已存在: {name}")
-
-        config = self.remote_machines[name]
-
-        shell_control = PosixShellControl(registry=self.registry)
-
-        current_host = self.machines[self.target_machine]
-        result = await current_host.create_process(config.argv, wait_second=15.0)
-
-        if not result.success:
-            return FailedToolResult(content=f"连接远程机器失败: {result.error}")
-
-        if result.returncode is not None:
-            return FailedToolResult(
-                content=f"连接进程立即退出(code={result.returncode}): {result.stderr}"
-            )
-
-        process = current_host.get_process(result.pid)
-        if process is None:
-            return FailedToolResult(content=f"连接进程不存在: {result.pid}")
-
-        connected = await shell_control.connect(process)
-        if not connected:
-            await process.kill()
-            return FailedToolResult(content=f"连接远程机器失败: {name}")
-
-        self.machines[name] = shell_control
-        shell_control._machine_id = name
-        self.source_machines[name] = self.target_machine
-        desc = config.description or f"远程机器 ({name})"
-        self.machine_descriptions[name] = desc
-
-        await self.registry.send_if_exists(
-            "ui_log",
-            UiNotice(
-                level="INFO",
-                content=f"远程机器连接成功: {name}",
-            ),
-        )
-
-        return SuccessfulToolResult(content=f"已成功连接远程机器: {name}")
 
     async def add_ether_ghost_machine(
         self,

@@ -19,7 +19,7 @@ class TestMachineControl(unittest.IsolatedAsyncioTestCase):
     def setUp(self):
         """测试前准备"""
         self.registry = Mock(spec=Registry)
-        self.machine_control = MachineControl(self.registry, remote_machines=[])
+        self.machine_control = MachineControl(self.registry)
         self.tool_manager = Mock(spec=ToolManager)
 
     def test_initialization(self):
@@ -460,7 +460,7 @@ class TestNotifyProcessCreated(unittest.IsolatedAsyncioTestCase):
         registry = Registry()
         registry.register_member("process_sandbox", NoSandbox())
         lifecycle = Lifecycle(registry)
-        mc = MachineControl(registry, remote_machines=[])
+        mc = MachineControl(registry)
         mc.register_plugin(lifecycle)
 
         triggered_infos: list[ProcessCreateInfo] = []
@@ -494,7 +494,7 @@ class TestNotifyProcessCreated(unittest.IsolatedAsyncioTestCase):
         registry = Registry()
         registry.register_member("process_sandbox", NoSandbox())
         lifecycle = Lifecycle(registry)
-        mc = MachineControl(registry, remote_machines=[])
+        mc = MachineControl(registry)
         mc.register_plugin(lifecycle)
 
         triggered_infos: list[ProcessCreateInfo] = []
@@ -522,7 +522,7 @@ class TestNotifyProcessCreated(unittest.IsolatedAsyncioTestCase):
         registry = Registry()
         registry.register_member("process_sandbox", NoSandbox())
         lifecycle = Lifecycle(registry)
-        mc = MachineControl(registry, remote_machines=[])
+        mc = MachineControl(registry)
         mc.register_plugin(lifecycle)
 
         triggered_infos: list[ProcessCreateInfo] = []
@@ -559,7 +559,7 @@ class TestNotifyProcessCreated(unittest.IsolatedAsyncioTestCase):
 
         registry = Registry()
         registry.register_member("process_sandbox", NoSandbox())
-        mc = MachineControl(registry, remote_machines=[])
+        mc = MachineControl(registry)
 
         mc.machines["master_host"].create_process = AsyncMock(
             return_value=ProcessCreateResult(
@@ -580,7 +580,7 @@ class TestNotifyProcessCreated(unittest.IsolatedAsyncioTestCase):
         registry = Registry()
         registry.register_member("process_sandbox", NoSandbox())
         lifecycle = Lifecycle(registry)
-        mc = MachineControl(registry, remote_machines=[])
+        mc = MachineControl(registry)
         mc.register_plugin(lifecycle)
 
         triggered_infos: list[ProcessCreateInfo] = []
@@ -606,7 +606,7 @@ class TestRegisterPluginStoreProcessInfo(unittest.IsolatedAsyncioTestCase):
         from linhai.agent.lifecycle import Lifecycle
 
         lifecycle = Lifecycle(registry)
-        mc = MachineControl(registry, remote_machines=[])
+        mc = MachineControl(registry)
         mc.register_plugin(lifecycle)
 
         mock_process = Mock()
@@ -631,7 +631,7 @@ class TestProcessCreateWithStdin(unittest.IsolatedAsyncioTestCase):
         from linhai.tool.base import SuccessfulToolResult
 
         registry = Registry()
-        mc = MachineControl(registry, remote_machines=[])
+        mc = MachineControl(registry)
 
         mock_process = Mock()
         mock_process.stdio_write = AsyncMock(
@@ -657,7 +657,7 @@ class TestProcessCreateWithStdin(unittest.IsolatedAsyncioTestCase):
         from linhai.tool.base import FailedToolResult
 
         registry = Registry()
-        mc = MachineControl(registry, remote_machines=[])
+        mc = MachineControl(registry)
 
         mc.machines["master_host"].create_process = AsyncMock(
             return_value=ProcessCreateResult(
@@ -684,7 +684,7 @@ class TestProcessCreateWithStdin(unittest.IsolatedAsyncioTestCase):
         from linhai.tool.base import FailedToolResult
 
         registry = Registry()
-        mc = MachineControl(registry, remote_machines=[])
+        mc = MachineControl(registry)
 
         mock_process = Mock()
         mock_process.stdio_write = AsyncMock(
@@ -710,7 +710,7 @@ class TestProcessCreateWithStdin(unittest.IsolatedAsyncioTestCase):
         from linhai.tool.base import SuccessfulToolResult
 
         registry = Registry()
-        mc = MachineControl(registry, remote_machines=[])
+        mc = MachineControl(registry)
 
         mc.machines["master_host"].create_process = AsyncMock(
             return_value=ProcessCreateResult(
@@ -730,7 +730,7 @@ class TestListProcesses(unittest.TestCase):
 
     def setUp(self):
         self.registry = Mock(spec=Registry)
-        self.machine_control = MachineControl(self.registry, remote_machines=[])
+        self.machine_control = MachineControl(self.registry)
 
     def test_list_processes_empty(self):
         """测试无进程时返回空列表"""
@@ -863,7 +863,7 @@ class TestCurrentMachineTool(unittest.IsolatedAsyncioTestCase):
 
     def setUp(self):
         self.registry = Mock(spec=Registry)
-        self.machine_control = MachineControl(self.registry, remote_machines=[])
+        self.machine_control = MachineControl(self.registry)
 
     async def test_current_machine_default(self):
         from linhai.machine_control.tools import register_machine_control_tools
@@ -999,7 +999,7 @@ class TestDisconnectMachine(unittest.IsolatedAsyncioTestCase):
     def setUp(self):
         self.registry = Mock(spec=Registry)
         self.registry.send_if_exists = AsyncMock()
-        self.machine_control = MachineControl(self.registry, remote_machines=[])
+        self.machine_control = MachineControl(self.registry)
 
     async def test_disconnect_machine_not_found(self):
         result = await self.machine_control.disconnect_machine("nonexistent")
@@ -1074,7 +1074,7 @@ class TestMachineControlTransferFile(unittest.IsolatedAsyncioTestCase):
         self.registry = Mock(spec=Registry)
         from linhai.machine_control import MachineControl
 
-        self.machine_control = MachineControl(self.registry, remote_machines=[])
+        self.machine_control = MachineControl(self.registry)
 
     async def test_transfer_file_same_machine(self):
         """测试同一台机器传输应失败"""

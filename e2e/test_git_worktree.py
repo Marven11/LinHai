@@ -54,9 +54,7 @@ async def test_git_worktree_created():
             conversation_folder.mkdir()
             registry.register_member("conversation_folder", conversation_folder)
 
-            ctl = MachineControl(
-                registry=registry, remote_machines=[], remote_shell_control="python"
-            )
+            ctl = MachineControl(registry=registry, remote_shell_control="python")
             _setup_git_worktree(registry, ctl)
 
             worktree_path = conversation_folder / "worktree"
@@ -85,9 +83,7 @@ async def test_git_worktree_agent_can_operate():
             conversation_folder.mkdir()
             registry.register_member("conversation_folder", conversation_folder)
 
-            ctl = MachineControl(
-                registry=registry, remote_machines=[], remote_shell_control="python"
-            )
+            ctl = MachineControl(registry=registry, remote_shell_control="python")
             _setup_git_worktree(registry, ctl)
 
             worktree_path = conversation_folder / "worktree"

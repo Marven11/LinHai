@@ -382,7 +382,6 @@ class TestCreateToolManager(unittest.TestCase):
         config.agent[0].enable_toolsets = None
         config.agent[0].disable_toolsets = None
         config.tools = config
-        config.remote_machines = []
 
         context = {
             "registry": registry,

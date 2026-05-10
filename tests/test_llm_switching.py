@@ -38,7 +38,7 @@ class TestLLMSwitching(unittest.IsolatedAsyncioTestCase):
         # 注册machine_control
         from linhai.machine_control.main import MachineControl
 
-        MachineControl(self.registry, remote_machines=[])
+        MachineControl(self.registry)
 
         from linhai.config import ToolConfig
 
