@@ -4,6 +4,10 @@
 
 ![social-preview](./assets/social-preview.jpg)
 
+## Demo
+
+![[demo](https://asciinema.org/a/N6zgQTzjXTNKohXF)](./assets/demo.gif)
+
 ## 稳定特性
 
 ### 进程控制和远程机器连接
@@ -78,6 +82,12 @@ uv tool install linhai
 # 使用pipx: pipx install linhai
 # 使用系统pip: pip linhai linhai
 # 临时使用venv安装: python -m venv /tmp/linhai-venv && . /tmp/linhai-venv/bin/activate && pip install linhai
+```
+
+## 配置
+
+```shell
+linhai -m '从[config.py](https://github.com/Marven11/LinHai/blob/main/linhai/config.py)开始研究，总结LinHai支持什么配置。如果我之后需要修改配置，帮我修改~/.config/linhai'
 ```
 
 ## 声明

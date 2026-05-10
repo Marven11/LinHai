@@ -6,6 +6,10 @@ A personal coding agent, framework inspired by Claude Code.
 
 ![social-preview](./assets/social-preview.jpg)
 
+## Demo
+
+![[demo](https://asciinema.org/a/N6zgQTzjXTNKohXF)](./assets/demo.gif)
+
 ## Stable Features
 
 ### Process Control and Remote Machine Connection
@@ -80,6 +84,12 @@ uv tool install linhai
 # Using pipx: pipx install linhai
 # Using system pip: pip install linhai
 # Install with venv: python -m venv /tmp/linhai-venv && . /tmp/linhai-venv/bin/activate && pip install linhai
+```
+
+## Config
+
+```shell
+linhai -m 'Starting at [config.py](https://github.com/Marven11/LinHai/blob/main/linhai/config.py), summerize configuration supported by LinHai. If I want to modify config later, modify ~/.config/linhai/ for me'
 ```
 
 ## Disclaimer
