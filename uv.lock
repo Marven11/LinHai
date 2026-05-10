@@ -455,7 +455,7 @@ wheels = [
 [[package]]
 name = "ether-ghost"
 version = "0.2.0"
-source = { registry = "https://pypi.org/simple" }
+source = { git = "https://github.com/Marven11/EtherGhost.git?rev=dev#42f1f660035bfab48b6e5dc16dd7b5daaed8e2d0" }
 dependencies = [
     { name = "chardet" },
     { name = "fastapi" },
@@ -467,10 +467,6 @@ dependencies = [
     { name = "sqlalchemy" },
     { name = "sqlalchemy-utils" },
     { name = "uvicorn" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/ca/68/16a4ac86418902abeb0a80b82c009edaeaab5d56b28b8a30fd2649cce29f/ether_ghost-0.2.0.tar.gz", hash = "sha256:4619ad161ce51b4402d20ad312306ae1436773d5ceb8ce1d2ba6a2e913ca9d70", size = 2998790, upload-time = "2025-03-26T13:27:13.042Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/b2/33/85b0686038158e64ad35cd60df45fa7ec15310d350b565f31e7cf4e0e08b/ether_ghost-0.2.0-py3-none-any.whl", hash = "sha256:646deb46ab4f92100e62b3eab5f5086d1bf81d22de57ccfecae4ab368bb4bb62", size = 3012500, upload-time = "2025-03-26T13:27:10.43Z" },
 ]
 
 [[package]]
@@ -806,7 +802,7 @@ requires-dist = [
     { name = "black", marker = "extra == 'dev'" },
     { name = "chardet" },
     { name = "croniter" },
-    { name = "ether-ghost" },
+    { name = "ether-ghost", git = "https://github.com/Marven11/EtherGhost.git?rev=dev" },
     { name = "httpx" },
     { name = "mcp" },
     { name = "mistune" },
