@@ -4,7 +4,7 @@ from textual.widgets import Input, Static, Button, Checkbox
 from textual.containers import Vertical, Horizontal
 
 
-class LabeledInput(Vertical):
+class LabeledInput(Static):
     """A labeled input widget."""
 
     def __init__(
@@ -55,36 +55,35 @@ class ConfigForm(Static):
 
     def compose(self):
         """Compose the form."""
-        with Vertical(classes="form-container"):
-            yield LabeledInput(
-                "LLM Name:",
-                placeholder="e.g., default",
-                value="default",
-                id="input-name",
-            )
-            yield LabeledInput(
-                "Base URL:",
-                placeholder="e.g., https://api.openai.com/v1",
-                value="https://api.openai.com/v1",
-                id="input-base-url",
-            )
-            yield LabeledInput(
-                "API Key:",
-                placeholder="Your API key",
-                password=True,
-                id="input-api-key",
-            )
-            yield LabeledInput(
-                "Model:",
-                placeholder="e.g., gpt-4o-mini",
-                value="gpt-4o-mini",
-                id="input-model",
-            )
-            yield Checkbox(
-                "你是一只猫娘",
-                value=False,
-                id="checkbox-cat-mode",
-            )
+        yield LabeledInput(
+            "LLM Name:",
+            placeholder="e.g., default",
+            value="default",
+            id="input-name",
+        )
+        yield LabeledInput(
+            "Base URL:",
+            placeholder="e.g., https://api.openai.com/v1",
+            value="https://api.openai.com/v1",
+            id="input-base-url",
+        )
+        yield LabeledInput(
+            "API Key:",
+            placeholder="Your API key",
+            password=True,
+            id="input-api-key",
+        )
+        yield LabeledInput(
+            "Model:",
+            placeholder="e.g., gpt-4o-mini",
+            value="gpt-4o-mini",
+            id="input-model",
+        )
+        yield Checkbox(
+            "你是一只猫娘",
+            value=False,
+            id="checkbox-cat-mode",
+        )
 
     def get_cat_mode(self) -> bool:
         return self.query_one("#checkbox-cat-mode", Checkbox).value

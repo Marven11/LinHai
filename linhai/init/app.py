@@ -21,7 +21,6 @@ Screen {
 
 #main-container {
     width: 70;
-    height: 85%;
     border: solid grey;
     padding: 2 3;
 }
@@ -38,13 +37,6 @@ Screen {
 }
 
 .input-label {
-    margin-top: 1;
-}
-
-.config-input {
-    width: 100%;
-    height: auto;
-    min-height: 3;
     margin-top: 1;
 }
 
