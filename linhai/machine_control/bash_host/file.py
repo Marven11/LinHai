@@ -165,9 +165,9 @@ async def replace_file_content(
     verify_cmd = (
         f"_NEW=$(cksum < {_quote(tmp_path)} | awk '{{print $1}}'); "
         f"_OLD=$(cksum < {_quote(filepath)} | awk '{{print $1}}'); "
-        f"if [ '$_OLD' != '{original_cksum}' ]; then "
+        f'if [ "$_OLD" != "{original_cksum}" ]; then '
         f"echo 'CHANGED'; "
-        f"elif [ '$_NEW' != '$_OLD' ]; then "
+        f'elif [ "$_NEW" != "$_OLD" ]; then '
         f"mv {_quote(tmp_path)} {_quote(filepath)} && echo 'OK'; "
         f"else echo 'OK'; fi"
     )

@@ -4,7 +4,12 @@ import asyncio
 import base64
 import pathlib
 import shlex
+import uuid
 from typing import Any, Dict, Optional, Union
+
+from rich.text import Text
+
+from linhai.machine_control.master_host.process import LocalPtyProcess
 
 from linhai.tool.base import (
     SuccessfulToolResult,
@@ -18,7 +23,6 @@ from linhai.machine_control.process import (
     ProcessCreateResult,
 )
 from linhai.registry import Registry
-from linhai.tool.base import SuccessfulToolResult, FailedToolResult
 from linhai.utils.common import UiNotice
 from .file import (
     read_file as _read_file,
@@ -33,11 +37,19 @@ from . import terminal as _terminal
 from .http import http_request as _http_request
 
 
+def _strip_ansi_and_cr(text: str) -> str:
+    return Text.from_ansi(text).plain.replace("\r", "")
+
+
+def _split_marker_for_echo(marker: str) -> str:
+    mid = len(marker) // 2
+    return marker[:mid] + '""' + marker[mid:]
+
+
 class BashHostControl:
     """通过raw bash命令控制远程机器，不依赖远程Python环境。"""
 
     GLOBAL_TIMEOUT = 30.0
-    MARKER_PREFIX = "_LINHAI_CMD_RESULT_"
 
     def __init__(self, registry: Registry) -> None:
         self.registry = registry
@@ -56,12 +68,40 @@ class BashHostControl:
         self._counter += 1
         return f"{self._tmp_dir}/{prefix}_{self._counter}"
 
-    def _next_marker(self) -> str:
-        self._counter += 1
-        return f"{self.MARKER_PREFIX}{self._counter}"
-
     async def connect(self, process: Process) -> bool:
         self._shell_process = process
+
+        if isinstance(process, LocalPtyProcess):
+            await asyncio.sleep(0.5)
+            await process.stdio_read(1.0)
+            await process.stdio_write("stty -echo -icanon -opost", with_enter=True)
+            await asyncio.sleep(0.3)
+            await process.stdio_read(0.5)
+
+            await process.stdio_write(
+                "command -v timeout >/dev/null 2>&1 && echo _LH_TO_",
+                with_enter=True,
+            )
+            await asyncio.sleep(0.3)
+            r = await process.stdio_read(0.5)
+            if not isinstance(r, ProcessIOError) and r.success:
+                cleaned = _strip_ansi_and_cr(r.stdout.decode("utf-8", errors="replace"))
+                if "_LH_TO_" in cleaned:
+                    self._timeout_mode = "timeout"
+
+            if self._timeout_mode != "timeout":
+                await process.stdio_write(
+                    "command -v perl >/dev/null 2>&1 && echo _LH_PL_",
+                    with_enter=True,
+                )
+                await asyncio.sleep(0.3)
+                r = await process.stdio_read(0.5)
+                if not isinstance(r, ProcessIOError) and r.success:
+                    cleaned = _strip_ansi_and_cr(
+                        r.stdout.decode("utf-8", errors="replace")
+                    )
+                    if "_LH_PL_" in cleaned:
+                        self._timeout_mode = "perl"
 
         rc, stdout, stderr = await self.execute_raw(
             "TMPDIR=$(mktemp -d /tmp/linhai_bash_XXXXXX) && echo $TMPDIR && echo $TMPDIR > $TMPDIR/.dir"
@@ -121,29 +161,38 @@ class BashHostControl:
         async with self._execute_lock:
             shell_proc = self._shell_process
             effective_timeout = timeout if timeout > 0 else self.GLOBAL_TIMEOUT
-            marker = self._next_marker()
+            marker_hex = uuid.uuid4().hex[:8]
+            marker_open = f"<linhai_{marker_hex}>"
+            marker_close = f"</linhai_{marker_hex}>"
+
+            marker_open_echo = _split_marker_for_echo(marker_open)
+            marker_close_echo = _split_marker_for_echo(marker_close)
+
             quoted_cmd = shlex.quote(command)
 
             timeout_secs = int(effective_timeout)
             if self._timeout_mode == "timeout":
                 full_command = (
+                    f'echo "{marker_open_echo}"; '
                     f"timeout {timeout_secs} sh -c {quoted_cmd} 2>&1; "
-                    f"_RC=$?; echo ''; echo '{marker}:'$_RC"
+                    f'RC=$?; echo "${{RC}}{marker_close_echo}"'
                 )
             elif self._timeout_mode == "perl":
                 full_command = (
+                    f'echo "{marker_open_echo}"; '
                     f"perl -e 'alarm shift; exec @ARGV' {timeout_secs}"
                     f" sh -c {quoted_cmd} 2>&1; "
-                    f"_RC=$?; echo ''; echo '{marker}:'$_RC"
+                    f'RC=$?; echo "${{RC}}{marker_close_echo}"'
                 )
             else:
                 full_command = (
+                    f'echo "{marker_open_echo}"; '
                     f"sh -c {quoted_cmd} 2>&1 & _CPID=$!; "
                     f"( sleep {timeout_secs}; kill -9 $_CPID 2>/dev/null ) & "
                     f"_WPID=$!; "
-                    f"wait $_CPID 2>/dev/null; _RC=$?; "
+                    f"wait $_CPID 2>/dev/null; RC=$?; "
                     f"kill $_WPID 2>/dev/null; wait $_WPID 2>/dev/null; "
-                    f"echo ''; echo '{marker}:'$_RC"
+                    f'echo "${{RC}}{marker_close_echo}"'
                 )
 
             write_result = await shell_proc.stdio_write(full_command, with_enter=True)
@@ -152,36 +201,38 @@ class BashHostControl:
             if not write_result.success:
                 return 1, "", f"写入命令失败: {write_result.error}"
 
-            output_lines: list[str] = []
             buffer = ""
-            result_line: str | None = None
+            start_time = asyncio.get_event_loop().time()
 
-            while result_line is None:
+            while asyncio.get_event_loop().time() - start_time < effective_timeout:
                 read_result = await shell_proc.stdio_read(wait_seconds=1.0)
                 if isinstance(read_result, ProcessIOError):
                     break
                 if not read_result.success:
                     break
                 decoded = read_result.stdout.decode(self._encoding, errors="replace")
-                buffer += decoded
-                while "\n" in buffer:
-                    line, buffer = buffer.split("\n", 1)
-                    line = line.rstrip()
-                    if line.startswith(f"{marker}:"):
-                        result_line = line
-                        break
-                    output_lines.append(line)
+                buffer += _strip_ansi_and_cr(decoded)
 
-            if result_line is None:
-                return 1, "\n".join(output_lines), "无法获取命令返回码"
+                start_idx = buffer.find(marker_open)
+                if start_idx == -1:
+                    continue
+                close_idx = buffer.find(marker_close, start_idx)
+                if close_idx == -1:
+                    continue
 
-            parts = result_line.split(":", 1)
-            if len(parts) == 2 and parts[1].strip().isdigit():
-                exit_code = int(parts[1].strip())
-            else:
-                exit_code = 1
+                content = buffer[start_idx + len(marker_open) : close_idx]
+                lines = content.strip().split("\n")
+                last_line = lines[-1].strip()
+                if last_line.isdigit():
+                    exit_code = int(last_line)
+                    output_lines = lines[:-1]
+                else:
+                    exit_code = 1
+                    output_lines = lines
 
-            return exit_code, "\n".join(output_lines), ""
+                return exit_code, "\n".join(output_lines).strip(), ""
+
+            return 1, "", "命令执行超时"
 
     async def ping(self) -> SuccessfulToolResult | FailedToolResult:
         rc, stdout, stderr = await self.execute_raw("echo pong", timeout=5.0)
