@@ -63,8 +63,8 @@ class ConfigForm(Static):
         )
         yield LabeledInput(
             "Base URL:",
-            placeholder="e.g., https://api.openai.com/v1",
-            value="https://api.openai.com/v1",
+            placeholder="e.g., https://api.deepseek.com",
+            value="https://api.deepseek.com",
             id="input-base-url",
         )
         yield LabeledInput(
@@ -75,8 +75,8 @@ class ConfigForm(Static):
         )
         yield LabeledInput(
             "Model:",
-            placeholder="e.g., gpt-4o-mini",
-            value="gpt-4o-mini",
+            placeholder="e.g., deepseek-v4-flash",
+            value="deepseek-v4-flash",
             id="input-model",
         )
         yield Checkbox(
