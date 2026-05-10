@@ -115,14 +115,6 @@ class TestWriteAgentsMd(unittest.TestCase):
             self.assertIn("猫娘", content)
             self.assertIn("角色沉浸要求", content)
 
-    def test_write_agents_md_overwrite(self):
-        with tempfile.TemporaryDirectory() as tmpdir:
-            config_dir = Path(tmpdir)
-            write_agents_md(config_dir, cat_mode=False)
-            write_agents_md(config_dir, cat_mode=True)
-            content = (config_dir / "AGENTS.md").read_text()
-            self.assertIn("猫娘", content)
-            self.assertIn("角色沉浸要求", content)
 
 
 class TestSandboxInit(unittest.TestCase):

@@ -279,7 +279,11 @@ def _create_call_with_secret_toolset(
         if result_content is None:
             return SuccessfulToolResult(content="工具执行完成，无文本输出")
 
-        matched_keys = find_matching_secret_keys(result_content, secrets_dict)
+        masked_content = mask_secrets_in_object(
+            result_content, secrets_dict, in_result_keys
+        )
+
+        matched_keys = find_matching_secret_keys(masked_content, secrets_dict)
         if matched_keys:
             conversation_dir = registry.get_member_typechecked(
                 "conversation_folder", Path
@@ -295,9 +299,6 @@ def _create_call_with_secret_toolset(
                 )
             )
 
-        masked_content = mask_secrets_in_object(
-            result_content, secrets_dict, in_result_keys
-        )
         return SuccessfulToolResult(content=masked_content)
 
     return toolset
