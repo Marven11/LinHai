@@ -16,7 +16,7 @@ from linhai.tool.base import (
 class _Base(unittest.IsolatedAsyncioTestCase):
     def setUp(self):
         self.mock_message_processor = Mock()
-        self.mock_message_processor.add_new_message = AsyncMock()
+        self.mock_message_processor.add_openai_tool_result = AsyncMock()
         self.mock_message_processor.get_messages.return_value = []
         self.mock_lifecycle = Mock()
         self.mock_lifecycle.after_toolcall.trigger = AsyncMock(return_value=None)
@@ -68,8 +68,8 @@ class TestCallOpenaiToolsSingleSuccess(_Base):
         await self.processor.call_openai_tools([tc])
 
         self.assertFalse(self.processor.early_return)
-        self.mock_message_processor.add_new_message.assert_called_once()
-        msg = self.mock_message_processor.add_new_message.call_args[0][0]
+        self.mock_message_processor.add_openai_tool_result.assert_called_once()
+        msg = self.mock_message_processor.add_openai_tool_result.call_args[0][0]
         self.assertIsInstance(msg, OpenAiToolResultMessage)
         self.assertEqual(msg.tool_call_id, "call_1")
         self.assertEqual(msg.content, "file content")
@@ -106,7 +106,9 @@ class TestCallOpenaiToolsMultipleSuccess(_Base):
         await self.processor.call_openai_tools([tc1, tc2])
 
         self.assertFalse(self.processor.early_return)
-        self.assertEqual(self.mock_message_processor.add_new_message.call_count, 2)
+        self.assertEqual(
+            self.mock_message_processor.add_openai_tool_result.call_count, 2
+        )
 
 
 class TestCallOpenaiToolsEarlyReturn(_Base):
@@ -132,8 +134,12 @@ class TestCallOpenaiToolsEarlyReturn(_Base):
         await self.processor.call_openai_tools([tc1, tc2])
 
         self.assertTrue(self.processor.early_return)
-        self.assertEqual(self.mock_message_processor.add_new_message.call_count, 2)
-        skip_msg = self.mock_message_processor.add_new_message.call_args_list[1][0][0]
+        self.assertEqual(
+            self.mock_message_processor.add_openai_tool_result.call_count, 2
+        )
+        skip_msg = self.mock_message_processor.add_openai_tool_result.call_args_list[1][
+            0
+        ][0]
         self.assertIsInstance(skip_msg, OpenAiToolResultMessage)
         self.assertEqual(skip_msg.tool_call_id, "call_2")
         self.assertEqual(skip_msg.content, EARLY_RETURN_SKIP_MESSAGE)
@@ -153,7 +159,7 @@ class TestCallOpenaiToolsBeforeCallbackBlocks(_Base):
         await self.processor.call_openai_tools([tc])
 
         self.assertTrue(self.processor.early_return)
-        msg = self.mock_message_processor.add_new_message.call_args[0][0]
+        msg = self.mock_message_processor.add_openai_tool_result.call_args[0][0]
         self.assertIsInstance(msg, OpenAiToolResultMessage)
         self.assertEqual(msg.content, "blocked by policy")
 
@@ -174,7 +180,9 @@ class TestCallOpenaiToolsExistingEarlyReturn(_Base):
 
         await self.processor.call_openai_tools([tc1, tc2])
 
-        self.assertEqual(self.mock_message_processor.add_new_message.call_count, 2)
+        self.assertEqual(
+            self.mock_message_processor.add_openai_tool_result.call_count, 2
+        )
         self.mock_tool_manager.process_tool_call.assert_not_called()
 
 

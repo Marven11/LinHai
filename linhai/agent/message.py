@@ -25,7 +25,7 @@ from .messages import (
     SpoofedReasoningMessage,
     MessagesListSummerizeMessage,
 )
-from linhai.base import UserMessage, AssistantMessage
+from linhai.base import UserMessage, AssistantMessage, OpenAiToolResultMessage
 from linhai.utils.common import UiNotice
 
 
@@ -206,6 +206,57 @@ class AgentMessage:
         if processed_message is None:
             processed_message = msg
         self.messages.append(processed_message)
+
+    async def add_openai_tool_result(
+        self, msg: OpenAiToolResultMessage, tool_call_id: str
+    ) -> None:
+        """添加OpenAI工具调用结果消息，插入到对应AssistantMessage的tool result chain末尾。
+
+        找到包含对应tool_call_id的AssistantMessage，然后在该消息之后连续的
+        OpenAiToolResultMessage链的末尾插入新的工具结果。
+
+        Args:
+            msg: OpenAI工具调用结果消息
+            tool_call_id: 对应的tool_call_id
+        """
+        from linhai.base import OpenAiToolResultMessage as OAITRM
+        from .lifecycle import Lifecycle
+
+        if not self.explicit_cache_anchors and self.is_explicit_cache_enabled():
+            anchor = self.calculate_explicit_cache_anchor()
+            if anchor is not None:
+                self.explicit_cache_anchors.append(anchor)
+                await self.registry.send_if_exists(
+                    "ui_log", UiNotice(level="INFO", content="刷新显式缓存")
+                )
+
+        lifecycle = self.registry.get_member_typechecked("lifecycle", Lifecycle)
+        processed_message = await lifecycle.before_add_new_message.trigger(msg)
+        if processed_message is None:
+            processed_message = msg
+
+        assistant_idx = None
+        for i in range(len(self.messages) - 1, -1, -1):
+            m = self.messages[i]
+            if isinstance(m, AssistantMessage) and m.tool_calls:
+                for tc in m.tool_calls:
+                    if tc["id"] == tool_call_id:
+                        assistant_idx = i
+                        break
+                if assistant_idx is not None:
+                    break
+
+        if assistant_idx is None:
+            self.messages.append(processed_message)
+            return
+
+        insert_idx = assistant_idx + 1
+        while insert_idx < len(self.messages) and isinstance(
+            self.messages[insert_idx], OAITRM
+        ):
+            insert_idx += 1
+
+        self.messages.insert(insert_idx, processed_message)
 
     def is_explicit_cache_enabled(self) -> bool:
         from ..llm_manager import LlmManager

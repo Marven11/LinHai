@@ -451,7 +451,7 @@ class AgentToolcall:
                 message_processor = self.registry.get_member_typechecked(
                     "agent_message", AgentMessage
                 )
-                await message_processor.add_new_message(result_msg)
+                await message_processor.add_openai_tool_result(result_msg, tc["id"])
                 continue
 
             try:
@@ -530,7 +530,7 @@ class AgentToolcall:
             )
             if callback_result is not None:
                 self._pending_warnings.extend(callback_result.warnings)
-            await message_processor.add_new_message(result_msg)
+            await message_processor.add_openai_tool_result(result_msg, tool_call_id)
             return True
         elif isinstance(beforecbs_result, dict):
             arguments = beforecbs_result
@@ -582,7 +582,7 @@ class AgentToolcall:
             tool_call_id=tool_call_id,
             content=result_content,
         )
-        await message_processor.add_new_message(result_msg)
+        await message_processor.add_openai_tool_result(result_msg, tool_call_id)
 
         if state_machine.state == "waiting_user":
             state_machine.transition_to_working()
