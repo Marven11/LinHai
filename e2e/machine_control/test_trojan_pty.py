@@ -172,6 +172,8 @@ async def test_trojan_ping_over_pty(pty_bash_with_trojan):
     try:
         await asyncio.sleep(0.5)
 
+        assert process.stdin is not None and process.stdout is not None
+
         request = {"jsonrpc": "2.0", "id": "1", "method": "ping", "params": {}}
         await _send_request(process.stdin, request, marker_str)
 
@@ -215,6 +217,8 @@ async def test_trojan_file_operations_over_pty(pty_bash_with_trojan):
                     "override": True,
                 },
             }
+            assert process.stdin is not None and process.stdout is not None
+
             await _send_request(process.stdin, write_req, marker_str)
             resp = json.loads(await _read_until_marker(process.stdout, marker_str))
             assert resp["id"] == "2"
@@ -258,6 +262,8 @@ async def test_trojan_process_create_over_pty(pty_bash_with_trojan):
             "method": "process_create",
             "params": {"argv": ["echo", "hello world"], "wait_second": 2.0},
         }
+        assert process.stdin is not None and process.stdout is not None
+
         await _send_request(process.stdin, create_req, marker_str)
         resp = json.loads(await _read_until_marker(process.stdout, marker_str))
         assert resp["id"] == "4"

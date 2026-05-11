@@ -16,7 +16,7 @@ pytestmark = pytest.mark.asyncio
 
 @pytest.fixture(autouse=True)
 def setup_manager():
-    config_path = str(get_default_config_path())
+    config_path = get_default_config_path()
     routes._manager = AgentManager(config_path=config_path)
     yield
     routes._manager = None

@@ -8,7 +8,7 @@ from linhai.llm import OpenAi
 from linhai.llm_manager import LlmManager
 from linhai.registry import Registry
 from linhai.token_manager import TokenManager
-from linhai.tool.base import ToolArgInfo, ToolSet
+from linhai.tool.base import ToolArgInfo, ToolSet, SuccessfulToolResult
 from linhai.task_supervisor import PlainTaskSupervisor
 from linhai.tool.mcp_connector import MCPConnector
 from linhai.tool.main import ToolManager
@@ -89,7 +89,7 @@ def _create_test_toolset() -> ToolSet:
         required_args=["city"],
     )
     def get_weather(city: str):
-        return f"Sunny, 25\u00b0C in {city}"
+        return SuccessfulToolResult(content=f"Sunny, 25\u00b0C in {city}")
 
     return toolset
 

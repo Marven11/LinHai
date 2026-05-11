@@ -51,7 +51,7 @@ def _create_test_agent_with_plugin(tmpdir: str, token: str) -> Agent:
     plugins_dir_str = str(plugins_dir.resolve())
     if plugins_dir_str not in sys.path:
         sys.path.insert(0, plugins_dir_str)
-    import litiansuo_plugin
+    litiansuo_plugin = importlib.import_module("litiansuo_plugin")
 
     importlib.reload(litiansuo_plugin)
 
@@ -105,7 +105,7 @@ def _create_test_agent_with_plugin(tmpdir: str, token: str) -> Agent:
     )
     tool_manager.register_lifecycle()
 
-    litiansuo_plugin.register_linhai_plugins(registry, agent.lifecycle)
+    getattr(litiansuo_plugin, "register_linhai_plugins")(registry, agent.lifecycle)
 
     registry.register_queue("parsed_agent_answer")
     registry.register_member("task_supervisor", PlainTaskSupervisor())

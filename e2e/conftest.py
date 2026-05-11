@@ -53,7 +53,7 @@ class AsyncEventFeeder:
         return time.time() - self._last_event_time
 
     def _count_waiting_signals(self) -> int:
-        if self.sub.data is None:
+        if not isinstance(self.sub.data, dict):
             return 0
         messages = self.sub.data.get("messages", [])
         return sum(

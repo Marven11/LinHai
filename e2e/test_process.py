@@ -5,6 +5,11 @@ import pytest
 pytestmark = pytest.mark.asyncio
 
 from linhai.machine_control.master_host.master_host import MasterHostControl
+from linhai.machine_control.process import (
+    ProcessReadResult,
+    ProcessWaitResult,
+    ProcessKillResult,
+)
 from linhai.registry import Registry
 from linhai.sandbox import NoSandbox
 
@@ -49,6 +54,7 @@ async def test_create_process_timeout():
     proc = host.get_process(result.pid)
     assert proc is not None
     kill_result = await proc.kill()
+    assert isinstance(kill_result, ProcessKillResult)
     assert kill_result.success
 
 
@@ -64,6 +70,7 @@ async def test_interactive_bash_write_and_read():
     await proc.stdio_write("echo hello_from_bash", with_enter=True)
     await asyncio.sleep(0.5)
     read_result = await proc.stdio_read(wait_seconds=2.0)
+    assert isinstance(read_result, ProcessReadResult)
     assert read_result.success
     assert b"hello_from_bash" in read_result.stdout
 
@@ -80,18 +87,21 @@ async def test_interactive_bash_multiple_commands():
     await proc.stdio_write("echo cmd1", with_enter=True)
     await asyncio.sleep(0.5)
     read1 = await proc.stdio_read(wait_seconds=2.0)
+    assert isinstance(read1, ProcessReadResult)
     assert read1.success
     assert b"cmd1" in read1.stdout
 
     await proc.stdio_write("echo cmd2", with_enter=True)
     await asyncio.sleep(0.5)
     read2 = await proc.stdio_read(wait_seconds=2.0)
+    assert isinstance(read2, ProcessReadResult)
     assert read2.success
     assert b"cmd2" in read2.stdout
 
     await proc.stdio_write("echo cmd3", with_enter=True)
     await asyncio.sleep(0.5)
     read3 = await proc.stdio_read(wait_seconds=2.0)
+    assert isinstance(read3, ProcessReadResult)
     assert read3.success
     assert b"cmd3" in read3.stdout
 
@@ -106,11 +116,13 @@ async def test_interactive_bash_nonblocking_read():
     assert proc is not None
 
     read_empty = await proc.stdio_read(wait_seconds=1.0)
+    assert isinstance(read_empty, ProcessReadResult)
     assert read_empty.success
 
     await proc.stdio_write("echo after_empty_read", with_enter=True)
     await asyncio.sleep(0.5)
     read_after = await proc.stdio_read(wait_seconds=2.0)
+    assert isinstance(read_after, ProcessReadResult)
     assert read_after.success
     assert b"after_empty_read" in read_after.stdout
 
@@ -127,6 +139,7 @@ async def test_interactive_bash_stderr():
     await proc.stdio_write("echo err_msg >&2", with_enter=True)
     await asyncio.sleep(0.5)
     read_result = await proc.stdio_read(wait_seconds=2.0)
+    assert isinstance(read_result, ProcessReadResult)
     assert read_result.success
     assert b"err_msg" in read_result.stderr
 
@@ -145,6 +158,7 @@ async def test_interactive_bash_with_variables():
     await proc.stdio_write("echo $MY_VAR", with_enter=True)
     await asyncio.sleep(0.5)
     read_result = await proc.stdio_read(wait_seconds=2.0)
+    assert isinstance(read_result, ProcessReadResult)
     assert read_result.success
     assert b"hello123" in read_result.stdout
 
@@ -160,6 +174,7 @@ async def test_wait_for_process():
 
     await proc.stdio_write("echo wait_test; exit 0", with_enter=True)
     wait_result = await proc.wait(timeout=5.0)
+    assert isinstance(wait_result, ProcessWaitResult)
     assert wait_result.success
     assert wait_result.returncode == 0
     assert "wait_test" in wait_result.stdout
@@ -173,10 +188,12 @@ async def test_kill_process():
     assert proc is not None
 
     kill_result = await proc.kill(graceful=False)
+    assert isinstance(kill_result, ProcessKillResult)
     assert kill_result.success
 
     await asyncio.sleep(0.5)
     wait_result = await proc.wait(timeout=2.0)
+    assert isinstance(wait_result, ProcessWaitResult)
     assert wait_result.success
     assert wait_result.returncode is not None
     assert wait_result.returncode != 0
@@ -197,11 +214,13 @@ async def test_stdio_write_without_enter():
     await proc.stdio_write("echo hello", with_enter=False)
     await asyncio.sleep(0.3)
     read_before = await proc.stdio_read(wait_seconds=1.0)
+    assert isinstance(read_before, ProcessReadResult)
     assert read_before.success
 
     await proc.stdio_write("", with_enter=True)
     await asyncio.sleep(0.5)
     read_after = await proc.stdio_read(wait_seconds=2.0)
+    assert isinstance(read_after, ProcessReadResult)
     assert read_after.success
     assert b"hello" in read_after.stdout
 
@@ -223,6 +242,7 @@ async def test_pty_create_bash_and_echo():
     await proc.stdio_write("echo hello_world", with_enter=True)
     await asyncio.sleep(0.5)
     read_result = await proc.stdio_read(wait_seconds=2.0)
+    assert isinstance(read_result, ProcessReadResult)
     assert read_result.success
     assert b"hello_world" in read_result.stdout
 
@@ -249,11 +269,13 @@ async def test_pty_write_read_cycle():
     await proc.stdio_write("echo test1", with_enter=True)
     await asyncio.sleep(0.5)
     read1 = await proc.stdio_read(wait_seconds=2.0)
+    assert isinstance(read1, ProcessReadResult)
     assert b"test1" in read1.stdout
 
     await proc.stdio_write("echo test2", with_enter=True)
     await asyncio.sleep(0.5)
     read2 = await proc.stdio_read(wait_seconds=2.0)
+    assert isinstance(read2, ProcessReadResult)
     assert b"test2" in read2.stdout
 
     await proc.kill()
@@ -269,6 +291,7 @@ async def test_pty_kill():
     assert proc is not None
 
     kill_result = await proc.kill(graceful=True)
+    assert isinstance(kill_result, ProcessKillResult)
     assert kill_result.success
     assert proc.returncode is not None
 
@@ -287,5 +310,6 @@ async def test_pty_wait():
 
     await proc.kill(graceful=True)
     wait_result = await proc.wait(timeout=5.0)
+    assert isinstance(wait_result, ProcessWaitResult)
     assert wait_result.success
     assert "pty_wait" in wait_result.stdout

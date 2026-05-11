@@ -79,6 +79,7 @@ def test_websocket_initial_state():
             data = ws.receive_json(mode="text")
             assert "event" in data
             sub.update_data(data)
+            assert isinstance(sub.data, dict)
             messages = sub.data.get("messages", [])
             assert any(
                 m.get("type") == "user" and m.get("content") == "Say hello"
@@ -116,7 +117,8 @@ def test_websocket_user_message():
             found = _feed_events_until(
                 ws,
                 sub,
-                lambda s: any(
+                lambda s: isinstance(s.data, dict)
+                and any(
                     m.get("type") == "user" and m.get("content") == "Hello from test"
                     for m in s.data.get("messages", [])
                 ),
@@ -153,13 +155,11 @@ def test_websocket_reset_recovery():
             _feed_events_until(
                 ws,
                 sub,
-                lambda s: any(
-                    m.get("type") == "user" for m in s.data.get("messages", [])
-                ),
+                lambda s: isinstance(s.data, dict)
+                and any(m.get("type") == "user" for m in s.data.get("messages", [])),
             )
 
             desynced_sub = JsonSubscriber()
-            assert desynced_sub.data is None
 
             ws.send_text(json.dumps({"type": "reset"}))
             for _ in range(30):
@@ -168,7 +168,7 @@ def test_websocket_reset_recovery():
                     desynced_sub.update_data(data)
                     break
 
-            assert desynced_sub.data is not None
+            assert isinstance(desynced_sub.data, dict)
             assert any(
                 m.get("type") == "user" for m in desynced_sub.data.get("messages", [])
             )
@@ -204,13 +204,15 @@ def test_websocket_multi_turn():
             found1 = _feed_events_until(
                 ws,
                 sub,
-                lambda s: any(
+                lambda s: isinstance(s.data, dict)
+                and any(
                     m.get("type") == "user" and m.get("content") == "First message"
                     for m in s.data.get("messages", [])
                 ),
             )
             assert found1, f"First user message not found: {sub.data}"
 
+            assert isinstance(sub.data, dict)
             first_count = len(sub.data.get("messages", []))
 
             ws.send_text(
@@ -220,7 +222,8 @@ def test_websocket_multi_turn():
             found2 = _feed_events_until(
                 ws,
                 sub,
-                lambda s: len(s.data.get("messages", [])) > first_count
+                lambda s: isinstance(s.data, dict)
+                and len(s.data.get("messages", [])) > first_count
                 and any(
                     m.get("type") == "user" and m.get("content") == "Second message"
                     for m in s.data.get("messages", [])
@@ -228,6 +231,7 @@ def test_websocket_multi_turn():
             )
             assert found2, f"Second user message not found: {sub.data}"
 
+            assert isinstance(sub.data, dict)
             messages = sub.data.get("messages", [])
             contents = [m.get("content") for m in messages if m.get("type") == "user"]
             assert contents == ["First message", "Second message"]
@@ -262,6 +266,7 @@ async def _wait_for_agent_turn(ws, sub, timeout=300):
 
 async def _retry_short_response(ws, feeder, sub, min_chars=50, max_retries=2):
     for _ in range(max_retries):
+        assert isinstance(sub.data, dict)
         agent_msgs = [
             m for m in sub.data.get("messages", []) if m.get("type") == "agent"
         ]
@@ -357,6 +362,7 @@ async def test_webui_streaming_e2e():
             await feeder.drain()
             await feeder.stop()
 
+        assert isinstance(sub.data, dict)
         messages = sub.data.get("messages", [])
         user_msg_contents = [m["content"] for m in messages if m.get("type") == "user"]
         assert (

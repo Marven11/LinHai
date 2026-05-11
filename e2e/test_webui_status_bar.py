@@ -101,6 +101,7 @@ async def test_webui_status_bar_e2e():
             await feeder.drain()
             await feeder.stop()
 
+            assert isinstance(sub.data, dict)
             status_bar = sub.data.get("status_bar")
             assert (
                 status_bar is not None

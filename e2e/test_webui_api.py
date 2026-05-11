@@ -1,6 +1,8 @@
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 from httpx import AsyncClient, ASGITransport
+from pathlib import Path
+
 from linhai.webui.app import create_app
 
 
@@ -10,7 +12,7 @@ def mock_manager():
         with patch("linhai.webui.agent_manager.load_config"):
             from linhai.webui.agent_manager import AgentManager, AgentSession
 
-            manager = AgentManager(config_path="/fake/path")
+            manager = AgentManager(config_path=Path("/fake/path"))
             mock_agent = MagicMock()
             mock_agent.state_machine.state = "waiting_user"
             mock_llm = MagicMock()

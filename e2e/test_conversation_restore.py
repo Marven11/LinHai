@@ -49,6 +49,8 @@ async def _wait_for_agent_completion(ws, feeder, sub, timeout=600):
 
 
 def _extract_save_path_from_notifications(sub) -> str | None:
+    if not isinstance(sub.data, dict):
+        return None
     messages = sub.data.get("messages", [])
     for msg in reversed(messages):
         if msg.get("type") == "notification":
@@ -114,6 +116,7 @@ async def test_conversation_save_and_restore():
             feeder.reset_timing()
             await _wait_for_agent_completion(ws, feeder, sub)
 
+            assert isinstance(sub.data, dict)
             agent_msgs = [
                 m for m in sub.data.get("messages", []) if m.get("type") == "agent"
             ]
@@ -140,6 +143,7 @@ async def test_conversation_save_and_restore():
             await feeder.drain()
             await feeder.stop()
 
+        assert isinstance(sub.data, dict)
         assert (
             save_path is not None
         ), f"Save path not found in notifications: {sub.data.get('messages', [])}"
@@ -200,6 +204,7 @@ async def test_conversation_save_and_restore():
             await feeder2.drain()
             await feeder2.stop()
 
+        assert isinstance(sub2.data, dict)
         all_messages = sub2.data.get("messages", [])
         user_contents = [
             m.get("content", "") for m in all_messages if m.get("type") == "user"

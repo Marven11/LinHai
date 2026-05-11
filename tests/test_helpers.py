@@ -21,6 +21,10 @@ class _AsyncioProcessAdapter:
     def pid(self) -> str:
         return str(self._process.pid)
 
+    @property
+    def returncode(self) -> int | None:
+        return self._process.returncode
+
     async def stdio_write(self, content: str, with_enter: bool) -> ProcessWriteResult:
         if self._process.stdin is None:
             return ProcessWriteResult(pid=self.pid, success=False, error="stdin不可用")

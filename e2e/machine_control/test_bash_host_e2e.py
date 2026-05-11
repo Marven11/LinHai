@@ -3,6 +3,11 @@ import shutil
 import unittest
 
 from linhai.machine_control.bash_host import BashHostControl
+from linhai.machine_control.process import (
+    ProcessWaitResult,
+    ProcessReadResult,
+    ProcessKillResult,
+)
 from linhai.registry import Registry
 from linhai.task_supervisor import PlainTaskSupervisor
 from linhai.tool.base import SuccessfulToolResult
@@ -74,9 +79,10 @@ class TestBashHostControlE2E(unittest.IsolatedAsyncioTestCase):
             self.assertTrue(len(result.pid) > 0)
 
             proc = control.get_process(result.pid)
-            self.assertIsNotNone(proc)
+            assert proc is not None
 
             wait_result = await proc.wait(timeout=10.0)
+            assert isinstance(wait_result, ProcessWaitResult)
             self.assertTrue(wait_result.success, f"wait failed: {wait_result.error}")
             self.assertEqual(wait_result.returncode, 0)
             self.assertIn("hello_world", wait_result.stdout)
@@ -105,9 +111,10 @@ class TestBashHostControlE2E(unittest.IsolatedAsyncioTestCase):
             self.assertTrue(result.success, f"create_process failed: {result.error}")
 
             proc = control.get_process(result.pid)
-            self.assertIsNotNone(proc)
+            assert proc is not None
 
             wait_result = await proc.wait(timeout=10.0)
+            assert isinstance(wait_result, ProcessWaitResult)
             self.assertTrue(wait_result.success)
             self.assertEqual(wait_result.returncode, 42)
             self.assertIn("err_msg", wait_result.stderr)
@@ -125,9 +132,10 @@ class TestBashHostControlE2E(unittest.IsolatedAsyncioTestCase):
             self.assertTrue(result.success, f"create_process failed: {result.error}")
 
             proc = control.get_process(result.pid)
-            self.assertIsNotNone(proc)
+            assert proc is not None
 
             read_result = await proc.stdio_read(wait_seconds=2.0)
+            assert isinstance(read_result, ProcessReadResult)
             self.assertTrue(read_result.success)
             self.assertIn(b"hello", read_result.stdout)
             self.assertIn(b"world", read_result.stdout)
@@ -149,11 +157,11 @@ class TestBashHostControlE2E(unittest.IsolatedAsyncioTestCase):
             self.assertGreaterEqual(len(pids), 2)
 
             proc1 = control.get_process(result1.pid)
-            self.assertIsNotNone(proc1)
+            assert proc1 is not None
             await proc1.kill()
 
             proc2 = control.get_process(result2.pid)
-            self.assertIsNotNone(proc2)
+            assert proc2 is not None
             await proc2.kill()
         finally:
             await self._cleanup(process)
@@ -166,9 +174,10 @@ class TestBashHostControlE2E(unittest.IsolatedAsyncioTestCase):
             self.assertTrue(result.success, f"create_process failed: {result.error}")
 
             proc = control.get_process(result.pid)
-            self.assertIsNotNone(proc)
+            assert proc is not None
 
             kill_result = await proc.kill(graceful=True)
+            assert isinstance(kill_result, ProcessKillResult)
             self.assertTrue(kill_result.success, f"kill failed: {kill_result.error}")
 
             await asyncio.sleep(0.5)
@@ -191,9 +200,10 @@ class TestBashHostControlE2E(unittest.IsolatedAsyncioTestCase):
             self.assertTrue(result.success, f"create_process failed: {result.error}")
 
             proc = control.get_process(result.pid)
-            self.assertIsNotNone(proc)
+            assert proc is not None
 
             kill_result = await proc.kill(graceful=False)
+            assert isinstance(kill_result, ProcessKillResult)
             self.assertTrue(kill_result.success, f"kill failed: {kill_result.error}")
 
             await asyncio.sleep(0.5)

@@ -105,7 +105,7 @@ def _setup_registry(registry, fake_llm, toolset):
 
     mock_mcp = unittest.mock.MagicMock(spec=MCPConnector)
     mock_mcp.get_toolsets = unittest.mock.MagicMock(return_value=[])
-    tool_manager = ToolManager(registry, ToolConfig(config={}), mock_mcp)
+    tool_manager = ToolManager(registry, ToolConfig(), mock_mcp)
     tool_manager.register_toolset("test", toolset)
     tool_manager._toolsets["test"] = toolset
     tool_manager._enabled["test"] = True

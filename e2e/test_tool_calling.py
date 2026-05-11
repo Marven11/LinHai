@@ -6,7 +6,7 @@ from openai import AsyncOpenAI
 from linhai.base import SystemMessage, ToolCallMessage
 from linhai.markdown_parser import extract_tool_calls_with_errors
 from linhai.registry import Registry
-from linhai.tool.base import ToolArgInfo, ToolSet, to_tools_info
+from linhai.tool.base import ToolArgInfo, ToolSet, to_tools_info, SuccessfulToolResult
 
 from conftest import retry_llm_call
 
@@ -21,7 +21,7 @@ def _get_weather_toolset() -> ToolSet:
         required_args=["city"],
     )
     def get_weather(city: str):
-        return f"Sunny, 25°C in {city}"
+        return SuccessfulToolResult(content=f"Sunny, 25°C in {city}")
 
     return toolset
 
