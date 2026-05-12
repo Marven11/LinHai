@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from typing import Sequence
 import asyncio
 
@@ -16,7 +17,13 @@ from linhai.base import (
     OpenAiToolCallToken,
     extract_usage,
 )
-from linhai.type_hints import FunctionCall, OpenAiToolCall
+from linhai.type_hints import (
+    FunctionCall,
+    OpenAiToolCall,
+    OpenAiToolCallResult,
+    ParsedOpenAiToolCall,
+    FailedOpenAiToolCall,
+)
 from linhai.utils.common import UiNotice
 import linhai
 
@@ -173,7 +180,7 @@ class OpenAiAnswer:
             message=self.content,
             reasoning_message=self.reasoning_content,
         )
-        msg.tool_calls = self.get_openai_toolcalls()
+        msg.tool_calls = self._get_raw_toolcalls()
         return msg
 
     def get_reasoning_message(self) -> str | None:
@@ -199,7 +206,7 @@ class OpenAiAnswer:
         return self.total_tokens
 
     def get_token_usage(self) -> AnswerTokenUsage | None:
-        """获取token使用情况，返回包含'input_tokens', 'output_tokens', 'total_tokens'的字典，如果不可用返回None。"""
+        """获取token使用情况。"""
         if self.total_tokens == 0:
             return None
         return AnswerTokenUsage(
@@ -210,7 +217,7 @@ class OpenAiAnswer:
             estimated_cached_input_tokens=self.estimated_cached_input_tokens,
         )
 
-    def get_openai_toolcalls(self) -> list[OpenAiToolCall] | None:
+    def _get_raw_toolcalls(self) -> list[OpenAiToolCall] | None:
         if not self._openai_toolcall_parts:
             return None
         result: list[OpenAiToolCall] = []
@@ -229,6 +236,40 @@ class OpenAiAnswer:
                 )
             )
         return result or None
+
+    async def get_openai_toolcalls(self) -> list[OpenAiToolCallResult] | None:
+        toolcalls = self._get_raw_toolcalls()
+        if not toolcalls:
+            return None
+
+        async def _parse_args(args_str: str) -> dict:
+            return json.loads(args_str)
+
+        parse_coros = [_parse_args(tc["function"]["arguments"]) for tc in toolcalls]
+        results = await asyncio.gather(*parse_coros, return_exceptions=True)
+
+        parsed: list[OpenAiToolCallResult] = []
+        for tc, result in zip(toolcalls, results):
+            if isinstance(result, dict):
+                parsed.append(
+                    ParsedOpenAiToolCall(
+                        type="success",
+                        id=tc["id"],
+                        name=tc["function"]["name"],
+                        arguments=result,
+                    )
+                )
+            else:
+                parsed.append(
+                    FailedOpenAiToolCall(
+                        type="error",
+                        id=tc["id"],
+                        name=tc["function"]["name"],
+                        raw_arguments=tc["function"]["arguments"],
+                        error=str(result),
+                    )
+                )
+        return parsed or None
 
 
 class MinimaxAnswer:
@@ -330,7 +371,7 @@ class MinimaxAnswer:
             message=self.content,
             reasoning_message=self.reasoning_content,
         )
-        msg.tool_calls = self.get_openai_toolcalls()
+        msg.tool_calls = self._get_raw_toolcalls()
         return msg
 
     def get_reasoning_message(self) -> str | None:
@@ -367,8 +408,42 @@ class MinimaxAnswer:
             estimated_cached_input_tokens=self.estimated_cached_input_tokens,
         )
 
-    def get_openai_toolcalls(self) -> list[OpenAiToolCall] | None:
+    def _get_raw_toolcalls(self) -> list[OpenAiToolCall] | None:
         return self._openai_toolcalls
+
+    async def get_openai_toolcalls(self) -> list[OpenAiToolCallResult] | None:
+        toolcalls = self._get_raw_toolcalls()
+        if not toolcalls:
+            return None
+
+        async def _parse_args(args_str: str) -> dict:
+            return json.loads(args_str)
+
+        parse_coros = [_parse_args(tc["function"]["arguments"]) for tc in toolcalls]
+        results = await asyncio.gather(*parse_coros, return_exceptions=True)
+
+        parsed: list[OpenAiToolCallResult] = []
+        for tc, result in zip(toolcalls, results):
+            if isinstance(result, dict):
+                parsed.append(
+                    ParsedOpenAiToolCall(
+                        type="success",
+                        id=tc["id"],
+                        name=tc["function"]["name"],
+                        arguments=result,
+                    )
+                )
+            else:
+                parsed.append(
+                    FailedOpenAiToolCall(
+                        type="error",
+                        id=tc["id"],
+                        name=tc["function"]["name"],
+                        raw_arguments=tc["function"]["arguments"],
+                        error=str(result),
+                    )
+                )
+        return parsed or None
 
 
 class OpenAi:

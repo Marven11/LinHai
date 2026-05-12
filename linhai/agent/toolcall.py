@@ -1,6 +1,5 @@
 """工具调用处理模块，负责工具注册、调用和结果管理。"""
 
-import json
 import time
 from pathlib import Path
 from typing import cast
@@ -21,7 +20,7 @@ from linhai.tool.base import (
     ToolResult,
 )
 from linhai.tool.main import ToolManager
-from linhai.type_hints import OpenAiToolCall
+from linhai.type_hints import OpenAiToolCall, OpenAiToolCallResult
 from linhai.utils.tokenizer import count_tokens, get_cl100k_base_tokenizer
 from linhai.utils.i18n import t
 
@@ -435,14 +434,15 @@ class AgentToolcall:
         if state_machine.state == "waiting_user":
             state_machine.transition_to_working()
 
-    async def call_openai_tools(self, openai_tool_calls: list[OpenAiToolCall]) -> None:
-        """处理OpenAI原生格式的工具调用列表。
+    async def call_openai_tools(
+        self, parsed_tool_calls: list[OpenAiToolCallResult]
+    ) -> None:
+        """处理解析后的工具调用列表。
 
-        遍历所有OpenAI工具调用，调用对应工具并将结果作为
-        OpenAiToolResultMessage添加到消息列表。
-        当early_return为True时，为剩余工具调用添加跳过消息。
+        遍历所有已解析的工具调用，检查type字段区分成功/失败，
+        调用对应工具并将结果作为OpenAiToolResultMessage添加到消息列表。
         """
-        for i, tc in enumerate(openai_tool_calls, start=1):
+        for i, tc in enumerate(parsed_tool_calls, start=1):
             if self.early_return:
                 result_msg = OpenAiToolResultMessage(
                     tool_call_id=tc["id"],
@@ -454,23 +454,21 @@ class AgentToolcall:
                 await message_processor.add_openai_tool_result(result_msg, tc["id"])
                 continue
 
-            try:
-                arguments = json.loads(tc["function"]["arguments"])
-            except json.JSONDecodeError as e:
+            if tc["type"] == "error":
                 message_processor = self.registry.get_member_typechecked(
                     "agent_message", AgentMessage
                 )
                 result_msg = OpenAiToolResultMessage(
                     tool_call_id=tc["id"],
-                    content=f"工具调用参数JSON解析失败: {e}",
+                    content=f"工具调用参数JSON解析失败: {tc['error']}",
                 )
                 await message_processor.add_new_message(result_msg)
                 self.early_return = True
                 continue
 
             tool_call = ToolCallMessage(
-                function_name=tc["function"]["name"],
-                function_arguments=arguments,
+                function_name=tc["name"],
+                function_arguments=tc["arguments"],
                 assert_success=True,
                 with_secret=None,
             )

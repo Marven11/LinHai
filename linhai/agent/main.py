@@ -16,8 +16,6 @@ from .lifecycle import Lifecycle
 from .message import AgentMessage
 from .orchestration import AgentContextOrchestration
 from .toolcall import AgentToolcall
-import json
-
 from linhai.base import Message, LanguageModel, Answer, ToolCallMessage
 from linhai.llm import OpenAiAnswer
 from linhai.llm_manager import LlmManager
@@ -242,26 +240,13 @@ class Agent:
 
         current_llm = self.llm_manager.get_current_llm()
         if not current_llm.get_custom_toolcall_format():
-            openai_toolcalls = parsed_answer.get_openai_toolcalls()
-            if openai_toolcalls:
+            parsed_toolcalls = await parsed_answer.get_openai_toolcalls()
+            if parsed_toolcalls:
                 self.toolcall_processor.start_new_tool_call_round()
-                await self.toolcall_processor.call_openai_tools(openai_toolcalls)
+                await self.toolcall_processor.call_openai_tools(parsed_toolcalls)
                 await self.toolcall_processor.flush_warnings()
-            openai_toolcall_dicts = []
-            for tc in openai_toolcalls or []:
-                if (
-                    "function" in tc
-                    and "name" in tc["function"]
-                    and "arguments" in tc["function"]
-                ):
-                    openai_toolcall_dicts.append(
-                        {
-                            "name": tc["function"]["name"],
-                            "arguments": json.loads(tc["function"]["arguments"]),
-                        }
-                    )
             await self.lifecycle.after_message_generation.trigger(
-                parsed_answer, openai_toolcall_dicts
+                parsed_answer, parsed_toolcalls or []
             )
         else:
             tool_calls, errors = parsed_answer.extract_tool_calls_with_errors()

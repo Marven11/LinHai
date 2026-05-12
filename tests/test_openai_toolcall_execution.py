@@ -1,11 +1,10 @@
 import unittest
-import json
 from unittest.mock import Mock, AsyncMock
 
 from linhai.agent.toolcall import AgentToolcall, EARLY_RETURN_SKIP_MESSAGE
 from linhai.agent.state_machine import AgentStateMachine
 from linhai.base import ToolCallMessage, OpenAiToolResultMessage
-from linhai.type_hints import OpenAiToolCall, FunctionCall
+from linhai.type_hints import ParsedOpenAiToolCall
 from linhai.tool.base import (
     ToolCallResultMessage,
     SuccessfulToolResult,
@@ -50,13 +49,18 @@ class _Base(unittest.IsolatedAsyncioTestCase):
         self.processor = AgentToolcall(self.mock_registry)
 
 
+def _make_tc(id: str, name: str, arguments: dict | None = None) -> ParsedOpenAiToolCall:
+    return ParsedOpenAiToolCall(
+        type="success",
+        id=id,
+        name=name,
+        arguments=arguments if arguments is not None else {},
+    )
+
+
 class TestCallOpenaiToolsSingleSuccess(_Base):
     async def test_single_tool_call_success(self):
-        tc = OpenAiToolCall(
-            id="call_1",
-            function=FunctionCall(name="read_file", arguments='{"path": "/tmp/x"}'),
-            type="function",
-        )
+        tc = _make_tc("call_1", "read_file", {"path": "/tmp/x"})
         mock_result = ToolCallResultMessage(
             tool_name="read_file",
             tool_index=1,
@@ -77,16 +81,8 @@ class TestCallOpenaiToolsSingleSuccess(_Base):
 
 class TestCallOpenaiToolsMultipleSuccess(_Base):
     async def test_multiple_tool_calls_success(self):
-        tc1 = OpenAiToolCall(
-            id="call_a",
-            function=FunctionCall(name="tool_a", arguments="{}"),
-            type="function",
-        )
-        tc2 = OpenAiToolCall(
-            id="call_b",
-            function=FunctionCall(name="tool_b", arguments="{}"),
-            type="function",
-        )
+        tc1 = _make_tc("call_a", "tool_a")
+        tc2 = _make_tc("call_b", "tool_b")
         mock_result = ToolCallResultMessage(
             tool_name="tool_a",
             tool_index=1,
@@ -113,16 +109,8 @@ class TestCallOpenaiToolsMultipleSuccess(_Base):
 
 class TestCallOpenaiToolsEarlyReturn(_Base):
     async def test_early_return_skips_remaining(self):
-        tc1 = OpenAiToolCall(
-            id="call_1",
-            function=FunctionCall(name="fail_tool", arguments="{}"),
-            type="function",
-        )
-        tc2 = OpenAiToolCall(
-            id="call_2",
-            function=FunctionCall(name="good_tool", arguments="{}"),
-            type="function",
-        )
+        tc1 = _make_tc("call_1", "fail_tool")
+        tc2 = _make_tc("call_2", "good_tool")
         mock_fail = ToolCallResultMessage(
             tool_name="fail_tool",
             tool_index=1,
@@ -147,11 +135,7 @@ class TestCallOpenaiToolsEarlyReturn(_Base):
 
 class TestCallOpenaiToolsBeforeCallbackBlocks(_Base):
     async def test_before_tool_call_blocks(self):
-        tc = OpenAiToolCall(
-            id="call_x",
-            function=FunctionCall(name="blocked_tool", arguments="{}"),
-            type="function",
-        )
+        tc = _make_tc("call_x", "blocked_tool")
         self.mock_lifecycle.before_tool_call.trigger = AsyncMock(
             return_value=FailedToolResult(content="blocked by policy")
         )
@@ -167,16 +151,8 @@ class TestCallOpenaiToolsBeforeCallbackBlocks(_Base):
 class TestCallOpenaiToolsExistingEarlyReturn(_Base):
     async def test_existing_early_return_adds_skip_messages(self):
         self.processor.early_return = True
-        tc1 = OpenAiToolCall(
-            id="call_1",
-            function=FunctionCall(name="tool_a", arguments="{}"),
-            type="function",
-        )
-        tc2 = OpenAiToolCall(
-            id="call_2",
-            function=FunctionCall(name="tool_b", arguments="{}"),
-            type="function",
-        )
+        tc1 = _make_tc("call_1", "tool_a")
+        tc2 = _make_tc("call_2", "tool_b")
 
         await self.processor.call_openai_tools([tc1, tc2])
 

@@ -90,7 +90,7 @@ class TestOpenAiAnswerGetToolCalls(unittest.IsolatedAsyncioTestCase):
             stream=self.mock_stream,
             registry=self.registry,
         )
-        self.assertIsNone(answer.get_openai_toolcalls())
+        self.assertIsNone(await answer.get_openai_toolcalls())
 
     async def test_tool_calls_assembled_from_parts(self):
         answer = OpenAiAnswer(
@@ -101,12 +101,14 @@ class TestOpenAiAnswerGetToolCalls(unittest.IsolatedAsyncioTestCase):
             0: {"id": "call_a", "name": "func_a", "args": '{"x": 1}'},
             1: {"id": "call_b", "name": "func_b", "args": "{}"},
         }
-        result = answer.get_openai_toolcalls()
+        result = await answer.get_openai_toolcalls()
         self.assertIsNotNone(result)
         self.assertEqual(len(result), 2)
         self.assertEqual(result[0]["id"], "call_a")
-        self.assertEqual(result[0]["function"]["name"], "func_a")
-        self.assertEqual(result[1]["function"]["name"], "func_b")
+        self.assertEqual(result[0]["name"], "func_a")
+        self.assertEqual(result[0]["type"], "success")
+        self.assertEqual(result[0]["arguments"], {"x": 1})
+        self.assertEqual(result[1]["name"], "func_b")
 
     async def test_incomplete_tool_call_skipped(self):
         answer = OpenAiAnswer(
@@ -116,7 +118,7 @@ class TestOpenAiAnswerGetToolCalls(unittest.IsolatedAsyncioTestCase):
         answer._openai_toolcall_parts = {
             0: {"id": None, "name": None, "args": ""},
         }
-        self.assertIsNone(answer.get_openai_toolcalls())
+        self.assertIsNone(await answer.get_openai_toolcalls())
 
     async def test_get_message_includes_tool_calls(self):
         answer = OpenAiAnswer(
@@ -133,7 +135,7 @@ class TestOpenAiAnswerGetToolCalls(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(msg.tool_calls[0]["id"], "call_x")
 
 
-class TestMinimaxAnswerGetToolCalls(unittest.TestCase):
+class TestMinimaxAnswerGetToolCalls(unittest.IsolatedAsyncioTestCase):
     def _make_minimax_response(self, tool_calls_data=None):
         message = MagicMock()
         message.content = "response text"
@@ -157,15 +159,15 @@ class TestMinimaxAnswerGetToolCalls(unittest.TestCase):
         response.__dict__["usage"] = None
         return response
 
-    def test_no_tool_calls_returns_none(self):
+    async def test_no_tool_calls_returns_none(self):
         response = self._make_minimax_response()
         answer = MinimaxAnswer(
             response=response,
             registry=Registry(),
         )
-        self.assertIsNone(answer.get_openai_toolcalls())
+        self.assertIsNone(await answer.get_openai_toolcalls())
 
-    def test_tool_calls_extracted_from_response(self):
+    async def test_tool_calls_extracted_from_response(self):
         response = self._make_minimax_response(
             [
                 {"id": "tc_1", "name": "get_data", "arguments": '{"key": "val"}'},
@@ -176,12 +178,13 @@ class TestMinimaxAnswerGetToolCalls(unittest.TestCase):
             response=response,
             registry=Registry(),
         )
-        result = answer.get_openai_toolcalls()
+        result = await answer.get_openai_toolcalls()
         self.assertIsNotNone(result)
         self.assertEqual(len(result), 2)
         self.assertEqual(result[0]["id"], "tc_1")
-        self.assertEqual(result[0]["function"]["name"], "get_data")
-        self.assertEqual(result[0]["function"]["arguments"], '{"key": "val"}')
+        self.assertEqual(result[0]["name"], "get_data")
+        self.assertEqual(result[0]["type"], "success")
+        self.assertEqual(result[0]["arguments"], {"key": "val"})
         self.assertEqual(result[1]["id"], "tc_2")
 
     def test_get_message_includes_tool_calls(self):

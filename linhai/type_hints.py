@@ -141,6 +141,24 @@ class ToolCallDict(TypedDict):
     with_secret: NotRequired[WithSecret]
 
 
+class ParsedOpenAiToolCall(TypedDict):
+    type: Literal["success"]
+    id: str
+    name: str
+    arguments: dict
+
+
+class FailedOpenAiToolCall(TypedDict):
+    type: Literal["error"]
+    id: str
+    name: str
+    raw_arguments: str
+    error: str
+
+
+OpenAiToolCallResult: TypeAlias = ParsedOpenAiToolCall | FailedOpenAiToolCall
+
+
 class CumulativeTokenUsage(TypedDict):
     """累计token使用量TypedDict，用于TokenManager中的cumulative_token_usage。"""
 
@@ -167,4 +185,7 @@ __all__ = [
     "ToolCallDict",
     "ToolResultMsg",
     "WithSecret",
+    "ParsedOpenAiToolCall",
+    "FailedOpenAiToolCall",
+    "OpenAiToolCallResult",
 ]

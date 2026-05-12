@@ -18,6 +18,7 @@ from pydantic import BaseModel
 from linhai.type_hints import (
     LanguageModelMessage,
     OpenAiToolCall,
+    OpenAiToolCallResult,
     UserMessage as UserMsgType,
     AssistantMessage as AsstMsgType,
     ToolResultMsg,
@@ -491,8 +492,8 @@ class Answer(Protocol):
         """获取token使用情况"""
         raise NotImplementedError
 
-    def get_openai_toolcalls(self) -> list[OpenAiToolCall] | None:
-        """获取OpenAI原生工具调用列表"""
+    async def get_openai_toolcalls(self) -> list[OpenAiToolCallResult] | None:
+        """获取解析后的OpenAI工具调用列表，参数已解析为dict"""
         raise NotImplementedError
 
 

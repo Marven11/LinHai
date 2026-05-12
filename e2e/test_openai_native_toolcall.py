@@ -77,27 +77,27 @@ async def test_openai_native_tool_call_generation():
     registry = Registry()
     answer, _ = await _stream_toolcall_answer(registry)
 
-    tool_calls = answer.get_openai_toolcalls()
+    tool_calls = await answer.get_openai_toolcalls()
     assert tool_calls is not None
     assert len(tool_calls) >= 1
     call = tool_calls[0]
-    assert call["function"]["name"] == "add"
-    args = json.loads(call["function"]["arguments"])
+    assert call["name"] == "add"
+    assert call["type"] == "success"
+    args = call["arguments"]
     assert "a" in args
     assert "b" in args
     assert call["id"] == "call_abc123"
-    assert call["type"] == "function"
 
 
 async def test_openai_native_tool_call_multi_turn():
     registry = Registry()
     answer, _ = await _stream_toolcall_answer(registry)
 
-    tool_calls = answer.get_openai_toolcalls()
+    tool_calls = await answer.get_openai_toolcalls()
     assert tool_calls is not None
     call = tool_calls[0]
-    assert call["function"]["name"] == "add"
-    args = json.loads(call["function"]["arguments"])
+    assert call["name"] == "add"
+    args = call["arguments"]
     result = args["a"] + args["b"]
 
     assistant_msg = answer.get_message()
