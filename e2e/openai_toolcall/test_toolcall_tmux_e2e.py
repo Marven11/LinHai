@@ -63,6 +63,22 @@ def _capture_tmux_output(session_name: str) -> str:
     return result.stdout
 
 
+def _send_followup_message(session_name: str, message: str) -> None:
+    subprocess.run(
+        ["tmux", "send-keys", "-t", session_name, "Tab"],
+        check=False,
+    )
+    time.sleep(0.5)
+    subprocess.run(
+        ["tmux", "send-keys", "-t", session_name, "-l", message],
+        check=False,
+    )
+    subprocess.run(
+        ["tmux", "send-keys", "-t", session_name, "Enter"],
+        check=False,
+    )
+
+
 def test_native_toolcall_write_file_e2e():
     flag = _generate_flag()
     config_path = Path(tempfile.mktemp(suffix=".toml", prefix="test_config_"))
@@ -100,6 +116,7 @@ def test_native_toolcall_write_file_e2e():
 
         start = time.time()
         last_output = ""
+        sent_retry = False
         while time.time() - start < TIMEOUT:
             if test_file.exists():
                 content = test_file.read_text()
@@ -113,6 +130,19 @@ def test_native_toolcall_write_file_e2e():
                 break
 
             last_output = _capture_tmux_output(session_name)
+
+            if (
+                not sent_retry
+                and "#LINHAI_WAITING_USER" in last_output
+                and not test_file.exists()
+            ):
+                _send_followup_message(
+                    session_name,
+                    f"The file {test_file} does not exist. "
+                    f"Use the write_file tool to create it with content: result={flag}",
+                )
+                sent_retry = True
+
             time.sleep(POLL_INTERVAL)
 
         if test_file.exists() and flag in test_file.read_text():
