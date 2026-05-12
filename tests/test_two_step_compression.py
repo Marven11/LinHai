@@ -16,7 +16,12 @@ from linhai.agent.workflow import (
     _prepare_messages_for_compression,
     _validate_compression_range,
 )
-from linhai.base import UserMessage, AssistantMessage, SystemMessage
+from linhai.base import (
+    UserMessage,
+    AssistantMessage,
+    SystemMessage,
+    OpenAiToolResultMessage,
+)
 from linhai.tool.main import ToolManager
 from linhai.tool.base import utils_tools, SuccessfulToolResult, FailedToolResult
 from linhai.registry import Registry
@@ -532,6 +537,264 @@ class TestTwoStepCompressionBasic(unittest.IsolatedAsyncioTestCase):
 
         self.assertTrue(
             user_message_summary_found, "No user message summary was created"
+        )
+
+
+class TestStep2OpenAiToolResultPlaceholder(unittest.IsolatedAsyncioTestCase):
+    """Test that step2 inserts placeholder OpenAiToolResultMessages when needed."""
+
+    async def test_placeholder_inserted_for_orphaned_tool_result(self):
+        """When a tool result is deleted but its assistant message remains,
+        a placeholder OpenAiToolResultMessage should be inserted."""
+        mock_registry = MagicMock()
+        mock_agent = MagicMock()
+        mock_agent.registry = mock_registry
+
+        def mock_get_member_typechecked(member_type, member_class=None):
+            if member_type == "agent":
+                return mock_agent
+            elif member_type == "range_clean_manager":
+                mock_manager = MagicMock(spec=RangeCleanManager)
+                mock_manager.get_clean_info = MagicMock(
+                    return_value=RangeCleanInfo(
+                        range_clean_id="test_rcid",
+                        message_length=16,
+                        min_safe_id=1,
+                        created_at=time.time(),
+                    )
+                )
+                mock_manager.remove_clean_info = MagicMock()
+                return mock_manager
+            elif member_type == "conversation_folder":
+                return Path(tempfile.mkdtemp())
+            else:
+                raise ValueError(f"Unexpected member type: {member_type}")
+
+        mock_registry.get_member_typechecked = MagicMock(
+            side_effect=mock_get_member_typechecked
+        )
+        mock_registry.send_if_exists = AsyncMock()
+
+        summerize_message = MessagesListSummerizeMessage(
+            messages_summerization="Test",
+            message_length=16,
+            range_clean_id="test_rcid",
+        )
+
+        assistant = AssistantMessage(message="calling tools")
+        assistant.tool_calls = [
+            {
+                "id": "tc_1",
+                "type": "function",
+                "function": {"name": "read_file", "arguments": "{}"},
+            },
+            {
+                "id": "tc_2",
+                "type": "function",
+                "function": {"name": "write_file", "arguments": "{}"},
+            },
+        ]
+
+        messages_list = [
+            SystemMessage(registry=mock_registry),
+            assistant,
+            OpenAiToolResultMessage(tool_call_id="tc_1", content="file content here"),
+            OpenAiToolResultMessage(tool_call_id="tc_2", content="file written"),
+            RuntimeMessage("msg 1"),
+            RuntimeMessage("msg 2"),
+            RuntimeMessage("msg 3"),
+            RuntimeMessage("msg 4"),
+            RuntimeMessage("msg 5"),
+            RuntimeMessage("msg 6"),
+            RuntimeMessage("msg 7"),
+            RuntimeMessage("msg 8"),
+            RuntimeMessage("msg 9"),
+            RuntimeMessage("msg 10"),
+            UserMessage(message="keep this"),
+            summerize_message,
+        ]
+        mock_agent.message_processor.messages = messages_list
+
+        async def mock_delete_message_range(start, end):
+            nonlocal messages_list
+            deleted = messages_list[start : end + 1]
+            messages_list[start : end + 1] = []
+            return deleted
+
+        async def mock_insert_message(index, message):
+            nonlocal messages_list
+            messages_list.insert(index, message)
+
+        mock_agent.message_processor.delete_message_range = AsyncMock(
+            side_effect=mock_delete_message_range
+        )
+        mock_agent.message_processor.insert_message = AsyncMock(
+            side_effect=mock_insert_message
+        )
+
+        async def mock_add_openai_tool_result(msg, tool_call_id):
+            nonlocal messages_list
+            assistant_idx = None
+            for i in range(len(messages_list) - 1, -1, -1):
+                m = messages_list[i]
+                if isinstance(m, AssistantMessage) and m.tool_calls:
+                    for tc in m.tool_calls:
+                        if tc["id"] == tool_call_id:
+                            assistant_idx = i
+                            break
+                    if assistant_idx is not None:
+                        break
+            if assistant_idx is None:
+                messages_list.append(msg)
+                return
+            insert_idx = assistant_idx + 1
+            while insert_idx < len(messages_list) and isinstance(
+                messages_list[insert_idx], OpenAiToolResultMessage
+            ):
+                insert_idx += 1
+            messages_list.insert(insert_idx, msg)
+
+        mock_agent.message_processor.add_openai_tool_result = AsyncMock(
+            side_effect=mock_add_openai_tool_result
+        )
+
+        with patch("linhai.agent.workflow.save_cleaned_messages") as mock_save:
+            mock_save.return_value = Path("/tmp/test_placeholder.json")
+            result = await context_forget_range_step2(
+                mock_registry,
+                range_clean_id="test_rcid",
+                start_id=2,
+                end_id=11,
+                description="Test with tool results deleted",
+            )
+
+        self.assertIsInstance(result, SuccessfulToolResult)
+
+        placeholder_tc1_found = False
+        placeholder_tc2_found = False
+        for msg in messages_list:
+            if (
+                isinstance(msg, OpenAiToolResultMessage)
+                and msg.tool_call_id == "tc_1"
+                and "已经被遗忘" in msg.content
+            ):
+                placeholder_tc1_found = True
+            if (
+                isinstance(msg, OpenAiToolResultMessage)
+                and msg.tool_call_id == "tc_2"
+                and "已经被遗忘" in msg.content
+            ):
+                placeholder_tc2_found = True
+
+        self.assertTrue(placeholder_tc1_found, "No placeholder for tc_1")
+        self.assertTrue(placeholder_tc2_found, "No placeholder for tc_2")
+
+    async def test_no_placeholder_when_assistant_also_deleted(self):
+        """When both the assistant and its tool results are deleted,
+        no placeholder should be inserted."""
+        mock_registry = MagicMock()
+        mock_agent = MagicMock()
+        mock_agent.registry = mock_registry
+
+        def mock_get_member_typechecked(member_type, member_class=None):
+            if member_type == "agent":
+                return mock_agent
+            elif member_type == "range_clean_manager":
+                mock_manager = MagicMock(spec=RangeCleanManager)
+                mock_manager.get_clean_info = MagicMock(
+                    return_value=RangeCleanInfo(
+                        range_clean_id="test_rcid",
+                        message_length=15,
+                        min_safe_id=0,
+                        created_at=time.time(),
+                    )
+                )
+                mock_manager.remove_clean_info = MagicMock()
+                return mock_manager
+            elif member_type == "conversation_folder":
+                return Path(tempfile.mkdtemp())
+            else:
+                raise ValueError(f"Unexpected member type: {member_type}")
+
+        mock_registry.get_member_typechecked = MagicMock(
+            side_effect=mock_get_member_typechecked
+        )
+        mock_registry.send_if_exists = AsyncMock()
+
+        summerize_message = MessagesListSummerizeMessage(
+            messages_summerization="Test",
+            message_length=15,
+            range_clean_id="test_rcid",
+        )
+
+        assistant = AssistantMessage(message="calling tools")
+        assistant.tool_calls = [
+            {
+                "id": "tc_1",
+                "type": "function",
+                "function": {"name": "read_file", "arguments": "{}"},
+            },
+        ]
+
+        messages_list = [
+            RuntimeMessage("msg 0"),
+            assistant,
+            OpenAiToolResultMessage(tool_call_id="tc_1", content="result"),
+            RuntimeMessage("msg 3"),
+            RuntimeMessage("msg 4"),
+            RuntimeMessage("msg 5"),
+            RuntimeMessage("msg 6"),
+            RuntimeMessage("msg 7"),
+            RuntimeMessage("msg 8"),
+            RuntimeMessage("msg 9"),
+            RuntimeMessage("msg 10"),
+            RuntimeMessage("msg 11"),
+            UserMessage(message="keep"),
+            summerize_message,
+        ]
+        mock_agent.message_processor.messages = messages_list
+
+        async def mock_delete_message_range(start, end):
+            nonlocal messages_list
+            deleted = messages_list[start : end + 1]
+            messages_list[start : end + 1] = []
+            return deleted
+
+        async def mock_insert_message(index, message):
+            nonlocal messages_list
+            messages_list.insert(index, message)
+
+        mock_agent.message_processor.delete_message_range = AsyncMock(
+            side_effect=mock_delete_message_range
+        )
+        mock_agent.message_processor.insert_message = AsyncMock(
+            side_effect=mock_insert_message
+        )
+        mock_agent.message_processor.add_openai_tool_result = AsyncMock(
+            side_effect=mock_insert_message
+        )
+
+        with patch("linhai.agent.workflow.save_cleaned_messages") as mock_save:
+            mock_save.return_value = Path("/tmp/test_no_placeholder.json")
+            result = await context_forget_range_step2(
+                mock_registry,
+                range_clean_id="test_rcid",
+                start_id=1,
+                end_id=10,
+                description="Delete assistant and tool results together",
+            )
+
+        self.assertIsInstance(result, SuccessfulToolResult)
+
+        placeholder_count = sum(
+            1
+            for msg in messages_list
+            if isinstance(msg, OpenAiToolResultMessage) and "已经被遗忘" in msg.content
+        )
+        self.assertEqual(
+            placeholder_count,
+            0,
+            "No placeholders should exist when assistant is also deleted",
         )
 
 

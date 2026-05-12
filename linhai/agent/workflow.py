@@ -8,7 +8,12 @@ from reprlib import Repr
 import linhai
 from .messages import RuntimeMessage, MessagesListSummerizeMessage, GlobalPrompt
 from linhai.markdown_parser import extract_json_blocks
-from linhai.base import AssistantMessage, SystemMessage, UserMessage
+from linhai.base import (
+    AssistantMessage,
+    OpenAiToolResultMessage,
+    SystemMessage,
+    UserMessage,
+)
 from linhai.tool.base import SuccessfulToolResult, FailedToolResult
 from linhai.utils.common import UiNotice, generate_id
 from pathlib import Path
@@ -250,6 +255,38 @@ async def context_forget_range_step2(
         conversation_dir, deleted_messages, prefix="range_compress"
     )
 
+    deleted_tool_call_ids: set[str] = set()
+    for msg in deleted_messages:
+        if isinstance(msg, OpenAiToolResultMessage):
+            deleted_tool_call_ids.add(msg.tool_call_id)
+
+    placeholder_count = 0
+    if deleted_tool_call_ids:
+        remaining_tool_call_ids: set[str] = {
+            msg.tool_call_id
+            for msg in agent.message_processor.messages
+            if isinstance(msg, OpenAiToolResultMessage)
+        }
+        missing_ids = deleted_tool_call_ids - remaining_tool_call_ids
+
+        if missing_ids:
+            tool_call_ids_to_insert: list[str] = []
+            for msg in agent.message_processor.messages:
+                if isinstance(msg, AssistantMessage) and msg.tool_calls:
+                    for tc in msg.tool_calls:
+                        if tc["id"] in missing_ids:
+                            tool_call_ids_to_insert.append(tc["id"])
+
+            for tool_call_id in tool_call_ids_to_insert:
+                await agent.message_processor.add_openai_tool_result(
+                    OpenAiToolResultMessage(
+                        tool_call_id=tool_call_id,
+                        content=f"此条工具结果已经被遗忘，和其他消息被临时保存在{filepath}中",
+                    ),
+                    tool_call_id,
+                )
+            placeholder_count = len(tool_call_ids_to_insert)
+
     deleted_user_messages = [
         msg.message
         for msg in deleted_messages
@@ -259,12 +296,12 @@ async def context_forget_range_step2(
     if deleted_user_messages:
         user_messages_summary = "\n".join(f"- {msg}" for msg in deleted_user_messages)
         await agent.message_processor.insert_message(
-            start_id + 1,
+            start_id + placeholder_count + 1,
             RuntimeMessage(f"历史压缩已删除以下用户消息：\n{user_messages_summary}"),
         )
 
     await agent.message_processor.insert_message(
-        start_id,
+        start_id + placeholder_count,
         RuntimeMessage(
             f"这里有一段消息被删除并转储到{filepath}中，以下为总结，请根据总结继续工作: {description}"
         ),
