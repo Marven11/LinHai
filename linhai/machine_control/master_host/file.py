@@ -169,6 +169,15 @@ def write_file(
             return FailedToolResult(content=validation_error)
     try:
         file_path.write_text(content, encoding="utf-8")
+        if not file_path.exists():
+            return FailedToolResult(
+                content=f"文件写入后验证失败: {file_path.as_posix()!r} 不存在"
+            )
+        actual = file_path.read_text(encoding="utf-8")
+        if actual != content:
+            return FailedToolResult(
+                content=f"文件写入后验证失败: {file_path.as_posix()!r} 内容不匹配"
+            )
     except OSError as exc:
         return FailedToolResult(content=f"写入文件时发生错误: {exc!r}")
     return SuccessfulToolResult(content=f"成功写入文件: {file_path.as_posix()!r}")

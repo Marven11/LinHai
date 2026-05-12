@@ -10,7 +10,12 @@ from linhai.agent.orchestration import (
     get_cleanable_large_messages,
 )
 from linhai.agent.message import AgentMessage
-from linhai.base import UserMessage, AssistantMessage, SystemMessage
+from linhai.base import (
+    UserMessage,
+    AssistantMessage,
+    SystemMessage,
+    OpenAiToolResultMessage,
+)
 from linhai.agent.messages import RuntimeMessage
 from linhai.registry import Registry
 from linhai.agent.lifecycle import Lifecycle
@@ -834,6 +839,39 @@ class TestAgentContextOrchestration(unittest.IsolatedAsyncioTestCase):
         self.assertIsNone(result)
         # 验证：没有发送UI提醒
         self.assertEqual(len(ui_log_calls), 0)
+
+    async def test_context_forget_large_message_replaces_openai_tool_result(self):
+        """测试清理OpenAiToolResultMessage大消息时保持同类型替换。"""
+        from linhai.agent.conversation import save_cleaned_messages
+        from pathlib import Path
+        from unittest.mock import patch, mock_open
+
+        tool_call_id = "call_abc123"
+        large_msg = OpenAiToolResultMessage(
+            tool_call_id=tool_call_id,
+            content="x" * 20000,
+        )
+        for _ in range(4):
+            extra = OpenAiToolResultMessage(
+                tool_call_id=f"call_{_}", content="y" * 20000
+            )
+            self.message_processor.messages.append(extra)
+            self.orchestration.large_messages.add(extra)
+
+        self.message_processor.messages.append(large_msg)
+        self.orchestration.large_messages.add(large_msg)
+
+        with patch.object(Path, "write_text"):
+            result = await self.orchestration.context_forget_large_message()
+
+        from linhai.tool.base import SuccessfulToolResult
+
+        self.assertIsInstance(result, SuccessfulToolResult)
+
+        replaced = self.message_processor.messages[-1]
+        self.assertIsInstance(replaced, OpenAiToolResultMessage)
+        self.assertEqual(replaced.tool_call_id, tool_call_id)
+        self.assertIn("遗忘", replaced.content)
 
     async def test_no_cache_ratio_reminder_when_abnormally_low(self):
         """测试缓存命中率异常低（<5%）时不发送提醒，符合issue #991要求。"""

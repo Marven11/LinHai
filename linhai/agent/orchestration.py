@@ -15,7 +15,7 @@ from linhai.agent.workflow import (
     context_forget_range_step2,
 )
 from .lifecycle import Lifecycle
-from linhai.base import ToolCallMessage, Answer
+from linhai.base import OpenAiToolResultMessage, ToolCallMessage, Answer
 from linhai.tool.base import ToolCallResultMessage
 from linhai.multimodal import ImageDisplayMessage
 from linhai.utils.tokenizer import count_tokens
@@ -169,7 +169,13 @@ class AgentContextOrchestration:
         )
 
         for message in removed_messages:
-            placeholder = RuntimeMessage(f"当前消息已经被遗忘，转储到{saved_path}")
+            placeholder_text = f"当前消息已经被遗忘，转储到{saved_path}"
+            if isinstance(message, OpenAiToolResultMessage):
+                placeholder = OpenAiToolResultMessage(
+                    tool_call_id=message.tool_call_id, content=placeholder_text
+                )
+            else:
+                placeholder = RuntimeMessage(placeholder_text)
             await self.agent_message.replace_message(message, placeholder)
             content = message.get_content()
             if isinstance(content, str):
