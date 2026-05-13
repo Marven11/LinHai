@@ -9,7 +9,13 @@ on:
 jobs:
   test:
     runs-on: debian-latest
+    env:
+      UV_INDEX_URL: https://repo.huaweicloud.com/repository/pypi/simple
+      PIP_INDEX_URL: https://repo.huaweicloud.com/repository/pypi/simple
     steps:
+      - name: Configure Chinese mirrors
+        run: |
+          sed -i 's|deb.debian.org|mirrors.huaweicloud.com|g; s|security.debian.org|mirrors.huaweicloud.com|g' /etc/apt/sources.list /etc/apt/sources.list.d/debian.sources 2>/dev/null || true
       - name: Checkout
         uses: actions/checkout@v4
         with:
@@ -34,14 +40,12 @@ jobs:
         run: |
           apt-get update
           apt-get install -y python3 python3-pip python3-venv curl tmux
-          curl -LsSf https://astral.sh/uv/install.sh | sh
-          export PATH="$HOME/.local/bin:$PATH"
+          pip3 install uv
           uv --version
 
       - name: Install dependencies
         run: |
-          export PATH="$HOME/.local/bin:$PATH"
-          uv sync --extra dev
+          for i in 1 2 3; do uv sync --extra dev && break || sleep 15; done
 
       - name: Create config file for tests
         run: |
@@ -193,12 +197,24 @@ jobs:
           fetch-depth: 0
 
       - name: Install Nix
-        uses: DeterminateSystems/nix-installer-action@main
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          extra-conf: |
-            experimental-features = nix-command flakes
-            accept-flake-config = true
+        run: |
+          apt-get update && apt-get install -y curl xz-utils
+          for i in $(seq 1 5); do
+            curl -L --connect-timeout 30 --max-time 300 https://nixos.org/nix/install -o /tmp/nix-install && break
+            echo "Attempt $i failed, retrying in 10s..."
+            rm -f /tmp/nix-install
+            sleep 10
+          done
+          [ -f /tmp/nix-install ] || { echo "Failed to download nix installer"; exit 1; }
+          sh /tmp/nix-install --daemon --no-channel-add
+          echo '/nix/var/nix/profiles/default/bin' >> $GITHUB_PATH
+          mkdir -p /etc/nix
+          cat >> /etc/nix/nix.conf << 'NIXCONF'
+          experimental-features = nix-command flakes
+          accept-flake-config = true
+          substituters = https://mirrors.tuna.tsinghua.edu.cn/nix-channels/store https://cache.nixos.org
+          trusted-public-keys = cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY=
+          NIXCONF
 
       - name: Create config file for nix unittests
         run: |
@@ -228,22 +244,27 @@ jobs:
   e2e-test:
     needs: [test, nix-build]
     runs-on: debian-latest
+    env:
+      UV_INDEX_URL: https://repo.huaweicloud.com/repository/pypi/simple
+      PIP_INDEX_URL: https://repo.huaweicloud.com/repository/pypi/simple
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Configure Chinese mirrors
+        run: |
+          sed -i 's|deb.debian.org|mirrors.huaweicloud.com|g; s|security.debian.org|mirrors.huaweicloud.com|g' /etc/apt/sources.list /etc/apt/sources.list.d/debian.sources 2>/dev/null || true
 
       - name: Setup Python
         run: |
           apt-get update
           apt-get install -y python3 python3-pip python3-venv curl tmux
-          curl -LsSf https://astral.sh/uv/install.sh | sh
-          export PATH="$HOME/.local/bin:$PATH"
+          pip3 install uv
           uv --version
 
       - name: Install dependencies
         run: |
-          export PATH="$HOME/.local/bin:$PATH"
-          uv sync --extra dev
+          for i in 1 2 3; do uv sync --extra dev && break || sleep 15; done
 
       - name: Create config file for tests
         run: |
