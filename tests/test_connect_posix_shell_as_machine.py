@@ -320,8 +320,15 @@ class TestAddBashMachine(unittest.IsolatedAsyncioTestCase):
         self.machine_control.machines["master_host"] = mock_host
         self.machine_control.remote_shell_control = "python"
 
-        with patch.object(
-            PosixShellControl, "connect", new_callable=AsyncMock, return_value=False
+        with (
+            patch(
+                "linhai.machine_control.main._check_shell_compatibility",
+                new_callable=AsyncMock,
+                return_value=(True, "bash"),
+            ),
+            patch.object(
+                PosixShellControl, "connect", new_callable=AsyncMock, return_value=False
+            ),
         ):
             from linhai.tool.base import FailedToolResult
 
@@ -342,8 +349,15 @@ class TestAddBashMachine(unittest.IsolatedAsyncioTestCase):
         mock_host.get_process = Mock(return_value=mock_process)
         self.machine_control.machines["master_host"] = mock_host
 
-        with patch.object(
-            PosixShellControl, "connect", new_callable=AsyncMock, return_value=True
+        with (
+            patch(
+                "linhai.machine_control.main._check_shell_compatibility",
+                new_callable=AsyncMock,
+                return_value=(True, "bash"),
+            ),
+            patch.object(
+                PosixShellControl, "connect", new_callable=AsyncMock, return_value=True
+            ),
         ):
             result = await self.machine_control.add_posix_shell_machine(
                 "bash_machine", "123"
@@ -407,6 +421,161 @@ class TestPosixShellControlHostOptional(unittest.IsolatedAsyncioTestCase):
 
         ctrl = PosixShellControl(registry=Mock(), host="example.com", port=2222)
         self.assertIsNotNone(ctrl)
+
+
+class TestCheckShellCompatibility(unittest.IsolatedAsyncioTestCase):
+    def _make_process_mock(self, stdout: bytes, write_success: bool = True) -> Mock:
+        from linhai.machine_control.process import ProcessWriteResult, ProcessReadResult
+
+        mock_process = Mock()
+        mock_process.stdio_write = AsyncMock(
+            return_value=ProcessWriteResult(
+                pid="1", success=write_success, message="ok"
+            )
+        )
+        mock_process.stdio_read = AsyncMock(
+            return_value=ProcessReadResult(
+                pid="1",
+                success=True,
+                stdout=stdout,
+                stderr=b"",
+                exit_note="",
+            )
+        )
+        return mock_process
+
+    async def test_bash_is_compatible(self):
+        from linhai.machine_control.main import _check_shell_compatibility
+
+        mock_process = self._make_process_mock(b"echo $SHELL\n/bin/bash\nuser@host:~$ ")
+        compatible, shell_name = await _check_shell_compatibility(mock_process)
+        self.assertTrue(compatible)
+        self.assertEqual(shell_name, "bash")
+
+    async def test_zsh_is_compatible(self):
+        from linhai.machine_control.main import _check_shell_compatibility
+
+        mock_process = self._make_process_mock(b"echo $SHELL\n/usr/bin/zsh\n")
+        compatible, shell_name = await _check_shell_compatibility(mock_process)
+        self.assertTrue(compatible)
+        self.assertEqual(shell_name, "zsh")
+
+    async def test_fish_is_not_compatible(self):
+        from linhai.machine_control.main import _check_shell_compatibility
+
+        mock_process = self._make_process_mock(b"echo $SHELL\n/usr/bin/fish\n")
+        compatible, shell_name = await _check_shell_compatibility(mock_process)
+        self.assertFalse(compatible)
+        self.assertEqual(shell_name, "fish")
+
+    async def test_nushell_is_not_compatible(self):
+        from linhai.machine_control.main import _check_shell_compatibility
+
+        mock_process = self._make_process_mock(
+            b"echo $SHELL\n/home/user/.local/bin/nu\n"
+        )
+        compatible, shell_name = await _check_shell_compatibility(mock_process)
+        self.assertFalse(compatible)
+        self.assertEqual(shell_name, "nu")
+
+    async def test_xonsh_is_not_compatible(self):
+        from linhai.machine_control.main import _check_shell_compatibility
+
+        mock_process = self._make_process_mock(b"/usr/bin/xonsh\n")
+        compatible, shell_name = await _check_shell_compatibility(mock_process)
+        self.assertFalse(compatible)
+        self.assertEqual(shell_name, "xonsh")
+
+    async def test_pwsh_is_not_compatible(self):
+        from linhai.machine_control.main import _check_shell_compatibility
+
+        mock_process = self._make_process_mock(b"/usr/bin/pwsh\n")
+        compatible, shell_name = await _check_shell_compatibility(mock_process)
+        self.assertFalse(compatible)
+        self.assertEqual(shell_name, "pwsh")
+
+    async def test_write_failure_returns_compatible(self):
+        from linhai.machine_control.main import _check_shell_compatibility
+
+        mock_process = self._make_process_mock(b"", write_success=False)
+        compatible, shell_name = await _check_shell_compatibility(mock_process)
+        self.assertTrue(compatible)
+        self.assertEqual(shell_name, "")
+
+    async def test_no_path_output_returns_compatible(self):
+        from linhai.machine_control.main import _check_shell_compatibility
+
+        mock_process = self._make_process_mock(b"some text without paths\n")
+        compatible, shell_name = await _check_shell_compatibility(mock_process)
+        self.assertTrue(compatible)
+        self.assertEqual(shell_name, "")
+
+    async def test_tcsh_is_not_compatible(self):
+        from linhai.machine_control.main import _check_shell_compatibility
+
+        mock_process = self._make_process_mock(b"/bin/tcsh\n")
+        compatible, shell_name = await _check_shell_compatibility(mock_process)
+        self.assertFalse(compatible)
+        self.assertEqual(shell_name, "tcsh")
+
+    async def test_ansi_codes_stripped(self):
+        from linhai.machine_control.main import _check_shell_compatibility
+
+        mock_process = self._make_process_mock(b"\x1b[32m/usr/bin/fish\x1b[0m\n")
+        compatible, shell_name = await _check_shell_compatibility(mock_process)
+        self.assertFalse(compatible)
+        self.assertEqual(shell_name, "fish")
+
+
+class TestAddPosixShellIncompatibleShell(unittest.IsolatedAsyncioTestCase):
+    def setUp(self):
+        self.registry = Mock()
+        self.registry.send_if_exists = AsyncMock()
+        from linhai.machine_control import MachineControl
+
+        self.machine_control = MachineControl(self.registry)
+
+    async def test_fish_shell_rejected(self):
+        from linhai.tool.base import FailedToolResult
+
+        mock_host = Mock()
+        mock_process = Mock()
+        mock_host.get_process = Mock(return_value=mock_process)
+        self.machine_control.machines["master_host"] = mock_host
+
+        with patch(
+            "linhai.machine_control.main._check_shell_compatibility",
+            new_callable=AsyncMock,
+            return_value=(False, "fish"),
+        ):
+            result = await self.machine_control.add_posix_shell_machine("remote", "123")
+            self.assertIsInstance(result, FailedToolResult)
+            self.assertIn("fish", result.content)
+            self.assertIn("posix", result.content)
+
+    async def test_bash_shell_accepted(self):
+        from linhai.machine_control.posix_shell.posix_shell_control import (
+            PosixShellControl,
+        )
+        from linhai.tool.base import SuccessfulToolResult
+
+        mock_host = Mock()
+        mock_process = Mock()
+        mock_host.get_process = Mock(return_value=mock_process)
+        self.machine_control.machines["master_host"] = mock_host
+
+        with (
+            patch(
+                "linhai.machine_control.main._check_shell_compatibility",
+                new_callable=AsyncMock,
+                return_value=(True, "bash"),
+            ),
+            patch.object(
+                PosixShellControl, "connect", new_callable=AsyncMock, return_value=True
+            ),
+        ):
+            result = await self.machine_control.add_posix_shell_machine("remote", "123")
+            self.assertIsInstance(result, SuccessfulToolResult)
 
 
 if __name__ == "__main__":

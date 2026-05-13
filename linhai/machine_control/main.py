@@ -1,5 +1,7 @@
 """MachineControl类，负责管理多个机器控制类并注册工具。"""
 
+import asyncio
+import os
 import time
 
 from typing import Any, Dict, Optional, TypedDict
@@ -12,7 +14,38 @@ from .master_host.master_host import MasterHostControl
 from .posix_shell.posix_shell_control import PosixShellControl
 from .bash_host.bash_host import BashHostControl
 from .plugin import MachineHeartbeatPlugin
-from .process import Process, ProcessCreateInfo
+from .process import Process, ProcessCreateInfo, ProcessIOError
+
+NON_POSIX_SHELLS = frozenset({"fish", "nu", "nushell", "csh", "tcsh", "xonsh", "pwsh"})
+
+
+async def _check_shell_compatibility(
+    process: Process,
+) -> tuple[bool, str]:
+    from rich.text import Text
+
+    write_result = await process.stdio_write("echo $SHELL", with_enter=True)
+    if isinstance(write_result, ProcessIOError):
+        return True, ""
+    if not write_result.success:
+        return True, ""
+    await asyncio.sleep(0.5)
+    read_result = await process.stdio_read(1.0)
+    if isinstance(read_result, ProcessIOError):
+        return True, ""
+    if not read_result.success:
+        return True, ""
+    decoded = Text.from_ansi(
+        read_result.stdout.decode("utf-8", errors="replace")
+    ).plain.replace("\r", "")
+    for line in decoded.split("\n"):
+        line = line.strip()
+        if line.startswith("/"):
+            shell_name = os.path.basename(line)
+            if shell_name in NON_POSIX_SHELLS:
+                return False, shell_name
+            return True, shell_name
+    return True, ""
 
 
 class _StoredProcessInfo(TypedDict):
@@ -119,6 +152,12 @@ class MachineControl:
         if process is None:
             return FailedToolResult(
                 content=f"进程不存在: {pid} (在机器 {source_machine_id} 上)"
+            )
+
+        compatible, shell_name = await _check_shell_compatibility(process)
+        if not compatible:
+            return FailedToolResult(
+                content=f"当前shell不是posix兼容的shell，而是 {shell_name}。请切换到bash/zsh/sh等posix兼容shell后重试"
             )
 
         if self.remote_shell_control == "bash":
@@ -268,7 +307,6 @@ class MachineControl:
         """
         try:
             import tempfile
-            import os
 
             if from_machine == to_machine:
                 return FailedToolResult(content=f"源机器和目标机器相同: {from_machine}")
