@@ -101,3 +101,26 @@ class TestJsonSerialization(unittest.TestCase):
 
         self.assertEqual(original.result.content, restored.result.content)
         self.assertEqual(original.tool_name, restored.tool_name)
+
+    def test_unicode_preservation(self):
+        chinese_text = "保存json时保留unicode中文测试"
+
+        user_msg = UserMessage(chinese_text)
+        json_str = user_msg.to_json()
+        self.assertIn(chinese_text, json_str)
+        self.assertNotIn("\\u", json_str)
+
+        assistant_msg = AssistantMessage(chinese_text)
+        json_str = assistant_msg.to_json()
+        self.assertIn(chinese_text, json_str)
+        self.assertNotIn("\\u", json_str)
+
+        success_result = SuccessfulToolResult(content=chinese_text)
+        json_str = success_result.to_json()
+        self.assertIn(chinese_text, json_str)
+        self.assertNotIn("\\u", json_str)
+
+        failed_result = FailedToolResult(content=chinese_text)
+        json_str = failed_result.to_json()
+        self.assertIn(chinese_text, json_str)
+        self.assertNotIn("\\u", json_str)

@@ -42,7 +42,8 @@ class CronDiffMessage(Message):
                 "cron_expression": self.cron_expression,
                 "command": self.command,
                 "result": self.result,
-            }
+            },
+            ensure_ascii=False,
         )
 
     @classmethod

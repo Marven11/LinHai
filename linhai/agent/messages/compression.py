@@ -50,7 +50,7 @@ class MessagesListSummerizeMessage(Message):
             "range_clean_id": self.range_clean_id,
             "_valid": self._valid,
         }
-        return json.dumps(data)
+        return json.dumps(data, ensure_ascii=False)
 
     @classmethod
     def from_json(cls, json_str: str, registry: "linhai.registry.Registry"):

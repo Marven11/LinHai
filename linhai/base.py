@@ -207,7 +207,7 @@ class SystemMessage:
             "rules_items": self.rules_items,
             "examples_items": self.examples_items,
         }
-        return json.dumps(data)
+        return json.dumps(data, ensure_ascii=False)
 
     @classmethod
     def from_json(cls, json_str: str, registry: "linhai.registry.Registry"):
@@ -261,7 +261,7 @@ class UserMessage:
             "role": "user",
             "message": self.message,
         }
-        return json.dumps(data)
+        return json.dumps(data, ensure_ascii=False)
 
     @classmethod
     def from_json(cls, json_str: str, registry: "linhai.registry.Registry"):
@@ -310,7 +310,7 @@ class AssistantMessage:
         }
         if self.tool_calls:
             data["tool_calls"] = self.tool_calls
-        return json.dumps(data)
+        return json.dumps(data, ensure_ascii=False)
 
     @classmethod
     def from_json(cls, json_str: str, registry: "linhai.registry.Registry"):
@@ -351,7 +351,8 @@ class OpenAiToolResultMessage:
                 "role": "tool",
                 "tool_call_id": self.tool_call_id,
                 "content": self.content,
-            }
+            },
+            ensure_ascii=False,
         )
 
     @classmethod

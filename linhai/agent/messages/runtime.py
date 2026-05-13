@@ -23,7 +23,7 @@ class RuntimeMessage(Message):
 
     def to_json(self) -> str:
         data = {"role": "user", "message": self.message}
-        return json.dumps(data)
+        return json.dumps(data, ensure_ascii=False)
 
     @classmethod
     def from_json(cls, json_str: str, registry: "linhai.registry.Registry"):

@@ -46,7 +46,7 @@ class DynamicFileContentMessage(Message):
             "filepath": self.filepath,
             "show_line_numbers": self.show_line_numbers,
         }
-        return json.dumps(data)
+        return json.dumps(data, ensure_ascii=False)
 
     @classmethod
     def from_json(cls, json_str: str, registry: "linhai.registry.Registry"):

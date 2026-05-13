@@ -109,7 +109,7 @@ class ImageDisplayMessage(Message):
             "width": self.width,
             "height": self.height,
         }
-        return json.dumps(data)
+        return json.dumps(data, ensure_ascii=False)
 
     @classmethod
     def from_json(cls, json_str: str, registry: Registry) -> "ImageDisplayMessage":

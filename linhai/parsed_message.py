@@ -89,7 +89,7 @@ class ToolCallFeeder:
                 final_value = (
                     value.value
                     if isinstance(value.value, str)
-                    else json.dumps(value.value)
+                    else json.dumps(value.value, ensure_ascii=False)
                 )
                 if value.index_key == "name" and isinstance(value.value, str):
                     self._segment["tool_name"] = value.value
@@ -164,7 +164,7 @@ class OpenAiToolCallFeeder:
                 final_value = (
                     value.value
                     if isinstance(value.value, str)
-                    else json.dumps(value.value)
+                    else json.dumps(value.value, ensure_ascii=False)
                 )
 
                 if "\n" in final_value:

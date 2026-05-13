@@ -54,7 +54,7 @@ class ExplicitCacheMessage(Message):
         return self.text
 
     def to_json(self) -> str:
-        return json.dumps({"text": self.text})
+        return json.dumps({"text": self.text}, ensure_ascii=False)
 
     @classmethod
     def from_json(cls, json_str: str, registry: Registry):

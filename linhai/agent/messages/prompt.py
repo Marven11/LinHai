@@ -31,7 +31,7 @@ class GlobalPrompt(Message):
 
     def to_json(self) -> str:
         data = {"filepath": str(self.filepath)}
-        return json.dumps(data)
+        return json.dumps(data, ensure_ascii=False)
 
     @classmethod
     def from_json(cls, json_str: str, registry: "linhai.registry.Registry"):
@@ -59,7 +59,7 @@ class PathPrompt(Message):
 
     def to_json(self) -> str:
         data = {"filepath": str(self.filepath)}
-        return json.dumps(data)
+        return json.dumps(data, ensure_ascii=False)
 
     @classmethod
     def from_json(cls, json_str: str, registry: "linhai.registry.Registry"):

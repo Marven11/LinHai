@@ -557,7 +557,8 @@ def register_machine_control_tools(machine_control: "MachineControl") -> ToolSet
                     "stdout": stdout_text,
                     "stderr": stderr_text,
                     "exit_note": read_result.exit_note,
-                }
+                },
+                ensure_ascii=False,
             )
         )
 

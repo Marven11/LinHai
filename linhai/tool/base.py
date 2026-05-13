@@ -233,7 +233,10 @@ class SuccessfulToolResult(BaseModel):
         return self.content
 
     def to_json(self) -> str:
-        return json.dumps({"type": "SuccessfulToolResult", "content": self.content})
+        return json.dumps(
+            {"type": "SuccessfulToolResult", "content": self.content},
+            ensure_ascii=False,
+        )
 
     @classmethod
     def from_json(cls, json_str: str) -> "SuccessfulToolResult":
@@ -249,7 +252,9 @@ class FailedToolResult(BaseModel):
         return self.content
 
     def to_json(self) -> str:
-        return json.dumps({"type": "FailedToolResult", "content": self.content})
+        return json.dumps(
+            {"type": "FailedToolResult", "content": self.content}, ensure_ascii=False
+        )
 
     @classmethod
     def from_json(cls, json_str: str) -> "FailedToolResult":
@@ -285,7 +290,8 @@ class FileContentToolResult(BaseModel):
                 "filepath": self.filepath,
                 "content": self.content,
                 "show_line_numbers": self.show_line_numbers,
-            }
+            },
+            ensure_ascii=False,
         )
 
     @classmethod
@@ -341,7 +347,8 @@ class ImageToolResult(BaseModel):
                 "quality": self.quality,
                 "width": self.width,
                 "height": self.height,
-            }
+            },
+            ensure_ascii=False,
         )
 
     @classmethod
@@ -457,7 +464,7 @@ class ToolCallResultMessage(Message):
             "result": self.result.to_json(),
             "toolcall_arguments": self.toolcall_arguments,
         }
-        return json.dumps(data)
+        return json.dumps(data, ensure_ascii=False)
 
     @classmethod
     def from_json(cls, json_str: str, registry: "linhai.registry.Registry"):
