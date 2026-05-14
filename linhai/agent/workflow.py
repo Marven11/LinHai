@@ -10,6 +10,7 @@ from .messages import RuntimeMessage, MessagesListSummerizeMessage, GlobalPrompt
 from linhai.markdown_parser import extract_json_blocks
 from linhai.base import (
     AssistantMessage,
+    Message,
     OpenAiToolResultMessage,
     SystemMessage,
     UserMessage,
@@ -75,6 +76,55 @@ class RangeCleanManager:
 
     def restore_from(self, data: dict) -> None:
         pass
+
+
+def _fixup_tool_result_chains(messages: list[Message]) -> list[Message]:
+    valid_tc_ids: set[str] = set()
+    for msg in messages:
+        if isinstance(msg, AssistantMessage) and msg.tool_calls:
+            for tc in msg.tool_calls:
+                valid_tc_ids.add(tc["id"])
+
+    result: list[Message] = []
+    i = 0
+    while i < len(messages):
+        msg = messages[i]
+
+        if isinstance(msg, AssistantMessage) and msg.tool_calls:
+            result.append(msg)
+            tc_ids = {tc["id"] for tc in msg.tool_calls}
+            deferred: list[Message] = []
+            i += 1
+
+            while i < len(messages):
+                m = messages[i]
+                if isinstance(m, OpenAiToolResultMessage):
+                    if m.tool_call_id in tc_ids:
+                        result.append(m)
+                        tc_ids.discard(m.tool_call_id)
+                        i += 1
+                        continue
+                    if m.tool_call_id not in valid_tc_ids:
+                        i += 1
+                        continue
+                    break
+
+                if tc_ids:
+                    deferred.append(m)
+                    i += 1
+                else:
+                    break
+
+            result.extend(deferred)
+        elif isinstance(msg, OpenAiToolResultMessage):
+            if msg.tool_call_id in valid_tc_ids:
+                result.append(msg)
+            i += 1
+        else:
+            result.append(msg)
+            i += 1
+
+    return result
 
 
 def _prepare_messages_for_compression(agent: "linhai.agent.Agent") -> str:
@@ -307,6 +357,16 @@ async def context_forget_range_step2(
         ),
     )
 
+    await _apply_fixup(agent)
+
     return SuccessfulToolResult(
         content=f"你使用历史压缩删除（遗忘）了一段消息，被转储到了{filepath}中，请根据**历史压缩总结**明确当前任务继续工作"
     )
+
+
+async def _apply_fixup(agent: "linhai.agent.Agent") -> None:
+    original = agent.message_processor.messages
+    fixed = _fixup_tool_result_chains(original)
+    if len(fixed) == len(original) and all(a is b for a, b in zip(fixed, original)):
+        return
+    await agent.message_processor.replace_messages(fixed)

@@ -15,6 +15,7 @@ from linhai.agent.workflow import (
     RangeCleanInfo,
     _prepare_messages_for_compression,
     _validate_compression_range,
+    _fixup_tool_result_chains,
 )
 from linhai.base import (
     UserMessage,
@@ -796,6 +797,116 @@ class TestStep2OpenAiToolResultPlaceholder(unittest.IsolatedAsyncioTestCase):
             0,
             "No placeholders should exist when assistant is also deleted",
         )
+
+
+class TestFixupToolResultChains(unittest.TestCase):
+    """Test _fixup_tool_result_chains function."""
+
+    def test_removes_orphaned_tool_result(self):
+        assistant = AssistantMessage(message="call")
+        assistant.tool_calls = [
+            {
+                "id": "tc_1",
+                "type": "function",
+                "function": {"name": "f", "arguments": "{}"},
+            },
+        ]
+        messages = [
+            RuntimeMessage("before"),
+            assistant,
+            OpenAiToolResultMessage(tool_call_id="tc_1", content="ok"),
+            OpenAiToolResultMessage(tool_call_id="orphan_tc", content="orphan"),
+            RuntimeMessage("after"),
+        ]
+        result = _fixup_tool_result_chains(messages)
+        self.assertEqual(len(result), 4)
+        self.assertIs(result[0], messages[0])
+        self.assertIs(result[1], messages[1])
+        self.assertIs(result[2], messages[2])
+        self.assertIs(result[3], messages[4])
+
+    def test_moves_intruder_after_tool_results(self):
+        assistant = AssistantMessage(message="call")
+        assistant.tool_calls = [
+            {
+                "id": "tc_1",
+                "type": "function",
+                "function": {"name": "f", "arguments": "{}"},
+            },
+            {
+                "id": "tc_2",
+                "type": "function",
+                "function": {"name": "g", "arguments": "{}"},
+            },
+        ]
+        intruder = RuntimeMessage("intruder")
+        messages = [
+            assistant,
+            OpenAiToolResultMessage(tool_call_id="tc_1", content="ok"),
+            intruder,
+            OpenAiToolResultMessage(tool_call_id="tc_2", content="ok2"),
+        ]
+        result = _fixup_tool_result_chains(messages)
+        self.assertEqual(len(result), 4)
+        self.assertIs(result[0], assistant)
+        self.assertIs(result[1], messages[1])
+        self.assertIs(result[2], messages[3])
+        self.assertIs(result[3], intruder)
+
+    def test_orphan_and_intruder_combined(self):
+        assistant = AssistantMessage(message="call")
+        assistant.tool_calls = [
+            {
+                "id": "tc_a",
+                "type": "function",
+                "function": {"name": "f", "arguments": "{}"},
+            },
+            {
+                "id": "tc_b",
+                "type": "function",
+                "function": {"name": "g", "arguments": "{}"},
+            },
+            {
+                "id": "tc_c",
+                "type": "function",
+                "function": {"name": "h", "arguments": "{}"},
+            },
+        ]
+        messages = [
+            assistant,
+            OpenAiToolResultMessage(tool_call_id="tc_a", content="a"),
+            OpenAiToolResultMessage(tool_call_id="orphan", content="orphan"),
+            OpenAiToolResultMessage(tool_call_id="tc_b", content="b"),
+            RuntimeMessage("intruder"),
+            OpenAiToolResultMessage(tool_call_id="tc_c", content="c"),
+        ]
+        result = _fixup_tool_result_chains(messages)
+        self.assertEqual(len(result), 5)
+        self.assertIs(result[0], assistant)
+        self.assertIs(result[1], messages[1])
+        self.assertIs(result[2], messages[3])
+        self.assertIs(result[3], messages[5])
+        self.assertIs(result[4], messages[4])
+
+    def test_no_change_when_clean(self):
+        assistant = AssistantMessage(message="call")
+        assistant.tool_calls = [
+            {
+                "id": "tc_1",
+                "type": "function",
+                "function": {"name": "f", "arguments": "{}"},
+            },
+        ]
+        messages = [
+            RuntimeMessage("before"),
+            assistant,
+            OpenAiToolResultMessage(tool_call_id="tc_1", content="ok"),
+            RuntimeMessage("after"),
+        ]
+        result = _fixup_tool_result_chains(messages)
+        self.assertEqual(len(result), len(messages))
+        for a, b in zip(result, messages):
+            self.assertIs(a, b)
 
 
 if __name__ == "__main__":
