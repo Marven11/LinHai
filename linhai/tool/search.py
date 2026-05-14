@@ -73,7 +73,7 @@ def _search_duckduckgo_http(query: str, max_results: int) -> ToolResult:
 
     if not results:
         return FailedToolResult(
-            content="未找到相关搜索结果。可能是由于DuckDuckGo的机器人检测或查询无匹配结果。请尝试重新表述搜索或稍后重试。"
+            content="未找到相关搜索结果。可能是由于DuckDuckGo的机器人检测或查询无匹配结果。请尝试重新表述搜索或稍后重试。如果持续速率限制，考虑使用浏览器MCP等操控真实的浏览器使用搜索引擎"
         )
 
     output = [f"找到 {len(results)} 个搜索结果：\n"]
@@ -107,7 +107,9 @@ def _search_bigmodel(query: str, max_results: int, api_key: str) -> ToolResult:
     search_results = data.get("search_result", [])
 
     if not search_results:
-        return FailedToolResult(content="BigModel搜索未返回结果。")
+        return FailedToolResult(
+            content="BigModel搜索未返回结果。如果持续速率限制，考虑使用浏览器MCP等操控真实的浏览器使用搜索引擎"
+        )
 
     results = []
     for item in search_results[:max_results]:
@@ -141,8 +143,8 @@ def create_web_search_toolset(config: Optional["WebSearchConfig"]) -> ToolSet:
         name="web_search",
         desc=t(
             {
-                "zh_CN": "使用搜索引擎进行网页搜索并返回格式化结果",
-                "en": "Search the web and return formatted results",
+                "zh_CN": "使用搜索引擎进行网页搜索并返回格式化结果。此工具只能调用搜索引擎API，无法浏览网页或获取完整页面内容",
+                "en": "Search the web using search engine APIs and return formatted results. This tool can only call search engine APIs, it cannot browse webpages or fetch full page content",
             }
         ),
         args={

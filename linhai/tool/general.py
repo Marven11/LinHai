@@ -100,8 +100,8 @@ def _download_with_httpx(url: str) -> str:
     name="fetch_webpage",
     desc=t(
         {
-            "zh_CN": "抓取网页并转换为Markdown格式，保存原始HTML和转换的markdown到临时目录，返回HTML, markdown的路径和markdown的内容",
-            "en": "Fetch a webpage and convert to Markdown format, save raw HTML and converted markdown to temp directory, return paths and markdown content",
+            "zh_CN": "抓取静态网页并转换为Markdown格式，保存原始HTML和转换的markdown到临时目录，返回HTML, markdown的路径和markdown的内容。此工具只能爬取静态页面，无法处理需要动态交互的内容",
+            "en": "Fetch a static webpage and convert to Markdown format, save raw HTML and converted markdown to temp directory, return paths and markdown content. This tool can only crawl static pages and cannot handle content requiring dynamic interaction",
         }
     ),
     args={
