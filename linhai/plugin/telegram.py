@@ -116,9 +116,11 @@ class TelegramPlugin(Plugin):
 
             send_delay = 1
             message_id: int | None = None
+            sent_text = ""
             while self._running:
+                sent_text = segment["content"]
                 result = await asyncio.gather(
-                    self._bot.send_message(chat_id=chat_id, text=segment["content"]),
+                    self._bot.send_message(chat_id=chat_id, text=sent_text),
                     return_exceptions=True,
                 )
                 if isinstance(result[0], Exception) and not isinstance(
@@ -140,7 +142,7 @@ class TelegramPlugin(Plugin):
             if message_id is None:
                 continue
 
-            last_sent_content = segment["content"]
+            last_sent_content = sent_text
 
             while self._running and not segment["is_finished"]:
                 await asyncio.sleep(EDIT_INTERVAL)
