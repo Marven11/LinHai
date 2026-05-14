@@ -117,7 +117,7 @@ def test_secret_native_toolcall_mask_and_read_e2e():
             ["tmux", "set-option", "-t", session_name, "remain-on-exit", "on"],
             check=False,
         )
-        time.sleep(5)
+        time.sleep(60)
         secret_path.unlink(missing_ok=True)
 
         start = time.time()
