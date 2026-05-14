@@ -699,6 +699,27 @@ remote_shell_control = "auto"
         finally:
             os.unlink(temp_file)
 
+    def test_load_config_duplicate_llm_names(self):
+        """Test that duplicate LLM names are rejected."""
+        config_content = """[[llm]]
+name = "test_llm"
+base_url = "https://api.example.com"
+api_key = "test_key"
+model = "test_model"
+
+[[llm]]
+name = "test_llm"
+base_url = "https://api.example.org"
+api_key = "test_key_2"
+model = "test_model_2"
+"""
+        temp_file = create_temp_config(config_content)
+        try:
+            with self.assertRaises(ConfigValidationError):
+                load_config(temp_file)
+        finally:
+            os.unlink(temp_file)
+
     def test_load_config_with_process_sandbox_none(self):
         """Test loading a config without sandbox configuration."""
         config_content = """[[llm]]

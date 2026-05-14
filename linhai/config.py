@@ -465,6 +465,21 @@ class Config(BaseModel):
     )
     claw: ClawConfig = Field(default_factory=ClawConfig, description="CLAW模式配置")
 
+    @model_validator(mode="after")
+    def validate_llm_names_unique(self):
+        names = [llm.name for llm in self.llm]
+        seen: set[str] = set()
+        duplicates: set[str] = set()
+        for name in names:
+            if name in seen:
+                duplicates.add(name)
+            seen.add(name)
+        if duplicates:
+            raise ConfigValidationError(
+                f"Duplicate LLM names found: {sorted(duplicates)}"
+            )
+        return self
+
     def __str__(self) -> str:
         """返回主配置的字符串表示"""
         llm_names = [llm.name for llm in self.llm]
