@@ -94,7 +94,7 @@ def _search_bigmodel(query: str, max_results: int, api_key: str) -> ToolResult:
     }
     payload = {
         "search_query": query,
-        "search_engine": "search_std",
+        "search_engine": "search_pro_sogou",
         "search_intent": False,
         "count": max_results,
     }
