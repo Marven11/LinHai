@@ -16,6 +16,7 @@ from .message_checkers import (
     GlmToolCallPlugin,
     GlmInsultMaskPlugin,
     MisplacedToolCallPlugin,
+    HackerNewsPlugin,
 )
 
 from .tool_call_managers import (
@@ -116,6 +117,7 @@ __all__ = [
     "READ_FILE_COMMANDS",
     "PythonCommentCheckerPlugin",
     "CatgirlTonePlugin",
+    "HackerNewsPlugin",
     "SudoBashHintPlugin",
     "StdioCommandCheckerPlugin",
     "PkillCheckerPlugin",

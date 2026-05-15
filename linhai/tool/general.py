@@ -17,6 +17,7 @@ from linhai.tool.base import (
     SuccessfulToolResult,
     FailedToolResult,
     ToolResult,
+    WebpageFetchToolResult,
 )
 from linhai.utils.i18n import t
 
@@ -181,15 +182,9 @@ def fetch_webpage(url: str, http_downloader: str):
 
         with open(output_md, "r", encoding="utf-8") as f:
             content = f.read()
-            return SuccessfulToolResult(content=f"""
-文件已经保存在: {output_html=} {output_md=} 用户需要时优先提供markdown
-
-markdown内容如下
-
----
-
-{content}
-""")
+            return WebpageFetchToolResult(
+                html_path=output_html, md_path=output_md, content=content
+            )
 
     except (OSError, subprocess.SubprocessError) as e:
         return FailedToolResult(content=f"转换失败: {str(e)}")

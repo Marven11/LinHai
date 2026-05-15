@@ -764,3 +764,46 @@ class GlmInsultMaskPlugin(Plugin):
     def register(self, lifecycle: "Lifecycle"):
         """注册到after_toolcall回调。"""
         lifecycle.after_toolcall.register(self.after_toolcall)
+
+
+class HackerNewsPlugin(Plugin):
+    """在fetch_webpage访问hacker news时提示agent直接读取HTML。"""
+
+    def __init__(self, registry: Registry):
+        super().__init__(registry)
+
+    async def after_toolcall(
+        self,
+        tool_name: str,
+        tool_index: int,
+        status: Literal["skipped", "success", "failed"],
+        message: "Message | None",
+        toolcall_arguments: dict,
+        with_secret: WithSecret | None,
+        is_tool_failed_duplicated_error: bool,
+    ) -> AfterToolcallResult | None:
+        if tool_name != "fetch_webpage" or status != "success":
+            return None
+
+        from linhai.tool.base import ToolCallResultMessage, WebpageFetchToolResult
+
+        if not isinstance(message, ToolCallResultMessage):
+            return None
+        if not isinstance(message.result, WebpageFetchToolResult):
+            return None
+
+        url = toolcall_arguments.get("url", "")
+        if "news.ycombinator.com" not in url:
+            return None
+
+        html_path = message.result.html_path
+        return AfterToolcallResult(
+            warnings=[
+                RuntimeMessage(
+                    f"hacker news使用大量嵌套table元素组织内容，导致生成的markdown过长，建议直接读取html: {html_path}"
+                )
+            ]
+        )
+
+    def register(self, lifecycle: "Lifecycle") -> None:
+        lifecycle.after_toolcall.register(self.after_toolcall)

@@ -317,6 +317,44 @@ class FileContentToolResult(BaseModel):
 
 
 @register_tool_result
+class WebpageFetchToolResult(BaseModel):
+    html_path: str
+    md_path: str
+    content: str
+
+    def to_llm_content(self) -> str:
+        return f"""
+文件已经保存在: html_path={self.html_path!r} md_path={self.md_path!r} 用户需要时优先提供markdown
+
+markdown内容如下
+
+---
+
+{self.content}
+"""
+
+    def to_json(self) -> str:
+        return json.dumps(
+            {
+                "type": "WebpageFetchToolResult",
+                "html_path": self.html_path,
+                "md_path": self.md_path,
+                "content": self.content,
+            },
+            ensure_ascii=False,
+        )
+
+    @classmethod
+    def from_json(cls, json_str: str) -> "WebpageFetchToolResult":
+        data = json.loads(json_str)
+        return cls(
+            html_path=data["html_path"],
+            md_path=data["md_path"],
+            content=data["content"],
+        )
+
+
+@register_tool_result
 class ImageToolResult(BaseModel):
     image_bytes_b64: str
     mime_type: str
