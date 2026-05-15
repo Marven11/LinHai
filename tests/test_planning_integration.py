@@ -203,6 +203,7 @@ class TestPlanningIntegration(unittest.IsolatedAsyncioTestCase):
             "claw_enabled": False,
             "claw_folder": None,
             "process_sandbox": None,
+            "tool_config": MagicMock(file_operation_rules=[]),
         }
 
         # 模拟LLM实例，确保get_name方法返回正确的名称
@@ -293,6 +294,7 @@ class TestPlanningIntegration(unittest.IsolatedAsyncioTestCase):
             "message": [],
             "file": [],
             "process_sandbox": None,
+            "tool_config": MagicMock(file_operation_rules=[]),
         }
 
         # 创建模拟的Lifecycle对象

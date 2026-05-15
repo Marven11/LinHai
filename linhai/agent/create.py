@@ -346,6 +346,14 @@ async def create_agent_from_context(
             context["registry"], context["allowed_commands"]
         ).register(agent.lifecycle)
 
+    tool_config = context["tool_config"]
+    if tool_config.file_operation_rules:
+        from linhai.plugin import FileOperationPermissionPlugin
+
+        FileOperationPermissionPlugin(
+            context["registry"], context["config_basedir"] or Path.cwd(), tool_config
+        ).register(agent.lifecycle)
+
     from linhai.plugin import MachineControlIntroductionPlugin, CurrentDirectoryPlugin
     from linhai.cron import CronPlugin, parse_cron_arg
 

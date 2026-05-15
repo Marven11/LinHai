@@ -39,16 +39,20 @@ class FileOperationPermissionPlugin:
             if pattern.startswith("~"):
                 base_dir = Path.home()
                 pattern_rel = Path(pattern).expanduser().relative_to(base_dir)
+                if not abs_path.is_relative_to(base_dir):
+                    continue
+                rel_path = abs_path.relative_to(base_dir)
+                if rel_path.match(str(pattern_rel)):
+                    return rule.action == "ALLOW"
+            elif Path(pattern).is_absolute():
+                if fnmatch.fnmatch(str(abs_path), pattern):
+                    return rule.action == "ALLOW"
             else:
-                base_dir = self.pwd
-                pattern_rel = Path(pattern)
-
-            if not abs_path.is_relative_to(base_dir):
-                continue
-            rel_path = abs_path.relative_to(base_dir)
-
-            if rel_path.match(str(pattern_rel)):
-                return rule.action == "ALLOW"
+                if not abs_path.is_relative_to(self.pwd):
+                    continue
+                rel_path = abs_path.relative_to(self.pwd)
+                if rel_path.match(str(pattern)):
+                    return rule.action == "ALLOW"
 
         return self.default_rule == "ALLOW"
 
@@ -72,8 +76,9 @@ class FileOperationPermissionPlugin:
             filepath = toolcall_arguments.get("filepath", "")
             if filepath:
                 if not self.check_permission(operation, filepath):
+                    operation_cn = "读取" if operation == "read" else "写入"
                     return FailedToolResult(
-                        content=f"文件操作被阻止: {operation} {filepath}"
+                        content=f"用户设置禁止你{operation_cn}这个文件路径: {filepath}"
                     )
         return None
 

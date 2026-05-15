@@ -124,7 +124,7 @@ class TestFileOperationPermissionPlugin(unittest.IsolatedAsyncioTestCase):
             with_secret={"in_arguments": [], "in_result": []},
         )
         self.assertIsInstance(result, FailedToolResult)
-        self.assertIn("文件操作被阻止", result.content)
+        self.assertIn("用户设置禁止你写入", result.content)
 
     async def test_before_tool_call_unsupported_tool(self):
         rule = FileOperationRule(operation="READ", pattern="**/*.txt", action="ALLOW")
@@ -138,6 +138,44 @@ class TestFileOperationPermissionPlugin(unittest.IsolatedAsyncioTestCase):
             with_secret={"in_arguments": [], "in_result": []},
         )
         self.assertIsNone(result)
+
+    async def test_check_permission_absolute_path_block(self):
+        rule = FileOperationRule(
+            operation="READ", pattern="/tmp/fobidden/**", action="BLOCK"
+        )
+        self.tool_config.file_operation_rules = [rule]
+        self.tool_config.file_operation_default_rule = "ALLOW"
+        self.plugin = FileOperationPermissionPlugin(
+            self.registry, self.pwd, self.tool_config
+        )
+        self.assertFalse(self.plugin.check_permission("read", "/tmp/fobidden/test.txt"))
+        self.assertTrue(self.plugin.check_permission("read", "/tmp/other/test.txt"))
+
+    async def test_check_permission_absolute_path_allow_only(self):
+        rule = FileOperationRule(
+            operation="READ", pattern="/tmp/allowed/**", action="ALLOW"
+        )
+        self.tool_config.file_operation_rules = [rule]
+        self.tool_config.file_operation_default_rule = "BLOCK"
+        self.plugin = FileOperationPermissionPlugin(
+            self.registry, self.pwd, self.tool_config
+        )
+        self.assertTrue(self.plugin.check_permission("read", "/tmp/allowed/test.txt"))
+        self.assertFalse(self.plugin.check_permission("read", "/tmp/other/test.txt"))
+
+    async def test_check_permission_absolute_path_write_block(self):
+        rule = FileOperationRule(
+            operation="WRITE", pattern="/tmp/readonly/**", action="BLOCK"
+        )
+        self.tool_config.file_operation_rules = [rule]
+        self.tool_config.file_operation_default_rule = "ALLOW"
+        self.plugin = FileOperationPermissionPlugin(
+            self.registry, self.pwd, self.tool_config
+        )
+        self.assertFalse(
+            self.plugin.check_permission("write", "/tmp/readonly/test.txt")
+        )
+        self.assertTrue(self.plugin.check_permission("read", "/tmp/readonly/test.txt"))
 
 
 if __name__ == "__main__":
