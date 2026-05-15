@@ -147,6 +147,27 @@ class TestSingleToolCallReminderPlugin(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(last_call_args[0][0], None)
         self.assertEqual(last_call_args[1]["source"], "single_tool_call_reminder")
 
+    async def test_after_message_generation_openai_format(self):
+        """测试openai工具调用格式时也追踪连续单工具调用。"""
+        self.agent.get_current_model = MagicMock()
+        self.agent.get_current_model.return_value.get_custom_toolcall_format.return_value = (
+            False
+        )
+        self.agent.message_processor.update_notification_message = MagicMock()
+
+        tool_calls = [{"name": "tool1", "arguments": {}}]
+        for _ in range(5):
+            await self.plugin.after_message_generation(self.answer, tool_calls)
+
+        self.assertEqual(self.plugin.single_tool_call_count, 5)
+        call_args_list = (
+            self.agent.message_processor.update_notification_message.call_args_list
+        )
+        last_call_args = call_args_list[-1]
+        self.assertIsInstance(last_call_args[0][0], RuntimeMessage)
+        self.assertNotIn("json toolcall", last_call_args[0][0].message)
+        self.assertEqual(last_call_args[1]["source"], "single_tool_call_reminder")
+
     async def test_after_message_generation_with_zero_tool_calls(self):
         """测试没有调用工具时重置计数器。"""
         full_response = "一些内容"

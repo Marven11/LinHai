@@ -218,19 +218,14 @@ class SingleToolCallReminderPlugin(Plugin):
     async def after_message_generation(self, parsed_answer, tool_calls: list[dict]):
         """检查是否连续多次只调用了一个工具。"""
         agent = self.registry.get_member_typechecked("agent", Agent)
-
-        if not agent.get_current_model().get_custom_toolcall_format():
-            agent.message_processor.update_notification_message(
-                None, source="single_tool_call_reminder", sort_value=0
-            )
-            return
+        is_custom_format = agent.get_current_model().get_custom_toolcall_format()
 
         if len(tool_calls) == 1:
             self.single_tool_call_count += 1
 
             if self.single_tool_call_count >= 2:
-                agent.message_processor.update_notification_message(
-                    RuntimeMessage(
+                if is_custom_format:
+                    notification = RuntimeMessage(
                         t(
                             {
                                 "zh_CN": (
@@ -249,7 +244,24 @@ class SingleToolCallReminderPlugin(Plugin):
                                 ),
                             }
                         )
-                    ),
+                    )
+                else:
+                    notification = RuntimeMessage(
+                        t(
+                            {
+                                "zh_CN": (
+                                    f"注意：你连续{self.single_tool_call_count}次仅调用一个工具，"
+                                    "除开特殊原因不要每次只调用一个工具！"
+                                ),
+                                "en": (
+                                    f"Note: You have called only one tool for {self.single_tool_call_count} consecutive times. "
+                                    "Avoid calling only one tool at a time unless there's a special reason!"
+                                ),
+                            }
+                        )
+                    )
+                agent.message_processor.update_notification_message(
+                    notification,
                     source="single_tool_call_reminder",
                     sort_value=0,
                 )
