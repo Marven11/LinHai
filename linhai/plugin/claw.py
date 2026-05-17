@@ -1,4 +1,5 @@
 import asyncio
+import time
 from pathlib import Path
 from typing import TYPE_CHECKING, Optional
 
@@ -7,7 +8,6 @@ from linhai.agent.messages import RuntimeMessage
 from linhai.agent.state_machine import AgentStateMachine
 from linhai.registry import Registry
 from linhai.plugin.message_checkers import Plugin
-from linhai.utils.common import UiNotice
 from linhai.prompt import (
     AGENTS_MD,
     BOOTSTRAP_MD,
@@ -110,35 +110,42 @@ class ClawHeartbeatPlugin(Plugin):
     def __init__(self, registry: Registry, heartbeat_interval: int):
         super().__init__(registry)
         self.heartbeat_interval = heartbeat_interval
+        self._next_reminder_time: float = 0.0
 
-    async def before_waiting_user(self, agent: "linhai_agent") -> None:
+    async def before_agent_loop(self, agent: "linhai_agent") -> None:
         from linhai.task_supervisor import TaskSupervisor
 
+        self._next_reminder_time = time.monotonic() + self.heartbeat_interval
         ts = self.registry.get_member_typechecked("task_supervisor", TaskSupervisor)
-        ts.create_supervised_task("claw_heartbeat", lambda: self._heartbeat(agent))
+        ts.create_supervised_task("claw_heartbeat", lambda: self._heartbeat_loop(agent))
 
-        minutes = self.heartbeat_interval // 60
-        await self.registry.send_if_exists(
-            "ui_log",
-            UiNotice(level="INFO", content=f"将在{minutes}分钟后唤醒claw"),
-        )
+    async def before_message_generation(self) -> None:
+        self._next_reminder_time = time.monotonic() + self.heartbeat_interval
 
-    async def _heartbeat(self, agent: "linhai_agent") -> None:
-        await asyncio.sleep(self.heartbeat_interval)
-        state_machine = self.registry.get_member_typechecked(
-            "state_machine", AgentStateMachine
-        )
-        if state_machine.state != "waiting_user":
-            return
-        state_machine.transition_to_working()
-        minutes = self.heartbeat_interval // 60
-        await agent.message_processor.add_new_message(
-            RuntimeMessage(
-                f"{minutes}分钟过去了，用户仍然没有回复。"
-                "你应该诚实地更新claw记忆等文档，记录当前状态，"
-                "重新诚实地反思用户交代的任务是否真正完成"
+    async def _heartbeat_loop(self, agent: "linhai_agent") -> None:
+        while True:
+            remaining = self._next_reminder_time - time.monotonic()
+            if remaining > 0:
+                await asyncio.sleep(remaining)
+            if time.monotonic() < self._next_reminder_time:
+                continue
+            state_machine = self.registry.get_member_typechecked(
+                "state_machine", AgentStateMachine
             )
-        )
+            if state_machine.state != "waiting_user":
+                self._next_reminder_time = time.monotonic() + self.heartbeat_interval
+                continue
+            state_machine.transition_to_working()
+            minutes = self.heartbeat_interval // 60
+            await agent.message_processor.add_new_message(
+                RuntimeMessage(
+                    f"{minutes}分钟过去了，用户仍然没有回复。"
+                    "你应该诚实地更新claw记忆等文档，记录当前状态，"
+                    "重新诚实地反思用户交代的任务是否真正完成"
+                )
+            )
+            self._next_reminder_time = time.monotonic() + self.heartbeat_interval
 
     def register(self, lifecycle: Lifecycle) -> None:
-        lifecycle.before_waiting_user.register(self.before_waiting_user)
+        lifecycle.before_agent_loop.register(self.before_agent_loop)
+        lifecycle.before_message_generation.register(self.before_message_generation)
