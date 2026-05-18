@@ -374,6 +374,10 @@ async def create_agent_from_context(
 
         TelegramPlugin(context["registry"], telegram_config).register(agent.lifecycle)
 
+        from linhai.plugin.telegram import TelegramReactionReminderPlugin
+
+        TelegramReactionReminderPlugin(context["registry"]).register(agent.lifecycle)
+
     if context.get("planning", False):
         from linhai.plugin.planning import (
             PlanningStatusReminderPlugin,

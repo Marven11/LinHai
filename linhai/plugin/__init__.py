@@ -61,6 +61,7 @@ from .system_message_leaning import (
 from .planning import TodolistCheckerPlugin, PlanningHeadingCheckPlugin
 from .reminder import ReminderPlugin, ReminderWriteGuardPlugin
 from .python_chore import PythonCommentCheckerPlugin
+from .telegram import TelegramReactionReminderPlugin
 from .catgirl_tone import CatgirlTonePlugin
 
 from .helpers import (
@@ -122,4 +123,5 @@ __all__ = [
     "StdioCommandCheckerPlugin",
     "PkillCheckerPlugin",
     "CustomToolcallFormatPlugin",
+    "TelegramReactionReminderPlugin",
 ]

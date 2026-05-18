@@ -33,7 +33,7 @@ class TelegramMessage(Message):
         }
 
     def get_content(self) -> str:
-        return f"<<telegram>>\n{self.content}\n<<telegram>>"
+        return f"<<telegram>>\nchat_id: {self.chat_id}\nmessage_id: {self.message_id}\n{self.content}\n<<telegram>>"
 
     def to_json(self) -> str:
         data = {

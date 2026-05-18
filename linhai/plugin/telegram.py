@@ -14,22 +14,31 @@ draft API的问题：send_message_draft会为每次调用创建独立的临时�
 from typing import TYPE_CHECKING
 import asyncio
 from collections import deque
-from telegram import Update, Message
+from telegram import Update, Message, ReactionTypeEmoji
 from telegram.ext import Application, MessageHandler, filters
 from telegram.error import RetryAfter, BadRequest
 
 if TYPE_CHECKING:
-    from linhai.agent import Agent as AgentType
     from linhai.agent.create import TelegramContext
 
+from linhai.agent import Agent
+
 from linhai.parsed_message import NormalSegment, Segment
-from linhai.agent.messages import WAITING_USER_MARKER
+from linhai.agent.messages import WAITING_USER_MARKER, RuntimeMessage
 from linhai.agent.lifecycle import Lifecycle
 from linhai.agent.state_machine import AgentStateMachine
 from linhai.registry import Registry
 from linhai.plugin.message_checkers import Plugin
 from linhai.telegram import TelegramMessage, load_sticker
+from linhai.tool.base import (
+    ToolSet,
+    ToolArgInfo,
+    SuccessfulToolResult,
+    FailedToolResult,
+    ToolResult,
+)
 from linhai.utils.common import UiNotice
+from linhai.utils.i18n import t
 
 EDIT_INTERVAL = 2
 
@@ -44,6 +53,8 @@ class TelegramPlugin(Plugin):
         self._application = None
         self._running = False
         self.send_queue: deque[NormalSegment] = deque()
+        self._latest_message_id: int | None = None
+        self._latest_chat_id: int | None = None
 
     async def _on_segment_start(self, _parsed_answer, segment: Segment):
         """在segment开始生成时将消息加入发送队列。
@@ -169,7 +180,7 @@ class TelegramPlugin(Plugin):
                 content="收到Telegram消息",
             ),
         )
-        from linhai.agent import Agent as AgentType
+        from linhai.agent import Agent
 
         if not update.message:
             return
@@ -182,19 +193,20 @@ class TelegramPlugin(Plugin):
         if not content:
             return
 
-        agent = self.registry.get_member_typechecked("agent", AgentType)
-        if agent:
-            message = TelegramMessage(
-                chat_id=chat_id,
-                content=content,
-                message_id=update.message.message_id,
-            )
-            await agent.message_processor.add_new_message(message)
-            state_machine = self.registry.get_member_typechecked(
-                "state_machine", AgentStateMachine
-            )
-            if state_machine.state == "waiting_user":
-                state_machine.transition_to_working()
+        agent = self.registry.get_member_typechecked("agent", Agent)
+        self._latest_chat_id = update.message.chat_id
+        self._latest_message_id = update.message.message_id
+        message = TelegramMessage(
+            chat_id=chat_id,
+            content=content,
+            message_id=update.message.message_id,
+        )
+        await agent.message_processor.add_new_message(message)
+        state_machine = self.registry.get_member_typechecked(
+            "state_machine", AgentStateMachine
+        )
+        if state_machine.state == "waiting_user":
+            state_machine.transition_to_working()
 
     async def _handle_telegram_sticker(self, update: Update, _context):
         """处理来自telegram的表情包消息。"""
@@ -205,7 +217,7 @@ class TelegramPlugin(Plugin):
                 content="收到Telegram表情包",
             ),
         )
-        from linhai.agent import Agent as AgentType
+        from linhai.agent import Agent
 
         if not update.message:
             return
@@ -227,16 +239,87 @@ class TelegramPlugin(Plugin):
 
         message = load_sticker(sticker_bytes, self.registry)
 
-        agent = self.registry.get_member_typechecked("agent", AgentType)
-        if agent:
-            await agent.message_processor.add_new_message(message)
-            state_machine = self.registry.get_member_typechecked(
-                "state_machine", AgentStateMachine
-            )
-            if state_machine.state == "waiting_user":
-                state_machine.transition_to_working()
+        agent = self.registry.get_member_typechecked("agent", Agent)
+        await agent.message_processor.add_new_message(message)
+        state_machine = self.registry.get_member_typechecked(
+            "state_machine", AgentStateMachine
+        )
+        if state_machine.state == "waiting_user":
+            state_machine.transition_to_working()
 
-    async def before_agent_loop(self, _agent: "AgentType"):
+    def create_toolset(self) -> ToolSet:
+        toolset = ToolSet()
+        plugin_self = self
+
+        @toolset.register_tool(
+            name="send_telegram_reaction",
+            desc=t(
+                {
+                    "zh_CN": "向telegram消息发送emoji reaction。只支持传入telegram支持的emoji",
+                    "en": "Send an emoji reaction to a telegram message. Only telegram-supported emojis are accepted",
+                }
+            ),
+            args={
+                "emoji": ToolArgInfo(
+                    desc=t(
+                        {
+                            "zh_CN": "要发送的emoji，只支持telegram支持的emoji",
+                            "en": "The emoji to send, only telegram-supported emojis are accepted",
+                        }
+                    ),
+                    type="str",
+                ),
+                "chat_id": ToolArgInfo(
+                    desc=t(
+                        {
+                            "zh_CN": "目标聊天的chat_id，不提供则使用最近收到消息的chat_id",
+                            "en": "Target chat_id, defaults to latest received message's chat_id",
+                        }
+                    ),
+                    type="int",
+                ),
+                "message_id": ToolArgInfo(
+                    desc=t(
+                        {
+                            "zh_CN": "目标消息的message_id，不提供则使用最近收到消息的message_id",
+                            "en": "Target message_id, defaults to latest received message's message_id",
+                        }
+                    ),
+                    type="int",
+                ),
+            },
+            required_args=["emoji"],
+        )
+        async def send_telegram_reaction(
+            emoji: str,
+            chat_id: int | None = None,
+            message_id: int | None = None,
+        ) -> ToolResult:
+            if plugin_self._bot is None:
+                return FailedToolResult(content="telegram bot未初始化")
+            target_chat_id = (
+                chat_id if chat_id is not None else plugin_self._latest_chat_id
+            )
+            target_message_id = (
+                message_id if message_id is not None else plugin_self._latest_message_id
+            )
+            if target_chat_id is None or target_message_id is None:
+                return FailedToolResult(content="没有可回复的telegram消息")
+            result = await asyncio.gather(
+                plugin_self._bot.set_message_reaction(
+                    chat_id=target_chat_id,
+                    message_id=target_message_id,
+                    reaction=[ReactionTypeEmoji(emoji=emoji)],
+                ),
+                return_exceptions=True,
+            )
+            if isinstance(result[0], Exception):
+                return FailedToolResult(content=f"发送reaction失败: {result[0]}")
+            return SuccessfulToolResult(content=f"已发送reaction: {emoji}")
+
+        return toolset
+
+    async def before_agent_loop(self, _agent: "Agent"):
         """在Agent循环开始前启动telegram bot和发送任务。"""
 
         if self._running:
@@ -261,6 +344,12 @@ class TelegramPlugin(Plugin):
         self._bot = self._application.bot
 
         self._running = True
+
+        from linhai.tool.main import ToolManager
+
+        tool_manager = self.registry.get_member_typechecked("tool_manager", ToolManager)
+        tool_manager.register_toolset("telegram", self.create_toolset())
+
         from linhai.task_supervisor import TaskSupervisor
 
         task_supervisor = self.registry.get_member_typechecked(
@@ -285,3 +374,36 @@ class TelegramPlugin(Plugin):
         """注册到Lifecycle。"""
         lifecycle.after_segment.register(self._on_segment_start)
         lifecycle.before_agent_loop.register(self.before_agent_loop)
+
+
+class TelegramReactionReminderPlugin(Plugin):
+    """当agent收到消息后默默工作（只调工具不说话）时，提醒agent给用户点reaction或说点什么。"""
+
+    NOTIFICATION_SOURCE = "telegram_reaction_reminder"
+    REMINDER_MESSAGE = (
+        "你收到消息后闷头工作，考虑给用户消息点reaction（如👀）或者说点什么来反馈状态"
+    )
+
+    async def after_message_generation(self, parsed_answer, tool_calls):
+        full_response = parsed_answer.get_message().get_content() or ""
+        agent = self.registry.get_member_typechecked("agent", Agent)
+
+        has_text_content = bool(full_response.strip())
+        called_reaction = any(
+            tc.get("function", {}).get("name") == "send_telegram_reaction"
+            for tc in (tool_calls or [])
+        )
+
+        if has_text_content or called_reaction:
+            agent.message_processor.update_notification_message(
+                None, source=self.NOTIFICATION_SOURCE, sort_value=500
+            )
+        elif tool_calls:
+            agent.message_processor.update_notification_message(
+                RuntimeMessage(self.REMINDER_MESSAGE),
+                source=self.NOTIFICATION_SOURCE,
+                sort_value=500,
+            )
+
+    def register(self, lifecycle: "Lifecycle") -> None:
+        lifecycle.after_message_generation.register(self.after_message_generation)

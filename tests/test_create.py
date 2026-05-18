@@ -473,6 +473,7 @@ class TestToolsetsConfig(unittest.TestCase):
             "context_cleaning",
             "mcp",
             "web_search",
+            "telegram",
         }
         self.assertEqual(set(AVAILABLE_TOOLSETS), expected)
 

@@ -314,6 +314,7 @@ AVAILABLE_TOOLSETS = frozenset(
         "context_cleaning",
         "mcp",
         "web_search",
+        "telegram",
     ]
 )
 
