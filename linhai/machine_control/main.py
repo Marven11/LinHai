@@ -24,7 +24,9 @@ async def _check_shell_compatibility(
 ) -> tuple[bool, str]:
     from rich.text import Text
 
-    write_result = await process.stdio_write("echo $SHELL", with_enter=True)
+    write_result = await process.stdio_write(
+        'echo "LH0=$0"; echo "LHS=$SHELL"', with_enter=True
+    )
     if isinstance(write_result, ProcessIOError):
         return True, ""
     if not write_result.success:
@@ -38,13 +40,23 @@ async def _check_shell_compatibility(
     decoded = Text.from_ansi(
         read_result.stdout.decode("utf-8", errors="replace")
     ).plain.replace("\r", "")
+    lh0 = ""
+    lhs = ""
     for line in decoded.split("\n"):
         line = line.strip()
-        if line.startswith("/"):
-            shell_name = os.path.basename(line)
-            if shell_name in NON_POSIX_SHELLS:
-                return False, shell_name
+        if line.startswith("LH0="):
+            lh0 = line[4:]
+        elif line.startswith("LHS="):
+            lhs = line[4:]
+    if lh0:
+        shell_name = os.path.basename(lh0).lstrip("-")
+        if shell_name and shell_name not in NON_POSIX_SHELLS:
             return True, shell_name
+    if lhs.startswith("/"):
+        shell_name = os.path.basename(lhs)
+        if shell_name in NON_POSIX_SHELLS:
+            return False, shell_name
+        return True, shell_name
     return True, ""
 
 

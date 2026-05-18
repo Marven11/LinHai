@@ -39,7 +39,7 @@ jobs:
       - name: Setup Python
         run: |
           apt-get update
-          apt-get install -y python3 python3-pip python3-venv curl tmux
+          apt-get install -y python3 python3-pip python3-venv curl tmux fish
           pip3 install uv
           uv --version
 
@@ -258,7 +258,7 @@ jobs:
       - name: Setup Python
         run: |
           apt-get update
-          apt-get install -y python3 python3-pip python3-venv curl tmux
+          apt-get install -y python3 python3-pip python3-venv curl tmux fish
           pip3 install uv
           uv --version
 

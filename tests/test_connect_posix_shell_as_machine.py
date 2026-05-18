@@ -447,7 +447,9 @@ class TestCheckShellCompatibility(unittest.IsolatedAsyncioTestCase):
     async def test_bash_is_compatible(self):
         from linhai.machine_control.main import _check_shell_compatibility
 
-        mock_process = self._make_process_mock(b"echo $SHELL\n/bin/bash\nuser@host:~$ ")
+        mock_process = self._make_process_mock(
+            b'echo "LH0=$0"; echo "LHS=$SHELL"\nLH0=bash\nLHS=/bin/bash\nuser@host:~$ '
+        )
         compatible, shell_name = await _check_shell_compatibility(mock_process)
         self.assertTrue(compatible)
         self.assertEqual(shell_name, "bash")
@@ -455,7 +457,9 @@ class TestCheckShellCompatibility(unittest.IsolatedAsyncioTestCase):
     async def test_zsh_is_compatible(self):
         from linhai.machine_control.main import _check_shell_compatibility
 
-        mock_process = self._make_process_mock(b"echo $SHELL\n/usr/bin/zsh\n")
+        mock_process = self._make_process_mock(
+            b'echo "LH0=$0"; echo "LHS=$SHELL"\nLH0=zsh\nLHS=/usr/bin/zsh\n'
+        )
         compatible, shell_name = await _check_shell_compatibility(mock_process)
         self.assertTrue(compatible)
         self.assertEqual(shell_name, "zsh")
@@ -463,7 +467,7 @@ class TestCheckShellCompatibility(unittest.IsolatedAsyncioTestCase):
     async def test_fish_is_not_compatible(self):
         from linhai.machine_control.main import _check_shell_compatibility
 
-        mock_process = self._make_process_mock(b"echo $SHELL\n/usr/bin/fish\n")
+        mock_process = self._make_process_mock(b"LH0=\nLHS=/usr/bin/fish\n")
         compatible, shell_name = await _check_shell_compatibility(mock_process)
         self.assertFalse(compatible)
         self.assertEqual(shell_name, "fish")
@@ -471,25 +475,23 @@ class TestCheckShellCompatibility(unittest.IsolatedAsyncioTestCase):
     async def test_nushell_is_not_compatible(self):
         from linhai.machine_control.main import _check_shell_compatibility
 
-        mock_process = self._make_process_mock(
-            b"echo $SHELL\n/home/user/.local/bin/nu\n"
-        )
+        mock_process = self._make_process_mock(b"LH0=\nLHS=/home/user/.local/bin/nu\n")
         compatible, shell_name = await _check_shell_compatibility(mock_process)
         self.assertFalse(compatible)
         self.assertEqual(shell_name, "nu")
 
-    async def test_xonsh_is_not_compatible(self):
+    async def test_xonsh_is_not_compatible_via_lh0(self):
         from linhai.machine_control.main import _check_shell_compatibility
 
-        mock_process = self._make_process_mock(b"/usr/bin/xonsh\n")
+        mock_process = self._make_process_mock(b"LH0=xonsh\nLHS=/usr/bin/xonsh\n")
         compatible, shell_name = await _check_shell_compatibility(mock_process)
         self.assertFalse(compatible)
         self.assertEqual(shell_name, "xonsh")
 
-    async def test_pwsh_is_not_compatible(self):
+    async def test_pwsh_is_not_compatible_via_lh0(self):
         from linhai.machine_control.main import _check_shell_compatibility
 
-        mock_process = self._make_process_mock(b"/usr/bin/pwsh\n")
+        mock_process = self._make_process_mock(b"LH0=pwsh\nLHS=/usr/bin/pwsh\n")
         compatible, shell_name = await _check_shell_compatibility(mock_process)
         self.assertFalse(compatible)
         self.assertEqual(shell_name, "pwsh")
@@ -502,10 +504,10 @@ class TestCheckShellCompatibility(unittest.IsolatedAsyncioTestCase):
         self.assertTrue(compatible)
         self.assertEqual(shell_name, "")
 
-    async def test_no_path_output_returns_compatible(self):
+    async def test_no_marker_output_returns_compatible(self):
         from linhai.machine_control.main import _check_shell_compatibility
 
-        mock_process = self._make_process_mock(b"some text without paths\n")
+        mock_process = self._make_process_mock(b"some text without markers\n")
         compatible, shell_name = await _check_shell_compatibility(mock_process)
         self.assertTrue(compatible)
         self.assertEqual(shell_name, "")
@@ -513,7 +515,7 @@ class TestCheckShellCompatibility(unittest.IsolatedAsyncioTestCase):
     async def test_tcsh_is_not_compatible(self):
         from linhai.machine_control.main import _check_shell_compatibility
 
-        mock_process = self._make_process_mock(b"/bin/tcsh\n")
+        mock_process = self._make_process_mock(b"LH0=\nLHS=/bin/tcsh\n")
         compatible, shell_name = await _check_shell_compatibility(mock_process)
         self.assertFalse(compatible)
         self.assertEqual(shell_name, "tcsh")
@@ -521,10 +523,44 @@ class TestCheckShellCompatibility(unittest.IsolatedAsyncioTestCase):
     async def test_ansi_codes_stripped(self):
         from linhai.machine_control.main import _check_shell_compatibility
 
-        mock_process = self._make_process_mock(b"\x1b[32m/usr/bin/fish\x1b[0m\n")
+        mock_process = self._make_process_mock(
+            b"\x1b[32mLH0=\x1b[0m\n\x1b[32mLHS=/usr/bin/fish\x1b[0m\n"
+        )
         compatible, shell_name = await _check_shell_compatibility(mock_process)
         self.assertFalse(compatible)
         self.assertEqual(shell_name, "fish")
+
+    async def test_bash_from_fish_is_compatible(self):
+        from linhai.machine_control.main import _check_shell_compatibility
+
+        mock_process = self._make_process_mock(b"LH0=bash\nLHS=/usr/bin/fish\n")
+        compatible, shell_name = await _check_shell_compatibility(mock_process)
+        self.assertTrue(compatible)
+        self.assertEqual(shell_name, "bash")
+
+    async def test_zsh_from_fish_is_compatible(self):
+        from linhai.machine_control.main import _check_shell_compatibility
+
+        mock_process = self._make_process_mock(b"LH0=zsh\nLHS=/usr/bin/fish\n")
+        compatible, shell_name = await _check_shell_compatibility(mock_process)
+        self.assertTrue(compatible)
+        self.assertEqual(shell_name, "zsh")
+
+    async def test_lh0_empty_lhs_no_path_compatible(self):
+        from linhai.machine_control.main import _check_shell_compatibility
+
+        mock_process = self._make_process_mock(b"LH0=\nLHS=\n")
+        compatible, shell_name = await _check_shell_compatibility(mock_process)
+        self.assertTrue(compatible)
+        self.assertEqual(shell_name, "")
+
+    async def test_login_shell_prefix_stripped(self):
+        from linhai.machine_control.main import _check_shell_compatibility
+
+        mock_process = self._make_process_mock(b"LH0=-bash\nLHS=/bin/bash\n")
+        compatible, shell_name = await _check_shell_compatibility(mock_process)
+        self.assertTrue(compatible)
+        self.assertEqual(shell_name, "bash")
 
 
 class TestAddPosixShellIncompatibleShell(unittest.IsolatedAsyncioTestCase):
