@@ -246,7 +246,9 @@ class AgentSession:
             sandbox = registry.get_member_typechecked(
                 "process_sandbox", ProcessSandboxProtocol
             )
-            if not isinstance(sandbox, NoSandbox):
+            if isinstance(sandbox, NoSandbox):
+                token_pieces.append("\uf530")
+            else:
                 token_pieces.append("\uf132")
         _, llm_instance = agent.get_current_llm_info()
         llm_name = llm_instance.get_name()

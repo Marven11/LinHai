@@ -62,10 +62,11 @@ class TestFooterWidgetSandboxIcon(unittest.TestCase):
         widget.update = MagicMock()
         return widget
 
-    def test_no_sandbox_no_icon(self):
+    def test_no_sandbox_shows_cross_icon(self):
         widget = self._make_widget(NoSandbox())
         widget.update_display()
         display_text = widget.update.call_args[0][0]
+        self.assertIn("\u2716", display_text)
         self.assertNotIn("◭", display_text)
 
     def test_bubblewrap_sandbox_shows_icon(self):
@@ -80,10 +81,11 @@ class TestFooterWidgetSandboxIcon(unittest.TestCase):
         display_text = widget.update.call_args[0][0]
         self.assertNotIn("◭", display_text)
 
-    def test_no_sandbox_nerd_font_no_icon(self):
+    def test_no_sandbox_nerd_font_shows_icon(self):
         widget = self._make_widget(NoSandbox(), use_nerd_font=True)
         widget.update_display()
         display_text = widget.update.call_args[0][0]
+        self.assertIn("\uf530", display_text)
         self.assertNotIn("\uf132", display_text)
 
 

@@ -1061,9 +1061,11 @@ class FooterWidget(Static):
         sandbox = self.registry.get_member_typechecked(
             "process_sandbox", ProcessSandboxProtocol
         )
-        if not isinstance(sandbox, NoSandbox):
+        if isinstance(sandbox, NoSandbox):
+            sandbox_icon = "\uf530" if self.use_nerd_font else "\u2716"
+        else:
             sandbox_icon = "\uf132" if self.use_nerd_font else "◭"
-            token_pieces.append(sandbox_icon)
+        token_pieces.append(sandbox_icon)
 
         llm_name = self._get_current_llm_name()
         if self.use_nerd_font:
