@@ -1,14 +1,35 @@
 """Configuration module for LinHai agent."""
 
+import os
 import re
 from pathlib import Path
-from typing import Optional, Union, Literal
+from typing import Annotated, Optional, Union, Literal
 from urllib.parse import urlparse
 
 import tomllib
-from pydantic import BaseModel, Field, field_validator, model_validator
+from pydantic import BaseModel, BeforeValidator, Field, field_validator, model_validator
 
 from .exceptions import ConfigValidationError
+
+
+def _resolve_secret_value(v: str | dict) -> str:
+    if isinstance(v, str):
+        return v
+    if isinstance(v, dict):
+        secret_type = v.get("type")
+        if secret_type == "env":
+            name = v.get("name")
+            if not name:
+                raise ConfigValidationError("env secret requires 'name' field")
+            value = os.environ.get(name)
+            if value is None:
+                raise ConfigValidationError(f"Environment variable '{name}' not found")
+            return value
+        raise ConfigValidationError(f"Unknown secret type: {secret_type}")
+    raise ConfigValidationError(f"api_key must be str or dict, got {type(v)}")
+
+
+SecretValue = Annotated[str, BeforeValidator(_resolve_secret_value)]
 
 
 def get_default_config_path() -> Path:
@@ -41,7 +62,7 @@ class LLMConfig(BaseModel):
         default=None, description="显式缓存配置"
     )
     base_url: str = Field(..., description="API服务的基地址")
-    api_key: str = Field(..., min_length=1, description="API认证密钥")
+    api_key: SecretValue = Field(..., min_length=1, description="API认证密钥")
     model: str = Field(..., min_length=1, description="使用的模型名称")
     client_options: dict = Field(default_factory=dict, description="客户端额外配置选项")
     completion_options: dict = Field(
@@ -269,7 +290,9 @@ class UserPromptConfig(BaseModel):
 class TelegramConfig(BaseModel):
     """Telegram bot配置类型定义。"""
 
-    bot_token: str = Field(..., min_length=1, description="Telegram bot的认证令牌")
+    bot_token: SecretValue = Field(
+        ..., min_length=1, description="Telegram bot的认证令牌"
+    )
     default_chat_id: str = Field(..., min_length=1, description="默认的聊天ID")
 
     def __str__(self) -> str:
@@ -326,7 +349,7 @@ class WebSearchConfig(BaseModel):
         default="duckduckgo_http",
         description="搜索引擎类型",
     )
-    api_key: Optional[str] = Field(
+    api_key: Optional[SecretValue] = Field(
         default=None,
         description="API密钥，bigmodel类型需要",
     )

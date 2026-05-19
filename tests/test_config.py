@@ -738,6 +738,65 @@ compress_threshold = 0.8
         finally:
             os.unlink(temp_file)
 
+    def test_load_config_api_key_from_env(self):
+        config_content = """[[llm]]
+name = "test_llm"
+base_url = "https://api.example.com"
+api_key = {type = "env", name = "TEST_API_KEY_1703"}
+model = "test_model"
+"""
+        os.environ["TEST_API_KEY_1703"] = "env_key_value"
+        temp_file = create_temp_config(config_content)
+        try:
+            config = load_config(temp_file)
+            self.assertEqual(config.llm[0].api_key, "env_key_value")
+        finally:
+            os.unlink(temp_file)
+            del os.environ["TEST_API_KEY_1703"]
+
+    def test_load_config_api_key_env_not_found(self):
+        config_content = """[[llm]]
+name = "test_llm"
+base_url = "https://api.example.com"
+api_key = {type = "env", name = "TEST_API_KEY_MISSING_1703"}
+model = "test_model"
+"""
+        os.environ.pop("TEST_API_KEY_MISSING_1703", None)
+        temp_file = create_temp_config(config_content)
+        try:
+            with self.assertRaises(ConfigValidationError):
+                load_config(temp_file)
+        finally:
+            os.unlink(temp_file)
+
+    def test_load_config_api_key_env_missing_name(self):
+        config_content = """[[llm]]
+name = "test_llm"
+base_url = "https://api.example.com"
+api_key = {type = "env"}
+model = "test_model"
+"""
+        temp_file = create_temp_config(config_content)
+        try:
+            with self.assertRaises(ConfigValidationError):
+                load_config(temp_file)
+        finally:
+            os.unlink(temp_file)
+
+    def test_load_config_api_key_plain_still_works(self):
+        config_content = """[[llm]]
+name = "test_llm"
+base_url = "https://api.example.com"
+api_key = "plain_key"
+model = "test_model"
+"""
+        temp_file = create_temp_config(config_content)
+        try:
+            config = load_config(temp_file)
+            self.assertEqual(config.llm[0].api_key, "plain_key")
+        finally:
+            os.unlink(temp_file)
+
 
 if __name__ == "__main__":
     unittest.main()
