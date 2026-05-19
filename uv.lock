@@ -777,6 +777,7 @@ dependencies = [
     { name = "rich" },
     { name = "textual" },
     { name = "tomli-w" },
+    { name = "websockets" },
 ]
 
 [package.optional-dependencies]
@@ -787,7 +788,6 @@ dev = [
     { name = "pytest" },
     { name = "pytest-asyncio" },
     { name = "tiktoken" },
-    { name = "websockets" },
 ]
 
 [package.dev-dependencies]
@@ -821,7 +821,7 @@ requires-dist = [
     { name = "textual" },
     { name = "tiktoken", marker = "extra == 'dev'" },
     { name = "tomli-w" },
-    { name = "websockets", marker = "extra == 'dev'" },
+    { name = "websockets" },
 ]
 provides-extras = ["dev"]
 

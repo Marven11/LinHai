@@ -90,6 +90,7 @@
             tomli-w
             croniter
             pathspec
+            websockets
             python-telegram-bot'
             quickjs-ng'
           ];
