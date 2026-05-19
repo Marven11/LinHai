@@ -56,7 +56,7 @@ def run_webui(args):
     api_token = args.api_token
     if api_token is None:
         api_token = os.urandom(16).hex()
-        print(api_token, file=sys.stderr)
+        print(f"api token: {api_token}", file=sys.stderr)
 
     app = create_app(api_token=api_token)
     uvicorn.run(app, host=args.host, port=args.port)
@@ -228,7 +228,7 @@ def main():
     webui_parser.add_argument(
         "--port",
         type=int,
-        default=8000,
+        default=19198,
         help="WebUI服务监听端口",
     )
     webui_parser.add_argument(
