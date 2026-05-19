@@ -462,25 +462,85 @@ class TestTelegramReactionReminderPlugin(unittest.TestCase):
         self.assertIsNone(call_args[0][0])
 
     def test_reminder_removed_when_called_reaction_tool(self):
-        """agent调用了send_telegram_reaction工具时移除通知。"""
+        """agent调用了send_telegram_reaction工具时通过after_toolcall移除通知。"""
         plugin = TelegramReactionReminderPlugin(self.registry)
-        parsed_answer = Mock()
-        parsed_answer.get_message.return_value.get_content.return_value = ""
-        tool_calls = [{"function": {"name": "send_telegram_reaction"}}]
 
-        asyncio.run(plugin.after_message_generation(parsed_answer, tool_calls))
+        asyncio.run(
+            plugin._on_reaction_tool_called(
+                "send_telegram_reaction", 0, "success", None, {}, None, False
+            )
+        )
 
+        self.agent.message_processor.update_notification_message.assert_called_once()
         call_args = self.agent.message_processor.update_notification_message.call_args
         self.assertIsNone(call_args[0][0])
 
-    def test_reminder_added_with_other_tool_calls(self):
-        """agent调用了其他工具但没有reaction也没有文本时添加提醒。"""
+    def test_reminder_not_removed_by_other_tool_call(self):
+        """其他工具调用不应清除提醒。"""
         plugin = TelegramReactionReminderPlugin(self.registry)
-        parsed_answer = Mock()
-        parsed_answer.get_message.return_value.get_content.return_value = ""
-        tool_calls = [{"function": {"name": "web_search"}}]
 
-        asyncio.run(plugin.after_message_generation(parsed_answer, tool_calls))
+        asyncio.run(
+            plugin._on_reaction_tool_called(
+                "web_search", 0, "success", None, {}, None, False
+            )
+        )
+
+        self.agent.message_processor.update_notification_message.assert_not_called()
+        self.assertFalse(plugin._has_responded)
+
+    def test_no_reminder_after_reaction_in_previous_turn(self):
+        """agent在上一turn已reaction后，下一turn只调工具不应再提醒。"""
+        plugin = TelegramReactionReminderPlugin(self.registry)
+
+        asyncio.run(
+            plugin._on_reaction_tool_called(
+                "send_telegram_reaction", 0, "success", None, {}, None, False
+            )
+        )
+
+        self.agent.message_processor.update_notification_message.reset_mock()
+
+        tool_parsed = Mock()
+        tool_parsed.get_message.return_value.get_content.return_value = ""
+        tool_tool_calls = [{"function": {"name": "web_search"}}]
+        asyncio.run(plugin.after_message_generation(tool_parsed, tool_tool_calls))
+
+        self.agent.message_processor.update_notification_message.assert_not_called()
+
+    def test_no_reminder_after_text_in_previous_turn(self):
+        """agent在上一turn有文本后，下一turn只调工具不应再提醒。"""
+        plugin = TelegramReactionReminderPlugin(self.registry)
+
+        text_parsed = Mock()
+        text_parsed.get_message.return_value.get_content.return_value = "hello"
+        text_tool_calls = [{"function": {"name": "some_tool"}}]
+        asyncio.run(plugin.after_message_generation(text_parsed, text_tool_calls))
+
+        self.agent.message_processor.update_notification_message.reset_mock()
+
+        tool_parsed = Mock()
+        tool_parsed.get_message.return_value.get_content.return_value = ""
+        tool_tool_calls = [{"function": {"name": "web_search"}}]
+        asyncio.run(plugin.after_message_generation(tool_parsed, tool_tool_calls))
+
+        self.agent.message_processor.update_notification_message.assert_not_called()
+
+    def test_reminder_reset_on_new_user_message(self):
+        """新用户消息到达后重置状态，允许再次提醒。"""
+        plugin = TelegramReactionReminderPlugin(self.registry)
+
+        asyncio.run(
+            plugin._on_reaction_tool_called(
+                "send_telegram_reaction", 0, "success", None, {}, None, False
+            )
+        )
+
+        asyncio.run(plugin._on_new_user_message(None))
+
+        tool_parsed = Mock()
+        tool_parsed.get_message.return_value.get_content.return_value = ""
+        tool_tool_calls = [{"function": {"name": "web_search"}}]
+        asyncio.run(plugin.after_message_generation(tool_parsed, tool_tool_calls))
 
         call_args = self.agent.message_processor.update_notification_message.call_args
         self.assertIsNotNone(call_args[0][0])

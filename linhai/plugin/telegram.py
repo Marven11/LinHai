@@ -384,21 +384,35 @@ class TelegramReactionReminderPlugin(Plugin):
         "你收到消息后闷头工作，考虑给用户消息点reaction（如👀）或者说点什么来反馈状态"
     )
 
+    def __init__(self, registry: Registry):
+        super().__init__(registry)
+        self._has_responded = False
+
+    async def _on_new_user_message(self, _parsed_user_message):
+        self._has_responded = False
+
+    async def _on_reaction_tool_called(
+        self, tool_name, _index, status, _result, _tool_call, _secret, _is_error
+    ):
+        if tool_name == "send_telegram_reaction" and status == "success":
+            self._has_responded = True
+            agent = self.registry.get_member_typechecked("agent", Agent)
+            agent.message_processor.update_notification_message(
+                None, source=self.NOTIFICATION_SOURCE, sort_value=500
+            )
+
     async def after_message_generation(self, parsed_answer, tool_calls):
         full_response = parsed_answer.get_message().get_content() or ""
         agent = self.registry.get_member_typechecked("agent", Agent)
 
         has_text_content = bool(full_response.strip())
-        called_reaction = any(
-            tc.get("function", {}).get("name") == "send_telegram_reaction"
-            for tc in (tool_calls or [])
-        )
 
-        if has_text_content or called_reaction:
+        if has_text_content:
+            self._has_responded = True
             agent.message_processor.update_notification_message(
                 None, source=self.NOTIFICATION_SOURCE, sort_value=500
             )
-        elif tool_calls:
+        elif tool_calls and not self._has_responded:
             agent.message_processor.update_notification_message(
                 RuntimeMessage(self.REMINDER_MESSAGE),
                 source=self.NOTIFICATION_SOURCE,
@@ -406,4 +420,6 @@ class TelegramReactionReminderPlugin(Plugin):
             )
 
     def register(self, lifecycle: "Lifecycle") -> None:
+        lifecycle.after_toolcall.register(self._on_reaction_tool_called)
         lifecycle.after_message_generation.register(self.after_message_generation)
+        lifecycle.after_parsed_user_message.register(self._on_new_user_message)
