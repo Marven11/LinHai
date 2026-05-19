@@ -28,7 +28,7 @@ class TrojanTransport:
         self._process: Process = process
         marker_bytes = f"<linhai_pulse_{marker_hex}>".encode()
         self._pulse_decoder = PulseDecoder(marker_bytes)
-        self._pulse_encoder = PulseEncoder(marker_bytes, 4096, False)
+        self._pulse_encoder = PulseEncoder(marker_bytes, 3000, False)
         self._pending_futures: Dict[str, asyncio.Future[JsonRpcResponse]] = {}
         self._reader_started: bool = False
         self._connection_valid = True
