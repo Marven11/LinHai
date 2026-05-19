@@ -33,19 +33,19 @@ def _generate_nixos_bwrap_argv() -> list[str]:
         "--ro-bind",
         "/run",
         "/run",
-        "--symlink",
+        "--ro-bind",
         "/usr/bin",
         "/usr/bin",
-        "--symlink",
-        "/usr/lib",
-        "/usr/lib",
-        "--symlink",
-        "/usr/lib64",
-        "/usr/lib64",
         "--proc",
         "/proc",
         "--dev",
         "/dev",
+        "--bind",
+        "/dev/pts",
+        "/dev/pts",
+        "--bind",
+        "/dev/ptmx",
+        "/dev/ptmx",
         "--bind",
         "{pwd}",
         "{pwd}",
@@ -88,6 +88,12 @@ def _generate_fhs_bwrap_argv() -> list[str]:
         "--dev",
         "/dev",
         "--bind",
+        "/dev/pts",
+        "/dev/pts",
+        "--bind",
+        "/dev/ptmx",
+        "/dev/ptmx",
+        "--bind",
         "{pwd}",
         "{pwd}",
         "--bind",
@@ -115,12 +121,13 @@ def _generate_sandbox_config(config_dir: Path) -> dict | None:
         profile_path = config_dir / "sandbox_profile.template.sb"
         profile_path.write_text(DEFAULT_MACOS_PROFILE_TEMPLATE)
         return {"macos_sandbox": {"sandbox_profile": str(profile_path)}}
-    if system == "Linux" and shutil.which("bwrap") is not None:
-        if Path("/etc/NIXOS").exists():
+    if system == "Linux":
+        if Path("/etc/NIXOS").exists() and shutil.which("nix") is not None:
             argv = _generate_nixos_bwrap_argv()
-        else:
+            return {"bubblewrap": {"argv_template": argv}}
+        if shutil.which("bwrap") is not None:
             argv = _generate_fhs_bwrap_argv()
-        return {"bubblewrap": {"argv_template": argv}}
+            return {"bubblewrap": {"argv_template": argv}}
     return None
 
 

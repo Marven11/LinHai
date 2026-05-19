@@ -116,7 +116,6 @@ class TestWriteAgentsMd(unittest.TestCase):
             self.assertIn("角色沉浸要求", content)
 
 
-
 class TestSandboxInit(unittest.TestCase):
 
     def test_write_config_contains_agent_default(self):
@@ -136,7 +135,10 @@ class TestSandboxInit(unittest.TestCase):
 
     @patch("linhai.init.config_writer.platform.system", return_value="Linux")
     @patch("linhai.init.config_writer.shutil.which", return_value=None)
-    def test_no_sandbox_when_no_bwrap(self, mock_which, mock_sys):
+    @patch("linhai.init.config_writer.Path.exists", return_value=False)
+    def test_no_sandbox_when_no_bwrap_and_not_nixos(
+        self, mock_exists, mock_which, mock_sys
+    ):
         with tempfile.TemporaryDirectory() as tmpdir:
             config_path = Path(tmpdir) / "config.toml"
             write_llm_config(
@@ -151,7 +153,10 @@ class TestSandboxInit(unittest.TestCase):
             self.assertNotIn("process_sandbox", config["agent"][0])
 
     @patch("linhai.init.config_writer.platform.system", return_value="Linux")
-    @patch("linhai.init.config_writer.shutil.which", return_value="/usr/bin/bwrap")
+    @patch(
+        "linhai.init.config_writer.shutil.which",
+        side_effect=["/usr/bin/nix", "/usr/bin/bwrap"],
+    )
     @patch("linhai.init.config_writer.Path.exists", return_value=True)
     def test_nixos_bwrap_config_generated(self, mock_exists, mock_which, mock_sys):
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -171,6 +176,8 @@ class TestSandboxInit(unittest.TestCase):
             ]
             self.assertEqual(argv_template[0], "bwrap")
             self.assertIn("/nix", argv_template)
+            self.assertIn("/dev/pts", argv_template)
+            self.assertIn("/dev/ptmx", argv_template)
             self.assertIn("{pwd}", argv_template)
             self.assertIn("--", argv_template)
 
@@ -195,8 +202,36 @@ class TestSandboxInit(unittest.TestCase):
             self.assertEqual(argv_template[0], "bwrap")
             self.assertIn("/usr", argv_template)
             self.assertNotIn("/nix", argv_template)
+            self.assertIn("/dev/pts", argv_template)
+            self.assertIn("/dev/ptmx", argv_template)
             self.assertIn("{pwd}", argv_template)
             self.assertIn("--", argv_template)
+
+    @patch("linhai.init.config_writer.platform.system", return_value="Linux")
+    @patch(
+        "linhai.init.config_writer.shutil.which", side_effect=[None, "/usr/bin/bwrap"]
+    )
+    @patch("linhai.init.config_writer.Path.exists", return_value=True)
+    def test_nixos_fallback_to_bwrap_when_no_nix(
+        self, mock_exists, mock_which, mock_sys
+    ):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            config_path = Path(tmpdir) / "config.toml"
+            write_llm_config(
+                name="test-llm",
+                base_url="https://api.test.com/v1",
+                api_key="test-key",
+                model="test-model",
+                config_path=config_path,
+                overwrite=True,
+            )
+            with open(config_path, "rb") as f:
+                config = tomllib.load(f)
+            argv_template = config["agent"][0]["process_sandbox"]["bubblewrap"][
+                "argv_template"
+            ]
+            self.assertEqual(argv_template[0], "bwrap")
+            self.assertIn("/usr", argv_template)
 
     @patch("linhai.init.config_writer.platform.system", return_value="Darwin")
     @patch("os.getcwd", return_value="/workdir")
