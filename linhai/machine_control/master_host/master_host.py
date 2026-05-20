@@ -1,9 +1,7 @@
 """Master host control module for tools that interact with the local machine."""
 
 import asyncio
-import fcntl
 import os
-import pty as pty_module
 import time
 from pathlib import Path
 from typing import Optional
@@ -99,7 +97,6 @@ class MasterHostControl:
         self,
         argv: list[str],
         wait_second: Optional[float] = None,
-        pty: bool = False,
         env: Optional[dict[str, str]] = None,
     ) -> ProcessCreateResult:
         try:
@@ -107,45 +104,6 @@ class MasterHostControl:
                 "process_sandbox", ProcessSandboxProtocol
             )
             wrapped_argv = sandbox.wrap_argv(argv)
-            if pty:
-                master_fd, slave_fd = pty_module.openpty()
-                subprocess = await asyncio.create_subprocess_exec(
-                    *wrapped_argv,
-                    stdin=slave_fd,
-                    stdout=slave_fd,
-                    stderr=slave_fd,
-                    cwd=self._cwd,
-                    env=env,
-                    start_new_session=True,
-                )
-                fcntl.fcntl(master_fd, fcntl.F_SETFL, os.O_NONBLOCK)
-                pid = str(subprocess.pid)
-                lp = LocalPtyProcess(
-                    subprocess, master_fd, slave_fd, on_exit=self._handle_process_exit
-                )
-                self._processes[pid] = lp
-                if wait_second is None:
-                    wait_second = 1.0
-                start = time.perf_counter()
-                while time.perf_counter() - start < wait_second:
-                    await asyncio.sleep(0.1)
-                    if subprocess.returncode is not None:
-                        break
-                if subprocess.returncode is not None:
-                    stdout_bytes, _ = await lp.drain_buffers()
-                    return ProcessCreateResult(
-                        pid=pid,
-                        success=True,
-                        returncode=subprocess.returncode,
-                        stdout=stdout_bytes.decode("utf-8", errors="replace"),
-                        stderr="",
-                    )
-                return ProcessCreateResult(
-                    pid=pid,
-                    success=True,
-                    returncode=None,
-                    message=f"等待失败，程序在{wait_second}秒后在运行(pty模式)。建议使用process_*系列工具进行读写stdio或者进一步等待程序",
-                )
             subprocess = await asyncio.create_subprocess_exec(
                 *wrapped_argv,
                 stdin=asyncio.subprocess.PIPE,

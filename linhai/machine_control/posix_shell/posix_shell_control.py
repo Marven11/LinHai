@@ -120,11 +120,8 @@ class PosixShellControl:
         self,
         argv: list[str],
         wait_second: Optional[float] = None,
-        pty: bool = False,
         env: Optional[Dict[str, str]] = None,
     ) -> ProcessCreateResult:
-        if pty:
-            raise RuntimeError("PosixShell不支持pty模式")
         if wait_second is None:
             wait_second = 1.0
         args: Dict[str, object] = {"argv": argv, "wait_second": wait_second}

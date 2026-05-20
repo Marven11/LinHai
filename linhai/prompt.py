@@ -735,8 +735,10 @@ EXAMPLE_MULTIHOP_MACHINES = t(
         "zh_CN": """
 使用`process_create`连接到远程ssh主机，然后通过`connect_posix_shell_as_machine`将其添加为新机器
 
+注意：process_create以非pty模式启动进程。启动ssh后bash不会自动输出任何内容，建议指定命令为`bash -i`以获取交互提示符，或在启动后输入`whoami`测试连接是否成功
+
 ```json toolcall
-{"name": "process_create", "arguments": {"argv": ["ssh", "user@host"]}}
+{"name": "process_create", "arguments": {"argv": ["ssh", "user@host", "bash", "-i"]}}
 ```
 
 ```json toolcall
@@ -780,8 +782,10 @@ EXAMPLE_MULTIHOP_MACHINES = t(
         "en": """
 Use `process_create` to connect to a remote ssh host, then add it as a new machine via `connect_posix_shell_as_machine`
 
+Note: process_create starts processes in non-pty mode. After starting ssh, bash won't output anything automatically. Specify command as `bash -i` to get an interactive prompt, or input `whoami` after starting to test connection success.
+
 ```json toolcall
-{"name": "process_create", "arguments": {"argv": ["ssh", "user@host"]}}
+{"name": "process_create", "arguments": {"argv": ["ssh", "user@host", "bash", "-i"]}}
 ```
 
 ```json toolcall

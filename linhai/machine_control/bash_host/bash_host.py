@@ -291,11 +291,8 @@ class BashHostControl:
         self,
         argv: list[str],
         wait_second: Optional[float] = None,
-        pty: bool = False,
         env: Optional[Dict[str, str]] = None,
     ) -> ProcessCreateResult:
-        if pty:
-            raise RuntimeError("BashHost不支持pty模式")
         self._counter += 1
         proc_id = str(self._counter)
         proc_dir = f"{self._tmp_dir}/proc_{proc_id}"

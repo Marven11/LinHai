@@ -115,7 +115,7 @@ class TestProcessTools(unittest.IsolatedAsyncioTestCase):
 
         self.assertTrue(inspect.iscoroutinefunction(tool_func))
 
-    def test_process_create_pty_parameter(self):
+    def test_process_create_no_pty_parameter(self):
         mock_machine_control = Mock()
         mock_machine_control.machines = {"master_host": Mock()}
         mock_machine_control.target_machine = "master_host"
@@ -124,9 +124,7 @@ class TestProcessTools(unittest.IsolatedAsyncioTestCase):
         tool_func = toolset.get_tool("process_create")
 
         signature = inspect.signature(tool_func)
-        self.assertIn("pty", signature.parameters)
-        param = signature.parameters["pty"]
-        self.assertEqual(param.default, False)
+        self.assertNotIn("pty", signature.parameters)
 
     def test_process_create_with_stdin_parameter(self):
         mock_machine_control = Mock()

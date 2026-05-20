@@ -35,7 +35,6 @@ class HostControl(Protocol):
         self,
         argv: list[str],
         wait_second: Optional[float] = None,
-        pty: bool = False,
         env: Optional[Dict[str, str]] = None,
     ) -> ProcessCreateResult: ...
 

@@ -67,7 +67,7 @@ class ProcessRowWidget(Horizontal):
     def compose(self) -> ComposeResult:
         cmd = shlex.join(self._info.argv)
         yield Static(cmd, classes="argv", markup=False)
-        yield Static(self._info.machine_id, classes="machine", markup=False)
+        yield Static(self._info.machine_id, classes="machine")
         created_str = datetime.fromtimestamp(self._info.created_at).strftime("%H:%M:%S")
         yield Static(created_str, classes="time")
         if self._returncode is None:

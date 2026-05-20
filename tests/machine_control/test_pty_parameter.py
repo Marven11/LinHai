@@ -1,18 +1,21 @@
 import unittest
-from unittest.mock import AsyncMock, MagicMock
+import inspect
+from unittest.mock import Mock
 
-from linhai.machine_control.posix_shell.posix_shell_control import PosixShellControl
+from linhai.machine_control.tools import register_machine_control_tools
 
 
-class TestPtyParameter(unittest.IsolatedAsyncioTestCase):
-    async def test_posix_shell_pty_raises(self):
-        control = MagicMock(spec=PosixShellControl)
-        control.create_process = PosixShellControl.create_process.__get__(control)
-        control.call_tool = AsyncMock()
-        control._cwd = "/tmp"
-        with self.assertRaises(RuntimeError) as ctx:
-            await control.create_process(["echo", "test"], pty=True)
-        self.assertIn("PosixShell", str(ctx.exception))
+class TestPtyParameter(unittest.TestCase):
+    def test_process_create_no_pty_parameter(self):
+        mock_machine_control = Mock()
+        mock_machine_control.machines = {"master_host": Mock()}
+        mock_machine_control.target_machine = "master_host"
+
+        toolset = register_machine_control_tools(mock_machine_control)
+        tool_func = toolset.get_tool("process_create")
+
+        signature = inspect.signature(tool_func)
+        self.assertNotIn("pty", signature.parameters)
 
 
 if __name__ == "__main__":

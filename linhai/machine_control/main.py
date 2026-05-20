@@ -463,6 +463,24 @@ class MachineControl:
         async def _on_process_create(info: "ProcessCreateInfo") -> None:
             self.store_process_info(info.process.pid, info.machine_id, info.argv)
 
+            if info.argv and os.path.basename(info.argv[0]) == "ssh":
+                from linhai.agent.messages import RuntimeMessage
+                from linhai.agent.message import AgentMessage
+
+                agent_message = self.registry.get_member_typechecked(
+                    "agent_message", AgentMessage
+                )
+                agent_message.update_notification_message(
+                    RuntimeMessage(
+                        "提示：非pty模式下ssh启动的bash不会自动输出任何内容。"
+                        "建议：1) 指定命令为bash -i以获取交互提示符；"
+                        "2) 启动后输入whoami测试是否连接成功；"
+                        "3) 使用ssh -v查看连接流程"
+                    ),
+                    source="ssh_process_reminder",
+                    sort_value=0,
+                )
+
         lifecycle.after_process_create.register(_on_process_create)
 
     async def _after_conversation_restore(self) -> None:

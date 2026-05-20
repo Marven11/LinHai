@@ -104,8 +104,8 @@ def register_machine_control_tools(machine_control: "MachineControl") -> ToolSet
         name="connect_posix_shell_as_machine",
         desc=t(
             {
-                "zh_CN": "连接已经打开的任何posix shell进程，部署jsonrpc远控进程并操控，可用于sudo bash, docker exec -it sh, adb shell, nc -l等任何场景打开的posix shell",
-                "en": "Connect to any existing posix shell process and control via jsonrpc. Usable for sudo bash, docker exec -it sh, adb shell, nc -l, etc.",
+                "zh_CN": "连接已经打开的任何posix shell进程，部署jsonrpc远控进程并操控，支持任何非pty且stdio连接着posix shell(如bash)的进程，可用于sudo bash, docker exec -it sh, adb shell, ssh, nc -l等任何场景打开的posix shell",
+                "en": "Connect to any non-pty posix shell process with stdio connected (e.g. bash), deploy jsonrpc control. Supports sudo bash, docker exec -it sh, adb shell, ssh, nc -l, etc.",
             }
         ),
         args={
@@ -364,8 +364,8 @@ def register_machine_control_tools(machine_control: "MachineControl") -> ToolSet
         name="process_create",
         desc=t(
             {
-                "zh_CN": "创建一个进程，等待一段时间后检查状态。如果进程已退出则返回退出码和输出，否则返回运行中状态。",
-                "en": "Create a process, wait and check status. Returns exit code and output if exited, otherwise running status.",
+                "zh_CN": "以非pty模式创建一个进程，等待一段时间后检查状态。如果进程已退出则返回退出码和输出，否则返回运行中状态。进程的stdin/stdout/stderr通过pipe连接，可使用process_stdio_read/write进行交互",
+                "en": "Create a process in non-pty mode, wait and check status. Returns exit code and output if exited, otherwise running status. Process stdin/stdout/stderr are connected via pipes, use process_stdio_read/write for interaction",
             }
         ),
         args={
@@ -386,15 +386,6 @@ def register_machine_control_tools(machine_control: "MachineControl") -> ToolSet
                     }
                 ),
                 type="Optional[float]",
-            ),
-            "pty": ToolArgInfo(
-                desc=t(
-                    {
-                        "zh_CN": "是否使用伪终端创建进程，默认为False。启用后进程将拥有完整的PTY环境，适用于需要交互式终端的程序如ssh",
-                        "en": "Whether to create process with a pseudo-terminal, default False. Enables full PTY environment for interactive programs like ssh",
-                    }
-                ),
-                type="bool",
             ),
             "env": ToolArgInfo(
                 desc=t(
@@ -420,12 +411,11 @@ def register_machine_control_tools(machine_control: "MachineControl") -> ToolSet
     async def process_create_tool(
         argv: list[str],
         wait_second: Optional[float] = None,
-        pty: bool = False,
         env: Optional[Dict[str, str]] = None,
         with_stdin: Optional[str] = None,
     ) -> SuccessfulToolResult | FailedToolResult:
         host_control = machine_control.machines[machine_control.target_machine]
-        result = await host_control.create_process(argv, wait_second, pty=pty, env=env)
+        result = await host_control.create_process(argv, wait_second, env=env)
         if not result.success:
             return FailedToolResult(content=result.error or "创建进程失败")
         if result.returncode is not None:
