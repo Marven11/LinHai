@@ -11,7 +11,7 @@ draft API的问题：send_message_draft会为每次调用创建独立的临时�
 这样始终只有一条消息，不会重复。
 """
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal
 import asyncio
 from collections import deque
 from telegram import Update, Message, ReactionTypeEmoji
@@ -20,6 +20,8 @@ from telegram.error import RetryAfter, BadRequest
 
 if TYPE_CHECKING:
     from linhai.agent.create import TelegramContext
+    from linhai.base import Message as BaseMessage
+    from linhai.type_hints import WithSecret
 
 from linhai.agent import Agent
 
@@ -392,8 +394,22 @@ class TelegramReactionReminderPlugin(Plugin):
         self._has_responded = False
 
     async def _on_reaction_tool_called(
-        self, tool_name, _index, status, _result, _tool_call, _secret, _is_error
-    ):
+        self,
+        tool_name: str,
+        tool_index: int,
+        status: Literal["skipped", "success", "failed"],
+        message: "BaseMessage | None",
+        toolcall_arguments: dict,
+        with_secret: "WithSecret | None",
+        is_tool_failed_duplicated_error: bool,
+    ) -> None:
+        _ = (
+            tool_index,
+            message,
+            toolcall_arguments,
+            with_secret,
+            is_tool_failed_duplicated_error,
+        )
         if tool_name == "send_telegram_reaction" and status == "success":
             self._has_responded = True
             agent = self.registry.get_member_typechecked("agent", Agent)

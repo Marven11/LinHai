@@ -467,7 +467,13 @@ class TestTelegramReactionReminderPlugin(unittest.TestCase):
 
         asyncio.run(
             plugin._on_reaction_tool_called(
-                "send_telegram_reaction", 0, "success", None, {}, None, False
+                tool_name="send_telegram_reaction",
+                tool_index=0,
+                status="success",
+                message=None,
+                toolcall_arguments={},
+                with_secret=None,
+                is_tool_failed_duplicated_error=False,
             )
         )
 
@@ -481,7 +487,13 @@ class TestTelegramReactionReminderPlugin(unittest.TestCase):
 
         asyncio.run(
             plugin._on_reaction_tool_called(
-                "web_search", 0, "success", None, {}, None, False
+                tool_name="web_search",
+                tool_index=0,
+                status="success",
+                message=None,
+                toolcall_arguments={},
+                with_secret=None,
+                is_tool_failed_duplicated_error=False,
             )
         )
 
@@ -494,7 +506,13 @@ class TestTelegramReactionReminderPlugin(unittest.TestCase):
 
         asyncio.run(
             plugin._on_reaction_tool_called(
-                "send_telegram_reaction", 0, "success", None, {}, None, False
+                tool_name="send_telegram_reaction",
+                tool_index=0,
+                status="success",
+                message=None,
+                toolcall_arguments={},
+                with_secret=None,
+                is_tool_failed_duplicated_error=False,
             )
         )
 
@@ -531,7 +549,13 @@ class TestTelegramReactionReminderPlugin(unittest.TestCase):
 
         asyncio.run(
             plugin._on_reaction_tool_called(
-                "send_telegram_reaction", 0, "success", None, {}, None, False
+                tool_name="send_telegram_reaction",
+                tool_index=0,
+                status="success",
+                message=None,
+                toolcall_arguments={},
+                with_secret=None,
+                is_tool_failed_duplicated_error=False,
             )
         )
 
