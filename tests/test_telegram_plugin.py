@@ -6,6 +6,7 @@ from linhai.plugin.telegram import TelegramPlugin, TelegramReactionReminderPlugi
 from linhai.agent.create import TelegramContext
 from linhai.agent.state_machine import AgentStateMachine
 from linhai.telegram import TelegramMessage
+from linhai.base import UserMessage
 from linhai.tool.base import SuccessfulToolResult, FailedToolResult
 
 
@@ -568,6 +569,63 @@ class TestTelegramReactionReminderPlugin(unittest.TestCase):
 
         call_args = self.agent.message_processor.update_notification_message.call_args
         self.assertIsNotNone(call_args[0][0])
+
+    def test_reset_on_telegram_message(self):
+        """telegram用户消息通过before_add_new_message重置状态。"""
+        plugin = TelegramReactionReminderPlugin(self.registry)
+
+        asyncio.run(
+            plugin._on_reaction_tool_called(
+                tool_name="send_telegram_reaction",
+                tool_index=0,
+                status="success",
+                message=None,
+                toolcall_arguments={},
+                with_secret=None,
+                is_tool_failed_duplicated_error=False,
+            )
+        )
+
+        self.agent.message_processor.update_notification_message.reset_mock()
+
+        telegram_msg = TelegramMessage(chat_id="123", content="hello", message_id=1)
+        asyncio.run(plugin._on_before_add_new_message(telegram_msg))
+
+        tool_parsed = Mock()
+        tool_parsed.get_message.return_value.get_content.return_value = ""
+        tool_tool_calls = [{"function": {"name": "web_search"}}]
+        asyncio.run(plugin.after_message_generation(tool_parsed, tool_tool_calls))
+
+        call_args = self.agent.message_processor.update_notification_message.call_args
+        self.assertIsNotNone(call_args[0][0])
+
+    def test_no_reset_on_non_telegram_message(self):
+        """非telegram消息不应触发重置。"""
+        plugin = TelegramReactionReminderPlugin(self.registry)
+
+        asyncio.run(
+            plugin._on_reaction_tool_called(
+                tool_name="send_telegram_reaction",
+                tool_index=0,
+                status="success",
+                message=None,
+                toolcall_arguments={},
+                with_secret=None,
+                is_tool_failed_duplicated_error=False,
+            )
+        )
+
+        self.agent.message_processor.update_notification_message.reset_mock()
+
+        user_msg = UserMessage(message="hello")
+        asyncio.run(plugin._on_before_add_new_message(user_msg))
+
+        tool_parsed = Mock()
+        tool_parsed.get_message.return_value.get_content.return_value = ""
+        tool_tool_calls = [{"function": {"name": "web_search"}}]
+        asyncio.run(plugin.after_message_generation(tool_parsed, tool_tool_calls))
+
+        self.agent.message_processor.update_notification_message.assert_not_called()
 
 
 class TestTelegramMessageGetContent(unittest.TestCase):

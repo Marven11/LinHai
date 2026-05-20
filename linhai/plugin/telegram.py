@@ -393,6 +393,10 @@ class TelegramReactionReminderPlugin(Plugin):
     async def _on_new_user_message(self, _parsed_user_message):
         self._has_responded = False
 
+    async def _on_before_add_new_message(self, message: "BaseMessage") -> None:
+        if isinstance(message, TelegramMessage):
+            self._has_responded = False
+
     async def _on_reaction_tool_called(
         self,
         tool_name: str,
@@ -439,3 +443,4 @@ class TelegramReactionReminderPlugin(Plugin):
         lifecycle.after_toolcall.register(self._on_reaction_tool_called)
         lifecycle.after_message_generation.register(self.after_message_generation)
         lifecycle.after_parsed_user_message.register(self._on_new_user_message)
+        lifecycle.before_add_new_message.register(self._on_before_add_new_message)
