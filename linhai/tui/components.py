@@ -274,6 +274,7 @@ class RuntimeMessageWidget(Static):
         yield Static(
             self.content_str,
             classes=f"runtime-content runtime-content-{self.level.lower()}",
+            markup=False,
         )
 
 

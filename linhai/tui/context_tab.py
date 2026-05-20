@@ -105,23 +105,23 @@ class ContextTabWidget(Static):
                     t({"zh_CN": "普通消息", "en": "Normal Messages"}), classes="title"
                 )
                 yield Sparkline(id="msg-stats-sparkline", summary_function=max)
-                yield Static(id="msg-stats-text")
+                yield Static(id="msg-stats-text", markup=False)
                 yield Label(
                     t({"zh_CN": "置顶消息", "en": "Pinned Messages"}), classes="title"
                 )
                 yield Sparkline(id="pinned-stats-sparkline", summary_function=max)
-                yield Static(id="pinned-stats-text")
+                yield Static(id="pinned-stats-text", markup=False)
                 yield Label(
                     t({"zh_CN": "通知消息", "en": "Notification Messages"}),
                     classes="title",
                 )
-                yield Static(id="notification-stats-text")
+                yield Static(id="notification-stats-text", markup=False)
             with Collapsible(
                 title=t({"zh_CN": "通知消息列表", "en": "Notification List"}),
                 id="notification-list-collapsible",
                 collapsed=True,
             ):
-                yield Static(id="notification-list-text")
+                yield Static(id="notification-list-text", markup=False)
             with Collapsible(
                 title=t({"zh_CN": "上下文Token用量", "en": "Context Token Usage"}),
                 id="token-usage-collapsible",
@@ -137,20 +137,20 @@ class ContextTabWidget(Static):
                     classes="token-usage-label",
                 )
                 yield ProgressBar(id="pb-model-limit", show_eta=False)
-                yield Static(id="token-stats-text")
+                yield Static(id="token-stats-text", markup=False)
             with Collapsible(
                 title=t({"zh_CN": "缓存状态", "en": "Cache Status"}),
                 id="cache-status-collapsible",
                 collapsed=False,
             ):
                 yield ProgressBar(id="pb-cache-ratio", show_eta=False)
-                yield Static(id="cache-stats-text")
+                yield Static(id="cache-stats-text", markup=False)
             with Collapsible(
                 title=t({"zh_CN": "Token用量状态", "en": "Token Usage Status"}),
                 id="cumulative-token-collapsible",
                 collapsed=False,
             ):
-                yield Static(id="cumulative-token-stats-text")
+                yield Static(id="cumulative-token-stats-text", markup=False)
 
     def on_mount(self) -> None:
         self.set_interval(self.refresh_interval, self.update_display)
