@@ -48,38 +48,9 @@ class PromptFastAgentPlugin(Plugin):
         return None
 
     async def before_message_generation(self):
-        """在消息生成前更新通知，显示当前模型的工具限制。"""
         agent = self.registry.get_member_typechecked("agent", Agent)
-
-        if not agent.get_current_model().get_custom_toolcall_format():
-            agent.message_processor.update_notification_message(
-                None, source="prompt_fast_agent", sort_value=100
-            )
-            return
-
-        max_toolcall = self._get_max_toolcall_for_current_model(agent)
-
-        if max_toolcall is None:
-            # 当前模型没有工具限制，清理notification消息
-            agent.message_processor.update_notification_message(
-                None, source="prompt_fast_agent", sort_value=100
-            )
-            return
-
-        model = agent.get_current_model()
-        model_name = model.get_name()
-        # 更新notification消息，显示当前模型的工具限制
         agent.message_processor.update_notification_message(
-            RuntimeMessage(
-                t(
-                    {
-                        "zh_CN": f"你现在是{model_name}，为了避免一次性造成大量错误，runtime会在你调用超过{max_toolcall}个工具时打断你",
-                        "en": f"You are now {model_name}, runtime will interrupt after {max_toolcall} tool calls to prevent mass errors",
-                    }
-                )
-            ),
-            source="prompt_fast_agent",
-            sort_value=100,
+            None, source="prompt_fast_agent", sort_value=100
         )
 
     async def after_token_generation(
