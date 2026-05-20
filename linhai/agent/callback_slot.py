@@ -1,23 +1,24 @@
-from typing import Generic, TypeVar, Callable, Awaitable
+from typing import Generic, TypeVar, Callable
 
+CallbackT = TypeVar("CallbackT", bound=Callable)
 R = TypeVar("R")
 
 
-class CallbackSlot(Generic[R]):
+class CallbackSlot(Generic[CallbackT]):
     def __init__(self) -> None:
-        self._callbacks: list[Callable[..., Awaitable[R]]] = []
+        self._callbacks: list[CallbackT] = []
 
-    def register(self, callback: Callable[..., Awaitable[R]]) -> None:
+    def register(self, callback: CallbackT) -> None:
         self._callbacks.append(callback)
 
 
-class BroadcastSlot(CallbackSlot[None]):
+class BroadcastSlot(CallbackSlot[CallbackT], Generic[CallbackT]):
     async def trigger(self, *args, **kwargs) -> None:
         for callback in self._callbacks:
             await callback(*args, **kwargs)
 
 
-class ShortCircuitSlot(CallbackSlot[R]):
+class ShortCircuitSlot(CallbackSlot[CallbackT], Generic[CallbackT, R]):
     async def trigger(self, *args, **kwargs) -> R | None:
         for callback in self._callbacks:
             result = await callback(*args, **kwargs)
@@ -26,7 +27,7 @@ class ShortCircuitSlot(CallbackSlot[R]):
         return None
 
 
-class InterruptSlot(CallbackSlot[bool]):
+class InterruptSlot(CallbackSlot[CallbackT], Generic[CallbackT]):
     async def trigger(self, *args, **kwargs) -> bool:
         for callback in self._callbacks:
             if await callback(*args, **kwargs):
@@ -34,7 +35,7 @@ class InterruptSlot(CallbackSlot[bool]):
         return False
 
 
-class AfterToolcallSlot(CallbackSlot):
+class AfterToolcallSlot(CallbackSlot[CallbackT], Generic[CallbackT]):
     async def trigger(self, *args, **kwargs):
         from linhai.agent.lifecycle import AfterToolcallResult
 
@@ -52,7 +53,7 @@ class AfterToolcallSlot(CallbackSlot):
         return AfterToolcallResult(replacement=replacement, warnings=warnings)
 
 
-class ChainSlot(CallbackSlot[R]):
+class ChainSlot(CallbackSlot[CallbackT], Generic[CallbackT, R]):
     def __init__(
         self,
         *,
