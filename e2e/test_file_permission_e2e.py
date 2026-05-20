@@ -15,6 +15,7 @@ from linhai.task_supervisor import PlainTaskSupervisor
 from linhai.tool.mcp_connector import MCPConnector
 from linhai.tool.main import ToolManager
 from linhai.plugin import FileOperationPermissionPlugin
+from linhai.machine_control import MachineControl
 
 from conftest import retry_llm_call, slim_system_message
 
@@ -87,9 +88,8 @@ def _create_test_agent_with_file_permission(
     )
     tool_manager.register_lifecycle()
 
-    FileOperationPermissionPlugin(registry, Path.cwd(), tool_config).register(
-        agent.lifecycle
-    )
+    MachineControl(registry, Path(tmpdir), tool_config)
+    FileOperationPermissionPlugin(registry, tool_config).register(agent.lifecycle)
 
     registry.register_queue("parsed_agent_answer")
     registry.register_member("task_supervisor", PlainTaskSupervisor())

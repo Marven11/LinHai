@@ -1,5 +1,5 @@
 import unittest
-from unittest.mock import MagicMock, AsyncMock, patch
+from unittest.mock import MagicMock
 from pathlib import Path
 import tempfile
 import shutil
@@ -22,38 +22,38 @@ class TestFileOperationPermissionPlugin(unittest.IsolatedAsyncioTestCase):
         self.tool_config = MagicMock(spec=ToolConfig)
         self.tool_config.file_operation_rules = []
         self.tool_config.file_operation_default_rule = "ALLOW"
-        self.plugin = FileOperationPermissionPlugin(
-            self.registry, self.pwd, self.tool_config
-        )
+
+    def _make_plugin(self, tool_config=None):
+        config = tool_config or self.tool_config
+        plugin = FileOperationPermissionPlugin(self.registry, config)
+        plugin._get_pwd = lambda: self.pwd
+        plugin._is_master_host = lambda: True
+        return plugin
 
     def tearDown(self):
         if hasattr(self, "temp_dir") and Path(self.temp_dir).exists():
             shutil.rmtree(self.temp_dir)
 
     def test_init(self):
-        self.assertEqual(self.plugin.registry, self.registry)
-        self.assertEqual(self.plugin.pwd, self.pwd)
-        self.assertEqual(self.plugin.rules, self.tool_config.file_operation_rules)
+        plugin = self._make_plugin()
+        self.assertEqual(plugin.registry, self.registry)
+        self.assertEqual(plugin.rules, self.tool_config.file_operation_rules)
         self.assertEqual(
-            self.plugin.default_rule, self.tool_config.file_operation_default_rule
+            plugin.default_rule, self.tool_config.file_operation_default_rule
         )
 
     async def test_check_permission_allow_read(self):
         rule = FileOperationRule(operation="READ", pattern="**/*.txt", action="ALLOW")
         self.tool_config.file_operation_rules = [rule]
-        self.plugin = FileOperationPermissionPlugin(
-            self.registry, self.pwd, self.tool_config
-        )
-        result = self.plugin.check_permission("read", str(self.test_file))
+        plugin = self._make_plugin()
+        result = plugin.check_permission("read", str(self.test_file))
         self.assertTrue(result)
 
     async def test_check_permission_block_write(self):
         rule = FileOperationRule(operation="WRITE", pattern="**/*.txt", action="BLOCK")
         self.tool_config.file_operation_rules = [rule]
-        self.plugin = FileOperationPermissionPlugin(
-            self.registry, self.pwd, self.tool_config
-        )
-        result = self.plugin.check_permission("write", str(self.test_file))
+        plugin = self._make_plugin()
+        result = plugin.check_permission("write", str(self.test_file))
         self.assertFalse(result)
 
     async def test_check_permission_read_write_operation(self):
@@ -61,47 +61,37 @@ class TestFileOperationPermissionPlugin(unittest.IsolatedAsyncioTestCase):
             operation="READ_WRITE", pattern="**/*.txt", action="BLOCK"
         )
         self.tool_config.file_operation_rules = [rule]
-        self.plugin = FileOperationPermissionPlugin(
-            self.registry, self.pwd, self.tool_config
-        )
-        self.assertFalse(self.plugin.check_permission("read", str(self.test_file)))
-        self.assertFalse(self.plugin.check_permission("write", str(self.test_file)))
+        plugin = self._make_plugin()
+        self.assertFalse(plugin.check_permission("read", str(self.test_file)))
+        self.assertFalse(plugin.check_permission("write", str(self.test_file)))
 
     async def test_check_permission_with_relative_path(self):
         rule = FileOperationRule(operation="READ", pattern="**/*.txt", action="ALLOW")
         self.tool_config.file_operation_rules = [rule]
-        self.plugin = FileOperationPermissionPlugin(
-            self.registry, self.pwd, self.tool_config
-        )
+        plugin = self._make_plugin()
         relative_path = self.test_file.relative_to(self.pwd)
-        result = self.plugin.check_permission("read", str(relative_path))
+        result = plugin.check_permission("read", str(relative_path))
         self.assertTrue(result)
 
     async def test_check_permission_default_rule_allow(self):
         self.tool_config.file_operation_rules = []
         self.tool_config.file_operation_default_rule = "ALLOW"
-        self.plugin = FileOperationPermissionPlugin(
-            self.registry, self.pwd, self.tool_config
-        )
-        result = self.plugin.check_permission("read", str(self.test_file))
+        plugin = self._make_plugin()
+        result = plugin.check_permission("read", str(self.test_file))
         self.assertTrue(result)
 
     async def test_check_permission_default_rule_block(self):
         self.tool_config.file_operation_rules = []
         self.tool_config.file_operation_default_rule = "BLOCK"
-        self.plugin = FileOperationPermissionPlugin(
-            self.registry, self.pwd, self.tool_config
-        )
-        result = self.plugin.check_permission("read", str(self.test_file))
+        plugin = self._make_plugin()
+        result = plugin.check_permission("read", str(self.test_file))
         self.assertFalse(result)
 
     async def test_before_tool_call_read_file_allowed(self):
         rule = FileOperationRule(operation="READ", pattern="**/*.txt", action="ALLOW")
         self.tool_config.file_operation_rules = [rule]
-        self.plugin = FileOperationPermissionPlugin(
-            self.registry, self.pwd, self.tool_config
-        )
-        result = await self.plugin.before_tool_call(
+        plugin = self._make_plugin()
+        result = await plugin.before_tool_call(
             tool_name="read_file",
             toolcall_arguments={"filepath": str(self.test_file)},
             with_secret={"in_arguments": [], "in_result": []},
@@ -111,10 +101,8 @@ class TestFileOperationPermissionPlugin(unittest.IsolatedAsyncioTestCase):
     async def test_before_tool_call_write_file_blocked(self):
         rule = FileOperationRule(operation="WRITE", pattern="**/*.txt", action="BLOCK")
         self.tool_config.file_operation_rules = [rule]
-        self.plugin = FileOperationPermissionPlugin(
-            self.registry, self.pwd, self.tool_config
-        )
-        result = await self.plugin.before_tool_call(
+        plugin = self._make_plugin()
+        result = await plugin.before_tool_call(
             tool_name="write_file",
             toolcall_arguments={
                 "filepath": str(self.test_file),
@@ -129,10 +117,8 @@ class TestFileOperationPermissionPlugin(unittest.IsolatedAsyncioTestCase):
     async def test_before_tool_call_unsupported_tool(self):
         rule = FileOperationRule(operation="READ", pattern="**/*.txt", action="ALLOW")
         self.tool_config.file_operation_rules = [rule]
-        self.plugin = FileOperationPermissionPlugin(
-            self.registry, self.pwd, self.tool_config
-        )
-        result = await self.plugin.before_tool_call(
+        plugin = self._make_plugin()
+        result = await plugin.before_tool_call(
             tool_name="unsupported_tool",
             toolcall_arguments={},
             with_secret={"in_arguments": [], "in_result": []},
@@ -145,11 +131,9 @@ class TestFileOperationPermissionPlugin(unittest.IsolatedAsyncioTestCase):
         )
         self.tool_config.file_operation_rules = [rule]
         self.tool_config.file_operation_default_rule = "ALLOW"
-        self.plugin = FileOperationPermissionPlugin(
-            self.registry, self.pwd, self.tool_config
-        )
-        self.assertFalse(self.plugin.check_permission("read", "/tmp/fobidden/test.txt"))
-        self.assertTrue(self.plugin.check_permission("read", "/tmp/other/test.txt"))
+        plugin = self._make_plugin()
+        self.assertFalse(plugin.check_permission("read", "/tmp/fobidden/test.txt"))
+        self.assertTrue(plugin.check_permission("read", "/tmp/other/test.txt"))
 
     async def test_check_permission_absolute_path_allow_only(self):
         rule = FileOperationRule(
@@ -157,11 +141,9 @@ class TestFileOperationPermissionPlugin(unittest.IsolatedAsyncioTestCase):
         )
         self.tool_config.file_operation_rules = [rule]
         self.tool_config.file_operation_default_rule = "BLOCK"
-        self.plugin = FileOperationPermissionPlugin(
-            self.registry, self.pwd, self.tool_config
-        )
-        self.assertTrue(self.plugin.check_permission("read", "/tmp/allowed/test.txt"))
-        self.assertFalse(self.plugin.check_permission("read", "/tmp/other/test.txt"))
+        plugin = self._make_plugin()
+        self.assertTrue(plugin.check_permission("read", "/tmp/allowed/test.txt"))
+        self.assertFalse(plugin.check_permission("read", "/tmp/other/test.txt"))
 
     async def test_check_permission_absolute_path_write_block(self):
         rule = FileOperationRule(
@@ -169,13 +151,21 @@ class TestFileOperationPermissionPlugin(unittest.IsolatedAsyncioTestCase):
         )
         self.tool_config.file_operation_rules = [rule]
         self.tool_config.file_operation_default_rule = "ALLOW"
-        self.plugin = FileOperationPermissionPlugin(
-            self.registry, self.pwd, self.tool_config
+        plugin = self._make_plugin()
+        self.assertFalse(plugin.check_permission("write", "/tmp/readonly/test.txt"))
+        self.assertTrue(plugin.check_permission("read", "/tmp/readonly/test.txt"))
+
+    async def test_before_tool_call_skip_non_master_host(self):
+        rule = FileOperationRule(operation="READ", pattern="**/*.txt", action="BLOCK")
+        self.tool_config.file_operation_rules = [rule]
+        plugin = self._make_plugin()
+        plugin._is_master_host = lambda: False
+        result = await plugin.before_tool_call(
+            tool_name="read_file",
+            toolcall_arguments={"filepath": str(self.test_file)},
+            with_secret={"in_arguments": [], "in_result": []},
         )
-        self.assertFalse(
-            self.plugin.check_permission("write", "/tmp/readonly/test.txt")
-        )
-        self.assertTrue(self.plugin.check_permission("read", "/tmp/readonly/test.txt"))
+        self.assertIsNone(result)
 
 
 if __name__ == "__main__":

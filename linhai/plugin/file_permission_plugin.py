@@ -7,24 +7,41 @@ from pathlib import Path
 from typing import Any
 
 from linhai.agent.lifecycle import Lifecycle
-from linhai.config import ToolConfig, FileOperationRule
+from linhai.config import ToolConfig
 from linhai.tool.base import FailedToolResult
 from linhai.registry import Registry
 
 
 class FileOperationPermissionPlugin:
-    def __init__(self, registry: Registry, pwd: Path, tool_config: ToolConfig):
+    def __init__(self, registry: Registry, tool_config: ToolConfig):
         self.registry = registry
-        self.pwd = pwd
         self.rules = tool_config.file_operation_rules
         self.default_rule = tool_config.file_operation_default_rule
 
+    def _get_pwd(self) -> Path:
+        from linhai.machine_control import MachineControl, MasterHostControl
+
+        mc = self.registry.get_member_typechecked("machine_control", MachineControl)
+        master = mc.machines["master_host"]
+        if isinstance(master, MasterHostControl):
+            return master.resolve_path(".")
+        return Path.cwd()
+
+    def _is_master_host(self) -> bool:
+        from linhai.machine_control import MachineControl
+
+        if not self.registry.has_member("machine_control"):
+            return False
+        mc = self.registry.get_member_typechecked("machine_control", MachineControl)
+        return mc.target_machine == "master_host"
+
     def check_permission(self, operation: str, filepath: str) -> bool:
+        pwd = self._get_pwd()
         path = Path(filepath)
         if filepath.startswith("~"):
             path = path.expanduser()
         elif not path.is_absolute():
-            path = self.pwd / path
+            path = pwd / path
         abs_path = path.resolve()
 
         for rule in self.rules:
@@ -48,9 +65,9 @@ class FileOperationPermissionPlugin:
                 if fnmatch.fnmatch(str(abs_path), pattern):
                     return rule.action == "ALLOW"
             else:
-                if not abs_path.is_relative_to(self.pwd):
+                if not abs_path.is_relative_to(pwd):
                     continue
-                rel_path = abs_path.relative_to(self.pwd)
+                rel_path = abs_path.relative_to(pwd)
                 if rel_path.match(str(pattern)):
                     return rule.action == "ALLOW"
 
@@ -62,6 +79,9 @@ class FileOperationPermissionPlugin:
         toolcall_arguments: dict[str, Any],
         with_secret: WithSecret | None,
     ) -> FailedToolResult | None:
+        if not self._is_master_host():
+            return None
+
         file_operations = {
             "read_file": "read",
             "write_file": "write",
