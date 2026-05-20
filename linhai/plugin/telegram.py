@@ -390,12 +390,9 @@ class TelegramReactionReminderPlugin(Plugin):
         super().__init__(registry)
         self._has_responded = False
 
-    async def _on_new_user_message(self, _parsed_user_message):
-        self._has_responded = False
-
-    async def _on_before_add_new_message(self, message: "BaseMessage") -> None:
-        if isinstance(message, TelegramMessage):
-            self._has_responded = False
+    async def _on_segment_finished(self, _parsed_answer, segment: Segment):
+        if segment["segment_type"] == "normal" and segment["content"].strip():
+            self._has_responded = True
 
     async def _on_reaction_tool_called(
         self,
@@ -409,38 +406,30 @@ class TelegramReactionReminderPlugin(Plugin):
     ) -> None:
         _ = (
             tool_index,
+            status,
             message,
             toolcall_arguments,
             with_secret,
             is_tool_failed_duplicated_error,
         )
-        if tool_name == "send_telegram_reaction" and status == "success":
+        if tool_name == "send_telegram_reaction":
             self._has_responded = True
-            agent = self.registry.get_member_typechecked("agent", Agent)
-            agent.message_processor.update_notification_message(
-                None, source=self.NOTIFICATION_SOURCE, sort_value=500
-            )
 
-    async def after_message_generation(self, parsed_answer, tool_calls):
-        full_response = parsed_answer.get_message().get_content() or ""
+    async def _before_message_generation(self):
         agent = self.registry.get_member_typechecked("agent", Agent)
-
-        has_text_content = bool(full_response.strip())
-
-        if has_text_content:
-            self._has_responded = True
+        if self._has_responded:
             agent.message_processor.update_notification_message(
                 None, source=self.NOTIFICATION_SOURCE, sort_value=500
             )
-        elif tool_calls and not self._has_responded:
+        else:
             agent.message_processor.update_notification_message(
                 RuntimeMessage(self.REMINDER_MESSAGE),
                 source=self.NOTIFICATION_SOURCE,
                 sort_value=500,
             )
+        self._has_responded = False
 
     def register(self, lifecycle: "Lifecycle") -> None:
         lifecycle.after_toolcall.register(self._on_reaction_tool_called)
-        lifecycle.after_message_generation.register(self.after_message_generation)
-        lifecycle.after_parsed_user_message.register(self._on_new_user_message)
-        lifecycle.before_add_new_message.register(self._on_before_add_new_message)
+        lifecycle.after_segment_finished.register(self._on_segment_finished)
+        lifecycle.before_message_generation.register(self._before_message_generation)

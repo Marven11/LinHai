@@ -6,7 +6,6 @@ from linhai.plugin.telegram import TelegramPlugin, TelegramReactionReminderPlugi
 from linhai.agent.create import TelegramContext
 from linhai.agent.state_machine import AgentStateMachine
 from linhai.telegram import TelegramMessage
-from linhai.base import UserMessage
 from linhai.tool.base import SuccessfulToolResult, FailedToolResult
 
 
@@ -412,58 +411,69 @@ class TestTelegramReactionReminderPlugin(unittest.TestCase):
 
         self.registry.get_member_typechecked = Mock(side_effect=get_member)
 
-    def test_reminder_added_when_no_text_content(self):
-        """agent只调工具不说话时添加提醒通知。"""
+    def test_reminder_added_when_not_responded(self):
+        """has_responded为False时添加提醒通知。"""
         plugin = TelegramReactionReminderPlugin(self.registry)
-        parsed_answer = Mock()
-        parsed_answer.get_message.return_value.get_content.return_value = ""
-        tool_calls = [Mock()]
 
-        asyncio.run(plugin.after_message_generation(parsed_answer, tool_calls))
+        asyncio.run(plugin._before_message_generation())
 
         self.agent.message_processor.update_notification_message.assert_called_once()
         call_args = self.agent.message_processor.update_notification_message.call_args
         self.assertEqual(call_args[1]["source"], "telegram_reaction_reminder")
         self.assertIsNotNone(call_args[0][0])
 
-    def test_reminder_removed_when_has_text_content(self):
-        """agent有文本内容时移除通知。"""
+    def test_reminder_cleared_when_has_responded(self):
+        """has_responded为True时清空通知并重置。"""
         plugin = TelegramReactionReminderPlugin(self.registry)
-        parsed_answer = Mock()
-        parsed_answer.get_message.return_value.get_content.return_value = "hello"
-        tool_calls = [Mock()]
+        plugin._has_responded = True
 
-        asyncio.run(plugin.after_message_generation(parsed_answer, tool_calls))
-
-        self.agent.message_processor.update_notification_message.assert_called_once()
-        call_args = self.agent.message_processor.update_notification_message.call_args
-        self.assertIsNone(call_args[0][0])
-
-    def test_no_action_when_no_tool_calls_and_no_text(self):
-        """既无工具调用也无文本时不做操作。"""
-        plugin = TelegramReactionReminderPlugin(self.registry)
-        parsed_answer = Mock()
-        parsed_answer.get_message.return_value.get_content.return_value = ""
-        tool_calls = []
-
-        asyncio.run(plugin.after_message_generation(parsed_answer, tool_calls))
-
-        self.agent.message_processor.update_notification_message.assert_not_called()
-
-    def test_reminder_removed_when_text_with_tool_calls(self):
-        """agent同时有文本和工具调用时移除通知。"""
-        plugin = TelegramReactionReminderPlugin(self.registry)
-        parsed_answer = Mock()
-        parsed_answer.get_message.return_value.get_content.return_value = "let me check"
-        tool_calls = [Mock()]
-
-        asyncio.run(plugin.after_message_generation(parsed_answer, tool_calls))
+        asyncio.run(plugin._before_message_generation())
 
         call_args = self.agent.message_processor.update_notification_message.call_args
         self.assertIsNone(call_args[0][0])
 
-    def test_reminder_removed_when_called_reaction_tool(self):
-        """agent调用了send_telegram_reaction工具时通过after_toolcall移除通知。"""
+    def test_before_message_generation_resets_has_responded(self):
+        """before_message_generation执行后重置has_responded为False。"""
+        plugin = TelegramReactionReminderPlugin(self.registry)
+        plugin._has_responded = True
+
+        asyncio.run(plugin._before_message_generation())
+
+        self.assertFalse(plugin._has_responded)
+
+    def test_segment_finished_sets_responded(self):
+        """非空normal segment结束时设置has_responded。"""
+        plugin = TelegramReactionReminderPlugin(self.registry)
+        segment = {"segment_type": "normal", "content": "hello", "is_finished": True}
+
+        asyncio.run(plugin._on_segment_finished(None, segment))
+
+        self.assertTrue(plugin._has_responded)
+
+    def test_segment_finished_empty_not_set(self):
+        """空normal segment不设置has_responded。"""
+        plugin = TelegramReactionReminderPlugin(self.registry)
+        segment = {"segment_type": "normal", "content": "   ", "is_finished": True}
+
+        asyncio.run(plugin._on_segment_finished(None, segment))
+
+        self.assertFalse(plugin._has_responded)
+
+    def test_segment_finished_reasoning_not_set(self):
+        """reasoning segment不设置has_responded。"""
+        plugin = TelegramReactionReminderPlugin(self.registry)
+        segment = {
+            "segment_type": "reasoning",
+            "content": "thinking",
+            "is_finished": True,
+        }
+
+        asyncio.run(plugin._on_segment_finished(None, segment))
+
+        self.assertFalse(plugin._has_responded)
+
+    def test_reaction_tool_sets_responded(self):
+        """send_telegram_reaction工具调用设置has_responded，不更新通知。"""
         plugin = TelegramReactionReminderPlugin(self.registry)
 
         asyncio.run(
@@ -478,12 +488,29 @@ class TestTelegramReactionReminderPlugin(unittest.TestCase):
             )
         )
 
-        self.agent.message_processor.update_notification_message.assert_called_once()
-        call_args = self.agent.message_processor.update_notification_message.call_args
-        self.assertIsNone(call_args[0][0])
+        self.assertTrue(plugin._has_responded)
+        self.agent.message_processor.update_notification_message.assert_not_called()
 
-    def test_reminder_not_removed_by_other_tool_call(self):
-        """其他工具调用不应清除提醒。"""
+    def test_reaction_tool_failed_also_sets_responded(self):
+        """send_telegram_reaction失败也设置has_responded。"""
+        plugin = TelegramReactionReminderPlugin(self.registry)
+
+        asyncio.run(
+            plugin._on_reaction_tool_called(
+                tool_name="send_telegram_reaction",
+                tool_index=0,
+                status="failed",
+                message=None,
+                toolcall_arguments={},
+                with_secret=None,
+                is_tool_failed_duplicated_error=False,
+            )
+        )
+
+        self.assertTrue(plugin._has_responded)
+
+    def test_other_tool_does_not_set_responded(self):
+        """其他工具调用不设置has_responded。"""
         plugin = TelegramReactionReminderPlugin(self.registry)
 
         asyncio.run(
@@ -498,11 +525,24 @@ class TestTelegramReactionReminderPlugin(unittest.TestCase):
             )
         )
 
+        self.assertFalse(plugin._has_responded)
         self.agent.message_processor.update_notification_message.assert_not_called()
+
+    def test_full_cycle_segment_then_clear(self):
+        """segment设置has_responded后，before_message_generation清空通知并重置。"""
+        plugin = TelegramReactionReminderPlugin(self.registry)
+
+        segment = {"segment_type": "normal", "content": "hello", "is_finished": True}
+        asyncio.run(plugin._on_segment_finished(None, segment))
+
+        asyncio.run(plugin._before_message_generation())
+
+        call_args = self.agent.message_processor.update_notification_message.call_args
+        self.assertIsNone(call_args[0][0])
         self.assertFalse(plugin._has_responded)
 
-    def test_no_reminder_after_reaction_in_previous_turn(self):
-        """agent在上一turn已reaction后，下一turn只调工具不应再提醒。"""
+    def test_full_cycle_reaction_then_clear(self):
+        """reaction设置has_responded后，before_message_generation清空通知并重置。"""
         plugin = TelegramReactionReminderPlugin(self.registry)
 
         asyncio.run(
@@ -517,115 +557,11 @@ class TestTelegramReactionReminderPlugin(unittest.TestCase):
             )
         )
 
-        self.agent.message_processor.update_notification_message.reset_mock()
-
-        tool_parsed = Mock()
-        tool_parsed.get_message.return_value.get_content.return_value = ""
-        tool_tool_calls = [{"function": {"name": "web_search"}}]
-        asyncio.run(plugin.after_message_generation(tool_parsed, tool_tool_calls))
-
-        self.agent.message_processor.update_notification_message.assert_not_called()
-
-    def test_no_reminder_after_text_in_previous_turn(self):
-        """agent在上一turn有文本后，下一turn只调工具不应再提醒。"""
-        plugin = TelegramReactionReminderPlugin(self.registry)
-
-        text_parsed = Mock()
-        text_parsed.get_message.return_value.get_content.return_value = "hello"
-        text_tool_calls = [{"function": {"name": "some_tool"}}]
-        asyncio.run(plugin.after_message_generation(text_parsed, text_tool_calls))
-
-        self.agent.message_processor.update_notification_message.reset_mock()
-
-        tool_parsed = Mock()
-        tool_parsed.get_message.return_value.get_content.return_value = ""
-        tool_tool_calls = [{"function": {"name": "web_search"}}]
-        asyncio.run(plugin.after_message_generation(tool_parsed, tool_tool_calls))
-
-        self.agent.message_processor.update_notification_message.assert_not_called()
-
-    def test_reminder_reset_on_new_user_message(self):
-        """新用户消息到达后重置状态，允许再次提醒。"""
-        plugin = TelegramReactionReminderPlugin(self.registry)
-
-        asyncio.run(
-            plugin._on_reaction_tool_called(
-                tool_name="send_telegram_reaction",
-                tool_index=0,
-                status="success",
-                message=None,
-                toolcall_arguments={},
-                with_secret=None,
-                is_tool_failed_duplicated_error=False,
-            )
-        )
-
-        asyncio.run(plugin._on_new_user_message(None))
-
-        tool_parsed = Mock()
-        tool_parsed.get_message.return_value.get_content.return_value = ""
-        tool_tool_calls = [{"function": {"name": "web_search"}}]
-        asyncio.run(plugin.after_message_generation(tool_parsed, tool_tool_calls))
+        asyncio.run(plugin._before_message_generation())
 
         call_args = self.agent.message_processor.update_notification_message.call_args
-        self.assertIsNotNone(call_args[0][0])
-
-    def test_reset_on_telegram_message(self):
-        """telegram用户消息通过before_add_new_message重置状态。"""
-        plugin = TelegramReactionReminderPlugin(self.registry)
-
-        asyncio.run(
-            plugin._on_reaction_tool_called(
-                tool_name="send_telegram_reaction",
-                tool_index=0,
-                status="success",
-                message=None,
-                toolcall_arguments={},
-                with_secret=None,
-                is_tool_failed_duplicated_error=False,
-            )
-        )
-
-        self.agent.message_processor.update_notification_message.reset_mock()
-
-        telegram_msg = TelegramMessage(chat_id="123", content="hello", message_id=1)
-        asyncio.run(plugin._on_before_add_new_message(telegram_msg))
-
-        tool_parsed = Mock()
-        tool_parsed.get_message.return_value.get_content.return_value = ""
-        tool_tool_calls = [{"function": {"name": "web_search"}}]
-        asyncio.run(plugin.after_message_generation(tool_parsed, tool_tool_calls))
-
-        call_args = self.agent.message_processor.update_notification_message.call_args
-        self.assertIsNotNone(call_args[0][0])
-
-    def test_no_reset_on_non_telegram_message(self):
-        """非telegram消息不应触发重置。"""
-        plugin = TelegramReactionReminderPlugin(self.registry)
-
-        asyncio.run(
-            plugin._on_reaction_tool_called(
-                tool_name="send_telegram_reaction",
-                tool_index=0,
-                status="success",
-                message=None,
-                toolcall_arguments={},
-                with_secret=None,
-                is_tool_failed_duplicated_error=False,
-            )
-        )
-
-        self.agent.message_processor.update_notification_message.reset_mock()
-
-        user_msg = UserMessage(message="hello")
-        asyncio.run(plugin._on_before_add_new_message(user_msg))
-
-        tool_parsed = Mock()
-        tool_parsed.get_message.return_value.get_content.return_value = ""
-        tool_tool_calls = [{"function": {"name": "web_search"}}]
-        asyncio.run(plugin.after_message_generation(tool_parsed, tool_tool_calls))
-
-        self.agent.message_processor.update_notification_message.assert_not_called()
+        self.assertIsNone(call_args[0][0])
+        self.assertFalse(plugin._has_responded)
 
 
 class TestTelegramMessageGetContent(unittest.TestCase):
