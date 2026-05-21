@@ -93,8 +93,8 @@ class TestFileReadWriteConflictPlugin(unittest.IsolatedAsyncioTestCase):
         self.assertIsNotNone(result)
         self.assertIn("警告", result.replacement.message)
         self.assertIn(str(self.test_file), result.replacement.message)
-        # 应该调用了send_if_exists发送UI日志
-        self.registry.send_if_exists.assert_called_once()
+        self.assertEqual(len(result.user_notices), 1)
+        self.assertIn(str(self.test_file), result.user_notices[0])
 
     async def test_read_then_write_different_file_should_not_warn(self):
         """测试读取文件后写入不同文件不应触发警告"""

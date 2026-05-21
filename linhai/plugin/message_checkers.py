@@ -802,7 +802,8 @@ class HackerNewsPlugin(Plugin):
                 RuntimeMessage(
                     f"hacker news使用大量嵌套table元素组织内容，导致生成的markdown过长，建议直接读取html: {html_path}"
                 )
-            ]
+            ],
+            user_notices=["检测到hacker news页面，已提醒agent读取HTML"],
         )
 
     def register(self, lifecycle: "Lifecycle") -> None:

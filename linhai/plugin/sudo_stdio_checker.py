@@ -9,7 +9,6 @@ from linhai.agent.lifecycle import AfterToolcallResult, Lifecycle
 from linhai.registry import Registry
 from linhai.tool.base import FailedToolResult, SuccessfulToolResult
 from linhai.plugin import Plugin
-from linhai.utils.common import UiNotice
 
 if TYPE_CHECKING:
     from linhai.agent.main import Agent as linhai_agent
@@ -98,18 +97,12 @@ class SudoStdioCheckerPlugin(Plugin):
                 return None
 
         self._last_warning_time = time.time()
-        await self.registry.send_if_exists(
-            "ui_log",
-            UiNotice(
-                level="INFO",
-                content="Agent使用了bash -c运行命令，已提醒agent避免使用",
-            ),
-        )
         return AfterToolcallResult(
             warnings=[
                 RuntimeMessage(
                     "警告：检测到你使用了bash -c运行一长串命令，这会导致命令难以被用户理解、审查和解析。"
                     "如果方便的话请避免自发使用bash -c，直接调用process_create工具并传入参数列表会更好喵~"
                 )
-            ]
+            ],
+            user_notices=["Agent使用了bash -c运行命令，已提醒agent避免使用"],
         )

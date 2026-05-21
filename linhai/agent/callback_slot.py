@@ -41,6 +41,7 @@ class AfterToolcallSlot(CallbackSlot[CallbackT], Generic[CallbackT]):
 
         replacement = None
         warnings = []
+        user_notices = []
         for callback in self._callbacks:
             result = await callback(*args, **kwargs)
             if result is None:
@@ -48,9 +49,12 @@ class AfterToolcallSlot(CallbackSlot[CallbackT], Generic[CallbackT]):
             if result.replacement is not None and replacement is None:
                 replacement = result.replacement
             warnings.extend(result.warnings)
-        if replacement is None and not warnings:
+            user_notices.extend(result.user_notices)
+        if replacement is None and not warnings and not user_notices:
             return None
-        return AfterToolcallResult(replacement=replacement, warnings=warnings)
+        return AfterToolcallResult(
+            replacement=replacement, warnings=warnings, user_notices=user_notices
+        )
 
 
 class ChainSlot(CallbackSlot[CallbackT], Generic[CallbackT, R]):

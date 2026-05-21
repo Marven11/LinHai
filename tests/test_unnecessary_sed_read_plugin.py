@@ -501,7 +501,7 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
 
         self.assertIsInstance(result2, AfterToolcallResult)
         self.assertIn("错误：你已经读取过文件", result2.replacement.message)
-        self.registry.send_if_exists.assert_called_once()
+        self.assertEqual(result2.user_notices, ["模型第二次重复读取相同文件，已阻止"])
 
     @patch("pathlib.Path")
     @patch("builtins.open", new_callable=mock_open, read_data=b"line1\nline2\nline3\n")
@@ -743,7 +743,7 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
         self.assertIsNotNone(result2)
         self.assertIsInstance(result2, AfterToolcallResult)
         self.assertIn("错误：你已经读取过文件", result2.replacement.message)
-        self.registry.send_if_exists.assert_called_once()
+        self.assertEqual(result2.user_notices, ["模型第二次重复读取相同文件，已阻止"])
 
     @patch("pathlib.Path")
     @patch("builtins.open", new_callable=mock_open, read_data=b"line1\nline2\nline3\n")
@@ -956,7 +956,7 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
         self.assertIsNotNone(result2)
         self.assertIsInstance(result2, AfterToolcallResult)
         self.assertIn("错误：你已经读取过文件", result2.replacement.message)
-        self.registry.send_if_exists.assert_called_once()
+        self.assertEqual(result2.user_notices, ["模型第二次重复读取相同文件，已阻止"])
 
     def test_duplicate_file_read_plugin_returns_none_on_failed_tool_call(self):
 

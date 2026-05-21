@@ -34,6 +34,7 @@ if TYPE_CHECKING:
 class AfterToolcallResult:
     replacement: Message | None = None
     warnings: list["RuntimeMessage"] = field(default_factory=list)
+    user_notices: list[str] = field(default_factory=list)
 
 
 BeforeMessageGenerationCallback: TypeAlias = Callable[[], Awaitable[None]]

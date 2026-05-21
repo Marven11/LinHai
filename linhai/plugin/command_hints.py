@@ -45,7 +45,10 @@ class SudoBashHintPlugin(Plugin):
                 return None
 
         self._last_hint_time = time.time()
-        return AfterToolcallResult(warnings=[RuntimeMessage(hint)])
+        return AfterToolcallResult(
+            warnings=[RuntimeMessage(hint)],
+            user_notices=["Agent使用sudo/su/adb/python -c运行命令，已提醒"],
+        )
 
     @staticmethod
     def _build_hint(argv: list) -> str | None:
@@ -277,7 +280,10 @@ class StdioCommandCheckerPlugin(Plugin):
                     "请使用connect_posix_shell_as_machine工具将该shell进程连接为机器，"
                     "然后直接使用read_file、write_file、replace_file_content等工具操作文件。"
                 )
-            ]
+            ],
+            user_notices=[
+                "Agent通过stdio发送shell命令，已提醒使用connect_posix_shell_as_machine"
+            ],
         )
 
 

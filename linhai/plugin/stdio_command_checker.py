@@ -180,7 +180,10 @@ class StdioCommandCheckerPlugin(Plugin):
                     "请使用connect_posix_shell_as_machine工具将该shell进程连接为机器，"
                     "然后直接使用read_file、write_file、replace_file_content等工具操作文件。"
                 )
-            ]
+            ],
+            user_notices=[
+                "Agent通过stdio发送shell命令，已提醒使用connect_posix_shell_as_machine"
+            ],
         )
 
 

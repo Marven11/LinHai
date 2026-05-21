@@ -23,6 +23,7 @@ from linhai.tool.main import ToolManager
 from linhai.type_hints import OpenAiToolCall, OpenAiToolCallResult
 from linhai.utils.tokenizer import count_tokens, get_cl100k_base_tokenizer
 from linhai.utils.i18n import t
+from linhai.utils.common import UiNotice
 
 from .lifecycle import Lifecycle
 from .message import AgentMessage
@@ -223,6 +224,15 @@ class AgentToolcall:
             f"当前轮次token总数已达限制（已使用{current_round_token_count} tokens，当前工具{token_count} tokens超过限制）。工具输出已保存到文件: {filepath}"
         )
 
+    async def _process_callback_result(self, callback_result):
+        if callback_result is None:
+            return
+        self._pending_warnings.extend(callback_result.warnings)
+        for notice_text in callback_result.user_notices:
+            await self.registry.send_if_exists(
+                "ui_log", UiNotice(level="INFO", content=notice_text)
+            )
+
     async def flush_warnings(self):
         if not self._pending_warnings:
             return
@@ -331,7 +341,7 @@ class AgentToolcall:
                     )
                 else:
                     replaced_tool_result = callback_result.replacement
-            self._pending_warnings.extend(callback_result.warnings)
+        await self._process_callback_result(callback_result)
 
         return replaced_tool_result
 
@@ -355,8 +365,7 @@ class AgentToolcall:
                 with_secret=tool_call.with_secret,
                 is_tool_failed_duplicated_error=False,
             )
-            if callback_result is not None:
-                self._pending_warnings.extend(callback_result.warnings)
+            await self._process_callback_result(callback_result)
             msg = f"工具调用失败: {beforecbs_result.content}"
             message_processor = self.registry.get_member_typechecked(
                 "agent_message", AgentMessage
@@ -388,8 +397,7 @@ class AgentToolcall:
                     with_secret=tool_call.with_secret,
                     is_tool_failed_duplicated_error=False,
                 )
-                if callback_result is not None:
-                    self._pending_warnings.extend(callback_result.warnings)
+                await self._process_callback_result(callback_result)
 
                 await message_processor.add_new_message(tool_result)
                 return tool_call.assert_success
@@ -413,8 +421,7 @@ class AgentToolcall:
                 with_secret=tool_call.with_secret,
                 is_tool_failed_duplicated_error=False,
             )
-            if callback_result is not None:
-                self._pending_warnings.extend(callback_result.warnings)
+            await self._process_callback_result(callback_result)
 
             await message_processor.add_new_message(msg)
             return False
@@ -526,8 +533,7 @@ class AgentToolcall:
                 with_secret=tool_call.with_secret,
                 is_tool_failed_duplicated_error=False,
             )
-            if callback_result is not None:
-                self._pending_warnings.extend(callback_result.warnings)
+            await self._process_callback_result(callback_result)
             await message_processor.add_openai_tool_result(result_msg, tool_call_id)
             return True
         elif isinstance(beforecbs_result, dict):
@@ -569,12 +575,11 @@ class AgentToolcall:
             with_secret=tool_call.with_secret,
             is_tool_failed_duplicated_error=False,
         )
-        if callback_result is not None:
-            self._pending_warnings.extend(callback_result.warnings)
-            if callback_result.replacement is not None:
-                replaced_content = callback_result.replacement.get_content()
-                if replaced_content is not None:
-                    result_content = replaced_content
+        await self._process_callback_result(callback_result)
+        if callback_result is not None and callback_result.replacement is not None:
+            replaced_content = callback_result.replacement.get_content()
+            if replaced_content is not None:
+                result_content = replaced_content
 
         result_msg = OpenAiToolResultMessage(
             tool_call_id=tool_call_id,

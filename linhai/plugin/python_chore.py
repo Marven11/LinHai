@@ -129,5 +129,6 @@ class PythonCommentCheckerPlugin:
         return AfterToolcallResult(
             warnings=[
                 RuntimeMessage(f"你添加了注释{comment_list}? 有注释相关的要求吗？")
-            ]
+            ],
+            user_notices=["Agent添加了注释，已提醒确认"],
         )

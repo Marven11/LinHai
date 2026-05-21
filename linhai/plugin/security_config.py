@@ -9,7 +9,6 @@ from typing import TYPE_CHECKING, Literal, Union
 from linhai.agent.lifecycle import AfterToolcallResult, Lifecycle
 from linhai.agent.messages import RuntimeMessage
 from linhai.registry import Registry
-from linhai.utils.common import UiNotice
 from linhai.utils.i18n import t
 from linhai.tool.base import SuccessfulToolResult, FailedToolResult
 from linhai.base import Message
@@ -48,17 +47,14 @@ class WithSecretParameterPositionPlugin(Plugin):
         if "with_secret" not in toolcall_arguments:
             return None
 
-        await self.registry.send_if_exists(
-            "ui_log",
-            UiNotice(level="WARNING", content="检测到with_secret参数位置错误"),
-        )
         return AfterToolcallResult(
             warnings=[
                 RuntimeMessage(
                     "错误：with_secret参数应该在工具调用的顶层，与name、arguments平级，而不是在arguments内部！\n"
                     '正确格式：{"name": "tool_name", "with_secret": {"in_arguments": [...], "in_result": [...]}, "arguments": {...}}'
                 )
-            ]
+            ],
+            user_notices=["检测到with_secret参数位置错误"],
         )
 
     def register(self, lifecycle: "Lifecycle"):
@@ -100,7 +96,8 @@ class MissingWithSecretWarningPlugin(Plugin):
                     "1. 如果确实需要使用secret，请将`with_secret`字段添加到工具调用的顶层（与name、arguments平级）\n"
                     "2. 如果只是想写入包含`<$$>`的文本内容，可以忽略此警告"
                 )
-            ]
+            ],
+            user_notices=["检测到未使用with_secret但包含secret占位符，已提醒agent"],
         )
 
     def register(self, lifecycle: "Lifecycle"):
@@ -263,6 +260,9 @@ class ProcessArgvCheckerPlugin(Plugin):
                 + repr(warnings_list)
                 + "注意：这些操作符在直接执行进程时可能不会被解释，但如果执行shell可能会被解释。请确认参数安全性。"
             )
-            return AfterToolcallResult(warnings=[RuntimeMessage(warning_msg)])
+            return AfterToolcallResult(
+                warnings=[RuntimeMessage(warning_msg)],
+                user_notices=["检测到argv参数包含bash操作符，已提醒agent"],
+            )
 
         return None
