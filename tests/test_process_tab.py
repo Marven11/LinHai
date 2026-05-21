@@ -591,6 +591,118 @@ class TestProcessTabI18n(unittest.TestCase):
             "Should use i18n for 'No processes created yet.' string",
         )
 
+    def test_machine_id_with_markup_chars_no_crash(self):
+        registry, lifecycle = _make_registry()
+        app = _make_app(registry)
+
+        async def _run():
+            async with app.run_test() as pilot:
+                process_tab = pilot.app.query_one(ProcessTabWidget)
+
+                proc = _FakeProcess("802")
+                info = ProcessCreateInfo(
+                    process=proc,
+                    argv=["echo", "test"],
+                    machine_id="host-[bold]text[/bold]",
+                    initial_returncode=None,
+                )
+                await lifecycle.after_process_create.trigger(info)
+                await pilot.pause()
+
+                rows = process_tab.query(ProcessRowWidget)
+                self.assertEqual(len(rows), 1)
+
+                machine_static = rows[0].query_one(".machine", Static)
+                rendered = str(machine_static.render())
+                self.assertIn("[bold]", rendered)
+
+        asyncio.run(_run())
+
+    def test_status_update_with_markup_chars(self):
+        registry, lifecycle = _make_registry()
+        app = _make_app(registry)
+
+        async def _run():
+            async with app.run_test() as pilot:
+                process_tab = pilot.app.query_one(ProcessTabWidget)
+
+                proc = _FakeProcess("803")
+                info = ProcessCreateInfo(
+                    process=proc,
+                    argv=["echo", "test"],
+                    machine_id="master_host",
+                    initial_returncode=None,
+                )
+                await lifecycle.after_process_create.trigger(info)
+                await pilot.pause()
+
+                rows = process_tab.query(ProcessRowWidget)
+                row = rows[0]
+                row.update_status(1)
+
+                status_static = row.query_one(".status", Static)
+                rendered = str(status_static.render())
+                self.assertIn("1", rendered)
+
+        asyncio.run(_run())
+
+
+class TestRuntimeMessageWidgetMarkupEscaping(unittest.TestCase):
+    def setUp(self):
+        from unittest.mock import patch
+
+        self.locale_patch = patch(
+            "linhai.utils.i18n.locale.getlocale", return_value=("en_US", "UTF-8")
+        )
+        self.locale_patch.start()
+        super().setUp()
+
+    def tearDown(self):
+        self.locale_patch.stop()
+        super().tearDown()
+
+    def test_content_with_square_brackets_no_crash(self):
+        from linhai.tui.components import RuntimeMessageWidget
+
+        registry, _ = _make_registry()
+        app = _make_app(registry)
+
+        async def _run():
+            async with app.run_test() as pilot:
+                widget = RuntimeMessageWidget(
+                    "error",
+                    "Command '['ssh' '-o' 'StrictHostKeyChecking=no']' returned non-zero exit status 1.",
+                )
+                await pilot.app.mount(widget)
+                await pilot.pause()
+
+                content_static = widget.query_one(".runtime-content", Static)
+                rendered = str(content_static.render())
+                self.assertIn("StrictHostKeyChecking", rendered)
+
+        asyncio.run(_run())
+
+    def test_content_with_markup_tags_no_crash(self):
+        from linhai.tui.components import RuntimeMessageWidget
+
+        registry, _ = _make_registry()
+        app = _make_app(registry)
+
+        async def _run():
+            async with app.run_test() as pilot:
+                widget = RuntimeMessageWidget(
+                    "warning",
+                    "[bold]dangerous[/bold] [link]url[/link]",
+                )
+                await pilot.app.mount(widget)
+                await pilot.pause()
+
+                content_static = widget.query_one(".runtime-content", Static)
+                rendered = str(content_static.render())
+                self.assertIn("[bold]", rendered)
+
+        asyncio.run(_run())
+
 
 class TestProcessIOError(unittest.TestCase):
     def test_process_io_error_is_dataclass(self):

@@ -67,12 +67,14 @@ class ProcessRowWidget(Horizontal):
     def compose(self) -> ComposeResult:
         cmd = shlex.join(self._info.argv)
         yield Static(cmd, classes="argv", markup=False)
-        yield Static(self._info.machine_id, classes="machine")
+        yield Static(self._info.machine_id, classes="machine", markup=False)
         created_str = datetime.fromtimestamp(self._info.created_at).strftime("%H:%M:%S")
-        yield Static(created_str, classes="time")
+        yield Static(created_str, classes="time", markup=False)
         if self._returncode is None:
             yield Static(
-                t({"en": "Running", "zh_CN": "运行中"}), classes="status status-running"
+                t({"en": "Running", "zh_CN": "运行中"}),
+                classes="status status-running",
+                markup=False,
             )
             yield Button(
                 t({"en": "Kill", "zh_CN": "终止"}), variant="error", classes="kill-btn"
@@ -81,8 +83,9 @@ class ProcessRowWidget(Horizontal):
             yield Static(
                 t({"en": "Exit {}", "zh_CN": "退出 {}"}).format(self._returncode),
                 classes="status status-exited",
+                markup=False,
             )
-            yield Static("", classes="kill-btn")
+            yield Static("", classes="kill-btn", markup=False)
 
     async def on_button_pressed(self, event: Button.Pressed) -> None:
         if "kill-btn" in event.button.classes:
@@ -133,6 +136,7 @@ class ProcessTabWidget(Static):
             yield Static(
                 t({"en": "No processes created yet.", "zh_CN": "尚未创建进程。"}),
                 id="process-empty",
+                markup=False,
             )
 
     def on_mount(self) -> None:

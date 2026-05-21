@@ -270,10 +270,12 @@ class RuntimeMessageWidget(Static):
         yield Static(
             f"\\[{self.level[0]}] ",
             classes=f"runtime-level runtime-level-{self.level.lower()}",
+            markup=False,
         )
         yield Static(
             self.content_str,
             classes=f"runtime-content runtime-content-{self.level.lower()}",
+            markup=False,
         )
 
 
