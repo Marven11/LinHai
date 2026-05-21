@@ -128,8 +128,8 @@ class ThresholdInfo(TypedDict):
 class WithSecret(TypedDict):
     """with_secret参数的TypedDict，分别控制参数替换和结果掩码。"""
 
-    in_arguments: list[str]
-    in_result: list[str]
+    in_arguments: NotRequired[list[str]]
+    in_result: NotRequired[list[str]]
 
 
 class ToolCallDict(TypedDict):
