@@ -427,7 +427,6 @@ class TelegramReactionReminderPlugin(Plugin):
                 source=self.NOTIFICATION_SOURCE,
                 sort_value=500,
             )
-        self._has_responded = False
 
     def register(self, lifecycle: "Lifecycle") -> None:
         lifecycle.after_toolcall.register(self._on_reaction_tool_called)
