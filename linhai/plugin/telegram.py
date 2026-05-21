@@ -428,7 +428,12 @@ class TelegramReactionReminderPlugin(Plugin):
                 sort_value=500,
             )
 
+    async def _on_before_add_new_message(self, message: "BaseMessage") -> None:
+        if isinstance(message, TelegramMessage):
+            self._has_responded = False
+
     def register(self, lifecycle: "Lifecycle") -> None:
         lifecycle.after_toolcall.register(self._on_reaction_tool_called)
         lifecycle.after_segment_finished.register(self._on_segment_finished)
         lifecycle.before_message_generation.register(self._before_message_generation)
+        lifecycle.before_add_new_message.register(self._on_before_add_new_message)

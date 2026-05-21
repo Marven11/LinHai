@@ -432,14 +432,14 @@ class TestTelegramReactionReminderPlugin(unittest.TestCase):
         call_args = self.agent.message_processor.update_notification_message.call_args
         self.assertIsNone(call_args[0][0])
 
-    def test_before_message_generation_resets_has_responded(self):
-        """before_message_generation执行后重置has_responded为False。"""
+    def test_before_message_generation_keeps_has_responded(self):
+        """before_message_generation不重置has_responded。"""
         plugin = TelegramReactionReminderPlugin(self.registry)
         plugin._has_responded = True
 
         asyncio.run(plugin._before_message_generation())
 
-        self.assertFalse(plugin._has_responded)
+        self.assertTrue(plugin._has_responded)
 
     def test_segment_finished_sets_responded(self):
         """非空normal segment结束时设置has_responded。"""
@@ -529,7 +529,7 @@ class TestTelegramReactionReminderPlugin(unittest.TestCase):
         self.agent.message_processor.update_notification_message.assert_not_called()
 
     def test_full_cycle_segment_then_clear(self):
-        """segment设置has_responded后，before_message_generation清空通知并重置。"""
+        """segment设置has_responded后，before_message_generation清空通知。"""
         plugin = TelegramReactionReminderPlugin(self.registry)
 
         segment = {"segment_type": "normal", "content": "hello", "is_finished": True}
@@ -539,10 +539,10 @@ class TestTelegramReactionReminderPlugin(unittest.TestCase):
 
         call_args = self.agent.message_processor.update_notification_message.call_args
         self.assertIsNone(call_args[0][0])
-        self.assertFalse(plugin._has_responded)
+        self.assertTrue(plugin._has_responded)
 
     def test_full_cycle_reaction_then_clear(self):
-        """reaction设置has_responded后，before_message_generation清空通知并重置。"""
+        """reaction设置has_responded后，before_message_generation清空通知。"""
         plugin = TelegramReactionReminderPlugin(self.registry)
 
         asyncio.run(
@@ -561,7 +561,41 @@ class TestTelegramReactionReminderPlugin(unittest.TestCase):
 
         call_args = self.agent.message_processor.update_notification_message.call_args
         self.assertIsNone(call_args[0][0])
+        self.assertTrue(plugin._has_responded)
+
+    def test_telegram_message_resets_has_responded(self):
+        """TelegramMessage插入时重置has_responded为False。"""
+        plugin = TelegramReactionReminderPlugin(self.registry)
+        plugin._has_responded = True
+
+        msg = TelegramMessage(chat_id="123", content="hello", message_id=1)
+        asyncio.run(plugin._on_before_add_new_message(msg))
+
         self.assertFalse(plugin._has_responded)
+
+    def test_non_telegram_message_does_not_reset(self):
+        """非TelegramMessage不会重置has_responded。"""
+        plugin = TelegramReactionReminderPlugin(self.registry)
+        plugin._has_responded = True
+
+        from linhai.agent.messages import RuntimeMessage
+
+        msg = RuntimeMessage("some runtime message")
+        asyncio.run(plugin._on_before_add_new_message(msg))
+
+        self.assertTrue(plugin._has_responded)
+
+    def test_telegram_message_then_reminder_shows(self):
+        """TelegramMessage重置后，before_message_generation显示提醒。"""
+        plugin = TelegramReactionReminderPlugin(self.registry)
+        plugin._has_responded = True
+
+        msg = TelegramMessage(chat_id="123", content="hello", message_id=1)
+        asyncio.run(plugin._on_before_add_new_message(msg))
+        asyncio.run(plugin._before_message_generation())
+
+        call_args = self.agent.message_processor.update_notification_message.call_args
+        self.assertIsNotNone(call_args[0][0])
 
 
 class TestTelegramMessageGetContent(unittest.TestCase):
