@@ -204,6 +204,16 @@ class TestPromptI18n(unittest.TestCase):
         self.assertIn("{todolist_file}", PLANNING_MODE_PROMPT)
         self.assertIn("{design_file}", PLANNING_MODE_PROMPT)
 
+    def test_ssh_example_contains_askpass(self):
+        from linhai.prompt import EXAMPLE_MULTIHOP_MACHINES
+
+        self.assertIn("SSH_ASKPASS", EXAMPLE_MULTIHOP_MACHINES)
+        self.assertIn("SSH_ASKPASS_REQUIRE", EXAMPLE_MULTIHOP_MACHINES)
+        self.assertIn("LINHAI_ASKPASS_PASSWORD", EXAMPLE_MULTIHOP_MACHINES)
+        self.assertIn("askpass", EXAMPLE_MULTIHOP_MACHINES)
+        self.assertIn("process_create", EXAMPLE_MULTIHOP_MACHINES)
+        self.assertIn("connect_posix_shell_as_machine", EXAMPLE_MULTIHOP_MACHINES)
+
     def test_format_placeholders_in_compress_range(self):
         from linhai.prompt import COMPRESS_RANGE_PROMPT
 

@@ -735,95 +735,95 @@ EXAMPLE_MULTIHOP_MACHINES = t(
         "zh_CN": """
 使用`process_create`连接到远程ssh主机，然后通过`connect_posix_shell_as_machine`将其添加为新机器
 
-注意：process_create以非pty模式启动进程。启动ssh后bash不会自动输出任何内容，建议指定命令为`bash -i`以获取交互提示符，或在启动后输入`whoami`测试连接是否成功
+注意：process_create以非pty模式启动进程，SSH密码认证需要TTY，因此需要使用askpass脚本来提供密码
+
+首先创建askpass脚本，该脚本从环境变量中读取密码并输出：
 
 ```json toolcall
-{"name": "process_create", "arguments": {"argv": ["ssh", "user@host", "bash", "-i"]}}
+{"name": "process_create", "arguments": {"argv": ["bash", "-c", "echo '#!/usr/bin/env bash\necho \"$LINHAI_ASKPASS_PASSWORD\"' > /tmp/linhai_askpass.sh && chmod +x /tmp/linhai_askpass.sh"]}}
 ```
 
-```json toolcall
-{"name": "switch_machine", "arguments": {"machine_id": "ssh_hop1"}}
-```
-
-如果成功的话应该可以切换到ssh_hop1上，直接在ssh_hop1上创建`sudo -S bash`以输入密码
-
-```json toolcall
-{"name": "process_create", "arguments": {"argv": ["sudo", "-S", "bash"]}}
-```
-
-现在等待`sudo -S bash`启动
-
----
-
-`sudo -S bash`应该已经启动了，输入密码然后连接为机器
+然后使用askpass方式启动SSH。设置环境变量SSH_ASKPASS指向脚本、SSH_ASKPASS_REQUIRE=force强制使用askpass、DISPLAY=:0，并通过LINHAI_ASKPASS_PASSWORD传递密码：
 
 ```json toolcall
 {
-  "name": "process_stdio_write",
+  "name": "process_create",
   "with_secret": {"in_arguments": ["EXAMPLECOM_FOOBAR_PASSWORD"], "in_result": ["EXAMPLECOM_FOOBAR_PASSWORD"]},
-  "arguments": {"pid": "1145141919", "content": "<$EXAMPLECOM_FOOBAR_PASSWORD$>"}
+  "arguments": {
+    "argv": ["ssh", "-o", "StrictHostKeyChecking=no", "-o", "UserKnownHostsFile=/dev/null", "user@host", "bash", "-i"],
+    "env": {
+      "SSH_ASKPASS": "/tmp/linhai_askpass.sh",
+      "SSH_ASKPASS_REQUIRE": "force",
+      "DISPLAY": ":0",
+      "LINHAI_ASKPASS_PASSWORD": "<$EXAMPLECOM_FOOBAR_PASSWORD$>"
+    }
+  }
 }
 ```
 
-确认一下密码是否成功输入，然后直接连接为机器并切换
+启动后输入`whoami`验证是否成功登录：
 
 ```json toolcall
-{"name": "process_stdio_read", "arguments": {"pid": "1145141919", "timeout": 1}}
+{"name": "process_stdio_write", "arguments": {"pid": "1145141919", "content": "whoami", "with_enter": true}}
 ```
 
-```json toolcall
-{"name": "connect_posix_shell_as_machine", "arguments": {"machine_id": "ssh_bash_hop2", "pid": "1145141919", "source_machine": "ssh_hop1"}}
-```
+确认登录成功后，使用`connect_posix_shell_as_machine`将SSH进程注册为可控制的机器：
 
 ```json toolcall
-{"name": "switch_machine", "arguments": {"machine_id": "ssh_bash_hop2"}}
+{"name": "connect_posix_shell_as_machine", "arguments": {"machine_id": "ssh_hop1", "pid": "1145141919"}}
+```
+
+然后切换到该机器操作：
+
+```json toolcall
+{"name": "switch_machine", "arguments": {"machine_id": "ssh_hop1"}}
 ```
 """,
         "en": """
 Use `process_create` to connect to a remote ssh host, then add it as a new machine via `connect_posix_shell_as_machine`
 
-Note: process_create starts processes in non-pty mode. After starting ssh, bash won't output anything automatically. Specify command as `bash -i` to get an interactive prompt, or input `whoami` after starting to test connection success.
+Note: process_create starts processes in non-pty mode. SSH password authentication requires a TTY, so you need to use an askpass script to provide the password.
+
+First create the askpass script, which reads the password from an environment variable and outputs it:
 
 ```json toolcall
-{"name": "process_create", "arguments": {"argv": ["ssh", "user@host", "bash", "-i"]}}
+{"name": "process_create", "arguments": {"argv": ["bash", "-c", "echo '#!/usr/bin/env bash\necho \"$LINHAI_ASKPASS_PASSWORD\"' > /tmp/linhai_askpass.sh && chmod +x /tmp/linhai_askpass.sh"]}}
 ```
 
-```json toolcall
-{"name": "switch_machine", "arguments": {"machine_id": "ssh_hop1"}}
-```
-
-If successful, you should be able to switch to ssh_hop1. Create `sudo -S bash` directly on ssh_hop1 to enter the password.
-
-```json toolcall
-{"name": "process_create", "arguments": {"argv": ["sudo", "-S", "bash"]}}
-```
-
-Now wait for `sudo -S bash` to start.
-
----
-
-`sudo -S bash` should have started. Enter the password and connect as a machine.
+Then start SSH using the askpass method. Set environment variables: SSH_ASKPASS pointing to the script, SSH_ASKPASS_REQUIRE=force to force askpass usage, DISPLAY=:0, and pass the password via LINHAI_ASKPASS_PASSWORD:
 
 ```json toolcall
 {
-  "name": "process_stdio_write",
+  "name": "process_create",
   "with_secret": {"in_arguments": ["EXAMPLECOM_FOOBAR_PASSWORD"], "in_result": ["EXAMPLECOM_FOOBAR_PASSWORD"]},
-  "arguments": {"pid": "1145141919", "content": "<$EXAMPLECOM_FOOBAR_PASSWORD$>"}
+  "arguments": {
+    "argv": ["ssh", "-o", "StrictHostKeyChecking=no", "-o", "UserKnownHostsFile=/dev/null", "user@host", "bash", "-i"],
+    "env": {
+      "SSH_ASKPASS": "/tmp/linhai_askpass.sh",
+      "SSH_ASKPASS_REQUIRE": "force",
+      "DISPLAY": ":0",
+      "LINHAI_ASKPASS_PASSWORD": "<$EXAMPLECOM_FOOBAR_PASSWORD$>"
+    }
+  }
 }
 ```
 
-Confirm if the password was entered successfully, then connect as a machine and switch.
+After starting, input `whoami` to verify successful login:
 
 ```json toolcall
-{"name": "process_stdio_read", "arguments": {"pid": "1145141919", "timeout": 1}}
+{"name": "process_stdio_write", "arguments": {"pid": "1145141919", "content": "whoami", "with_enter": true}}
 ```
 
-```json toolcall
-{"name": "connect_posix_shell_as_machine", "arguments": {"machine_id": "ssh_bash_hop2", "pid": "1145141919", "source_machine": "ssh_hop1"}}
-```
+After confirming successful login, use `connect_posix_shell_as_machine` to register the SSH process as a controllable machine:
 
 ```json toolcall
-{"name": "switch_machine", "arguments": {"machine_id": "ssh_bash_hop2"}}
+{"name": "connect_posix_shell_as_machine", "arguments": {"machine_id": "ssh_hop1", "pid": "1145141919"}}
+```
+
+Then switch to that machine:
+
+```json toolcall
+{"name": "switch_machine", "arguments": {"machine_id": "ssh_hop1"}}
 ```
 """,
     }
