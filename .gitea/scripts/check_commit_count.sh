@@ -18,7 +18,7 @@ fi
 commit_count=$(git log --oneline origin/main..HEAD | wc -l)
 
 # Get the number of files changed (excluding deleted files)
-file_count=$(git diff --name-only --diff-filter=ACMR origin/main..HEAD | wc -l)
+file_count=$(git diff --name-only --diff-filter=ACMRD origin/main..HEAD | wc -l)
 
 echo "Number of commits: $commit_count"
 echo "Number of files changed: $file_count"
