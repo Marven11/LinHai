@@ -160,22 +160,29 @@ def extract_tool_calls_with_errors(
                             f"实际类型: {type(ws).__name__}"
                         )
                         continue
-                    if "in_arguments" not in ws or "in_result" not in ws:
+                    if "in_arguments" not in ws and "in_result" not in ws:
                         errors.append(
-                            f"工具调用解析出错：第{i+1}个code block中的'with_secret'缺少'in_arguments'或'in_result'字段"
+                            f"工具调用解析出错：第{i+1}个code block中的'with_secret'至少需要'in_arguments'或'in_result'字段之一"
                         )
                         continue
-                    if not isinstance(ws["in_arguments"], list) or not isinstance(
-                        ws["in_result"], list
+                    if "in_arguments" in ws and not isinstance(
+                        ws["in_arguments"], list
                     ):
                         errors.append(
-                            f"工具调用解析出错：第{i+1}个code block中的'with_secret'的'in_arguments'和'in_result'必须是列表"
+                            f"工具调用解析出错：第{i+1}个code block中的'with_secret'的'in_arguments'必须是列表"
                         )
                         continue
-                    tc["with_secret"] = {
-                        "in_arguments": ws["in_arguments"],
-                        "in_result": ws["in_result"],
-                    }
+                    if "in_result" in ws and not isinstance(ws["in_result"], list):
+                        errors.append(
+                            f"工具调用解析出错：第{i+1}个code block中的'with_secret'的'in_result'必须是列表"
+                        )
+                        continue
+                    ws_dict: WithSecret = {}
+                    if "in_arguments" in ws:
+                        ws_dict["in_arguments"] = ws["in_arguments"]
+                    if "in_result" in ws:
+                        ws_dict["in_result"] = ws["in_result"]
+                    tc["with_secret"] = ws_dict
                 tool_calls.append(tc)
             except json.JSONDecodeError as e:
                 context_str = _extract_json_error_context(e, block["content"])

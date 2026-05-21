@@ -89,8 +89,8 @@ invalid json
         self.assertIn("with_secret", errors[0])
         self.assertIn("字典", errors[0])
 
-    def test_extract_tool_calls_with_secret_missing_fields_rejected(self):
-        """Test that with_secret without in_arguments or in_result is rejected."""
+    def test_extract_tool_calls_with_secret_only_in_arguments_accepted(self):
+        """Test that with_secret with only in_arguments is accepted."""
         markdown_text = """
 ```json toolcall
 {"name": "test_tool", "arguments": {}, "with_secret": {"in_arguments": ["KEY"]}}
@@ -98,9 +98,37 @@ invalid json
 """
         tool_calls, errors = extract_tool_calls_with_errors(markdown_text)
 
+        self.assertEqual(len(errors), 0)
+        self.assertEqual(len(tool_calls), 1)
+        self.assertEqual(tool_calls[0]["with_secret"]["in_arguments"], ["KEY"])
+        self.assertNotIn("in_result", tool_calls[0]["with_secret"])
+
+    def test_extract_tool_calls_with_secret_only_in_result_accepted(self):
+        """Test that with_secret with only in_result is accepted."""
+        markdown_text = """
+```json toolcall
+{"name": "test_tool", "arguments": {}, "with_secret": {"in_result": ["KEY"]}}
+```
+"""
+        tool_calls, errors = extract_tool_calls_with_errors(markdown_text)
+
+        self.assertEqual(len(errors), 0)
+        self.assertEqual(len(tool_calls), 1)
+        self.assertEqual(tool_calls[0]["with_secret"]["in_result"], ["KEY"])
+        self.assertNotIn("in_arguments", tool_calls[0]["with_secret"])
+
+    def test_extract_tool_calls_with_secret_empty_dict_rejected(self):
+        """Test that with_secret with neither field is rejected."""
+        markdown_text = """
+```json toolcall
+{"name": "test_tool", "arguments": {}, "with_secret": {}}
+```
+"""
+        tool_calls, errors = extract_tool_calls_with_errors(markdown_text)
+
         self.assertEqual(len(tool_calls), 0)
         self.assertEqual(len(errors), 1)
-        self.assertIn("in_result", errors[0])
+        self.assertIn("至少需要", errors[0])
 
     def test_extract_tool_calls_with_secret_non_list_values_rejected(self):
         """Test that with_secret with non-list in_arguments is rejected."""
