@@ -153,6 +153,38 @@ class TestMissingWithSecretWarningPlugin(unittest.IsolatedAsyncioTestCase):
             result.warnings[0].message,
         )
 
+    async def test_no_warning_when_call_with_secret(self):
+        tool_name = "call_with_secret"
+        tool_index = 1
+        status = "success"
+        message = None
+        toolcall_arguments = {
+            "tool_name": "write_file",
+            "tool_arguments": {
+                "filepath": "config.py",
+                "content": "api_key = '<$DEEPSEEK_API_KEY$>'",
+            },
+            "with_secret": {
+                "in_arguments": ["DEEPSEEK_API_KEY"],
+                "in_result": ["DEEPSEEK_API_KEY"],
+            },
+        }
+        with_secret = None
+        is_tool_failed_duplicated_error = False
+
+        result = await self.plugin.after_toolcall(
+            tool_name,
+            tool_index,
+            status,
+            message,
+            toolcall_arguments,
+            with_secret,
+            is_tool_failed_duplicated_error,
+        )
+
+        self.assertIsNone(result)
+        self.agent.message_processor.add_new_message.assert_not_called()
+
     def test_register(self):
         lifecycle = Mock()
         self.plugin.register(lifecycle)

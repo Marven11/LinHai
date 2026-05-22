@@ -77,6 +77,9 @@ class MissingWithSecretWarningPlugin(Plugin):
         with_secret: WithSecret | None,
         is_tool_failed_duplicated_error: bool,
     ) -> AfterToolcallResult | None:
+        if tool_name == "call_with_secret":
+            return None
+
         if not toolcall_arguments:
             return None
 
