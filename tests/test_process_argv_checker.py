@@ -16,15 +16,14 @@ class TestProcessArgvCheckerPlugin(unittest.IsolatedAsyncioTestCase):
 
     def test_initialization(self):
         self.assertEqual(self.plugin.registry, self.registry)
-        self.assertTrue(hasattr(ProcessArgvCheckerPlugin, "BASH_OPERATOR_PATTERNS"))
-        self.assertIsInstance(ProcessArgvCheckerPlugin.BASH_OPERATOR_PATTERNS, list)
-        self.assertGreater(len(ProcessArgvCheckerPlugin.BASH_OPERATOR_PATTERNS), 0)
+        self.assertTrue(hasattr(ProcessArgvCheckerPlugin, "BASH_OPERATORS"))
+        self.assertIsInstance(ProcessArgvCheckerPlugin.BASH_OPERATORS, list)
+        self.assertGreater(len(ProcessArgvCheckerPlugin.BASH_OPERATORS), 0)
 
-        sample_patterns = ProcessArgvCheckerPlugin.BASH_OPERATOR_PATTERNS
-        self.assertTrue(any(p.search("&&") for p in sample_patterns))
-        self.assertTrue(any(p.search("|") for p in sample_patterns))
-        self.assertTrue(any(p.search(">") for p in sample_patterns))
-        self.assertTrue(any(p.search(";") for p in sample_patterns))
+        operators = ProcessArgvCheckerPlugin.BASH_OPERATORS
+        self.assertIn("&&", operators)
+        self.assertIn("|", operators)
+        self.assertIn(";", operators)
 
     async def test_before_tool_call_no_argv(self):
         result = await self.plugin.before_tool_call(
@@ -54,10 +53,9 @@ class TestProcessArgvCheckerPlugin(unittest.IsolatedAsyncioTestCase):
         test_cases = [
             (["echo", "test", "&&", "ls"], ["&&"]),
             (["echo", "test", "|", "grep", "hello"], ["|"]),
-            (["echo", "test", ">", "output.txt"], [">"]),
             (["ls", ";", "pwd"], [";"]),
-            (["ls", "-la", "2>&1"], ["2>&1"]),
-            (["echo", "$(pwd)"], ["$("]),
+            (["echo", "test", "||", "ls"], ["||"]),
+            (["sleep", "1", "&", "echo", "bg"], ["&"]),
         ]
 
         for argv, expected_operators in test_cases:
@@ -85,7 +83,7 @@ class TestProcessArgvCheckerPlugin(unittest.IsolatedAsyncioTestCase):
             tool_index=0,
             status="success",
             message=None,
-            toolcall_arguments={"argv": ["echo", "test", "&&", "ls", ">", "out.txt"]},
+            toolcall_arguments={"argv": ["echo", "test", "&&", "ls", "||", "pwd"]},
             with_secret=None,
             is_tool_failed_duplicated_error=False,
         )
@@ -93,7 +91,7 @@ class TestProcessArgvCheckerPlugin(unittest.IsolatedAsyncioTestCase):
         self.assertIsInstance(result, AfterToolcallResult)
         warning_text = result.warnings[0].get_content()
         self.assertIn("&&", warning_text)
-        self.assertIn(">", warning_text)
+        self.assertIn("||", warning_text)
 
     async def test_after_toolcall_no_false_positive_python_semicolon(self):
         false_positive_cases = [
@@ -134,20 +132,30 @@ class TestProcessArgvCheckerPlugin(unittest.IsolatedAsyncioTestCase):
         warning_text = result.warnings[0].get_content()
         self.assertIn(";", warning_text)
 
-    async def test_after_toolcall_no_false_positive_compound_operators(self):
-        result = await self.plugin.after_toolcall(
-            tool_name="process_create",
-            tool_index=0,
-            status="success",
-            message=None,
-            toolcall_arguments={"argv": ["echo", "a>>b"]},
-            with_secret=None,
-            is_tool_failed_duplicated_error=False,
-        )
+    async def test_after_toolcall_no_false_positive_substring_match(self):
+        false_positive_cases = [
+            [
+                "bash",
+                "-c",
+                "export TMPDIR=/tmp && cd crates/safeline2_skynet && cbindgen",
+            ],
+            ["echo", "a>>b"],
+            ["ls", "-la", "2>&1"],
+            ["echo", "$(pwd)"],
+        ]
 
-        self.assertIsInstance(result, AfterToolcallResult)
-        warning_text = result.warnings[0].get_content()
-        self.assertIn(">>", warning_text)
+        for argv in false_positive_cases:
+            with self.subTest(argv=argv):
+                result = await self.plugin.after_toolcall(
+                    tool_name="process_create",
+                    tool_index=0,
+                    status="success",
+                    message=None,
+                    toolcall_arguments={"argv": argv},
+                    with_secret=None,
+                    is_tool_failed_duplicated_error=False,
+                )
+                self.assertIsNone(result)
 
     def test_register_method(self):
         mock_lifecycle = Mock()

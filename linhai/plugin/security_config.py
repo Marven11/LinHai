@@ -184,22 +184,7 @@ class CommandWhitelistPlugin(Plugin):
 class ProcessArgvCheckerPlugin(Plugin):
     """检查process_create的argv参数是否包含bash语法操作符的插件。"""
 
-    BASH_OPERATOR_PATTERNS: list[re.Pattern[str]] = [
-        re.compile(r"\$\("),
-        re.compile(r"`"),
-        re.compile(r"\$\{"),
-        re.compile(r"2>&1"),
-        re.compile(r"&&"),
-        re.compile(r"\|\|"),
-        re.compile(r">>"),
-        re.compile(r"<<"),
-        re.compile(r"(?<!\|)\|(?!\|)"),
-        re.compile(r"(?<!&)&(?!&)"),
-        re.compile(r"(?<!>)>(?!>)"),
-        re.compile(r"(?<!<)<(?!<)"),
-        re.compile(r"(?:^|\s);(?:\s|$)"),
-        re.compile(r"\n"),
-    ]
+    BASH_OPERATORS: list[str] = ["&&", "||", "|", "&", ";"]
 
     def __init__(self, registry):
         super().__init__(registry)
@@ -253,8 +238,7 @@ class ProcessArgvCheckerPlugin(Plugin):
         warnings_list = [
             f"参数[{i}]: '{arg}' 包含可能的bash操作符"
             for i, arg in enumerate(argv)
-            if isinstance(arg, str)
-            and any(p.search(arg) for p in self.BASH_OPERATOR_PATTERNS)
+            if isinstance(arg, str) and arg in self.BASH_OPERATORS
         ]
 
         if warnings_list:
