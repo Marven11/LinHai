@@ -6,6 +6,12 @@ A Multi-Machine Control Coding/Hacking Agent running on Mac/Linux/Android.
 
 ![social-preview](./assets/social-preview.jpg)
 
+<p align="center">
+  <a href="https://pypi.org/project/linhai/"><img src="https://img.shields.io/pypi/v/linhai?style=flat&amp;colorA=222222&amp;colorB=3776AB" alt="PyPI version"></a>
+  <a href="https://pypi.org/project/linhai/"><img src="https://img.shields.io/pypi/pyversions/linhai?style=flat&amp;colorA=222222&amp;colorB=3776AB" alt="Python"></a>
+  <a href="./LICENSE"><img src="https://img.shields.io/badge/license-GPL--3.0-58A6FF?style=flat&amp;colorA=222222" alt="License"></a>
+</p>
+
 ## Demo
 
 ![[demo](https://asciinema.org/a/N6zgQTzjXTNKohXF)](./assets/demo.gif)
