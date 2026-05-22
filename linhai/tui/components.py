@@ -268,7 +268,7 @@ class RuntimeMessageWidget(Static):
     def compose(self) -> ComposeResult:
         """组合UI组件"""
         yield Static(
-            f"\\[{self.level[0]}] ",
+            f"[{self.level[0]}] ",
             classes=f"runtime-level runtime-level-{self.level.lower()}",
             markup=False,
         )

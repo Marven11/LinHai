@@ -703,6 +703,44 @@ class TestRuntimeMessageWidgetMarkupEscaping(unittest.TestCase):
 
         asyncio.run(_run())
 
+    def test_level_renders_bracket_correctly(self):
+        from linhai.tui.components import RuntimeMessageWidget
+
+        registry, _ = _make_registry()
+        app = _make_app(registry)
+
+        async def _run():
+            async with app.run_test() as pilot:
+                widget = RuntimeMessageWidget("INFO", "test")
+                await pilot.app.mount(widget)
+                await pilot.pause()
+
+                level_static = widget.query_one(".runtime-level", Static)
+                rendered = str(level_static.render())
+                self.assertIn("[I]", rendered)
+                self.assertNotIn("\\[", rendered)
+
+        asyncio.run(_run())
+
+    def test_level_renders_without_backslash_escape(self):
+        from linhai.tui.components import RuntimeMessageWidget
+
+        registry, _ = _make_registry()
+        app = _make_app(registry)
+
+        async def _run():
+            async with app.run_test() as pilot:
+                widget = RuntimeMessageWidget("WARNING", "test")
+                await pilot.app.mount(widget)
+                await pilot.pause()
+
+                level_static = widget.query_one(".runtime-level", Static)
+                rendered = str(level_static.render())
+                self.assertIn("[W]", rendered)
+                self.assertNotIn("\\[", rendered)
+
+        asyncio.run(_run())
+
 
 class TestProcessIOError(unittest.TestCase):
     def test_process_io_error_is_dataclass(self):
