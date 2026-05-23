@@ -311,7 +311,7 @@ class AgentMessage:
         Returns:
              如果是用户消息返回True，否则False
         """
-        all_messages = self.get_messages()
+        all_messages = self.pinned_messages + self.messages
         if not all_messages:
             return False
         msg = all_messages[-1]

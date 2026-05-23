@@ -210,9 +210,9 @@ class Agent:
         await self.generate_response()
 
     def is_last_message_user(self) -> bool:
-        if not self.message_processor.get_messages():
+        if not self.message_processor.messages:
             return False
-        msg = self.message_processor.get_messages()[-1]
+        msg = self.message_processor.messages[-1]
         from linhai.base import UserMessage
 
         return isinstance(msg, UserMessage)
@@ -224,7 +224,7 @@ class Agent:
         await self.message_processor.process_queued_messages()
 
         if self.message_processor.get_message_count() > 0:
-            last_msg = self.message_processor.get_messages()[-1]
+            last_msg = self.message_processor.messages[-1]
             from linhai.base import AssistantMessage
 
             if isinstance(last_msg, AssistantMessage):
