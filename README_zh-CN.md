@@ -14,59 +14,62 @@
 
 ![[demo](https://asciinema.org/a/N6zgQTzjXTNKohXF)](./assets/demo.gif)
 
-## 稳定特性
+## 任何bash进程都是一等公民。
 
-### 进程控制和远程机器连接
+SSH、sudo、docker exec、adb shell --- 连上就是本机。多跳不过是堆叠连接：SSH到服务器，在里面sudo bash，两台都是同一个会话中的一等机器。
 
-- 动态连接任何bash进程（ssh/sudo bash/docker exec/adb shell）作为机器操控，让agent像操控本机一样操控远程机器
-- 支持多跳连接机器: 支持ssh到目标机器并连接sudo bash, 并用同一套工具集（而非复杂的shell命令）操控sudo bash
-- 工具集: 比bash+run_in_background更加灵活的进程控制工具集
-  - 未退出进程自动转后台
-  - 强制输入argv，避开`&&`和pipe的过度使用
-  - 后台进程可通过stdio操控，允许使用repl
+- 动态连接任何bash进程（ssh/sudo bash/docker exec/adb shell）作为机器操控
+- 多跳连接：ssh到目标机器并连接sudo bash，用同一套工具集操控
+- 长时间运行的进程自动后台
+- 强制argv避免盲目拼接`&&`
+- 后台进程通过stdio保持可控 --- REPL直接能用
 
-### TUI
+## 看到每一个token，随时打断。
 
-- 流式输出所有token: 思考内容、对话内容、工具调用
+思考。对话。工具调用。全部实时流式输出。Agent走偏了？在生成过程中直接打断 --- 不用等一段注定要扔掉的完整回复。
+
+- 流式输出所有token：思考内容、对话内容、工具调用
 - 动态打断Agent输出
-- 完善的上下文统计信息和进程管理页面
-- 实时展示上下文长度、已消耗token量
-- 支持nerd fonts
+- 上下文统计、token消耗、进程管理各有独立面板，实时刷新
+- Nerd fonts开箱即用
 
-### 工具
+## 沙箱优先，没有审批弹窗。
 
-- YOLO in mind: 基于沙箱而非审批的授权哲学
-- 完善的软件开发/机器运维工具集: 文件读写、终端操控、进程操控
-- MCP: 完全动态化的MCP连接，Agent可以按需连接MCP服务器，避免不使用MCP时带来的Token开销和决策成本
-- 沙箱: 文件读写权限规则和进程沙箱 - **动态连接的MCP**也会在沙箱中运行
+YOLO式沙箱 --- Agent在规则内工作，而不是绕过规则。没有逐条审批拖慢你的节奏。文件读写、终端操控、进程控制：一套工具集搞定开发和运维。
 
-### 上下文
+- 基于沙箱而非审批的授权哲学
+- 文件读写权限规则和进程沙箱生效于所有操作
+- MCP按需连接、空闲断开，不使用时**零**token开销
+- 动态连接的MCP也在沙箱内运行
 
-- 上下文压缩(Context Compacting): 全自动缓存感知上下文压缩 - Agent全自动清理上下文并同时维持缓存率在90%以上
-- 上下文组织: 置顶消息+普通消息+通知消息三层结构（类Codex）
+## 上下文自己压缩自己。
 
-### 实用功能
+全自动、缓存感知的上下文压缩。Agent自己决定保留什么、压缩什么，缓存命中率保持在**90%**以上 --- 永远不会撞上上下文天花板。
 
-- Planning模式: Agent自主管理状态、待办以及设计文档，不完成所有待办不暂停（启发来自amp/oh my opencode）
-- 自动/手动切换llm: 使用`@`语法切换llm, agent调用工具切换llm, 在遇到429/api网络问题时临时切换到fallback llm
-- i18n: 中英双语
+- 全自动缓存感知上下文压缩
+- Agent全自动清理上下文并维持缓存率90%以上
+- 三层消息结构：置顶、常规、通知（灵感来自Codex）
+
+## Planning模式。LLM切换。中英双语。
+
+Planning模式：Agent自己管理状态、待办和设计文档，每一项不打勾就不停。灵感来自amp和oh-my-opencode。
+
+- Planning模式：自主管理状态、待办和设计文档
+- 用`@`语法或工具调用自动/手动切换LLM
+- 遇到429/API网络问题自动回退到备用LLM
+- 中英双语界面
 
 ## 还在糊
 
-- claw模式: Continuous Living Autonomous Worker / 类OpenClaw模式 - 心跳消息、自动更新记忆文件
-- telegram远程控制功能
-- webshell控制：只是粘上去了而已
-- 恢复会话(restore conversation): 没有测试是否可用
+CLAW模式 --- Continuous Living Autonomous Worker。心跳消息、自动更新记忆文件，Agent在会话之间保持存活。Telegram远程控制。Webshell控制。恢复会话：没测过。
 
 ## 计划中
 
-- webui
-- skills: 只是一堆markdown+总结而已
+WebUI。Skills：Agent随取随用的markdown剧本。
 
 ## 暂时搁置
 
-- MCP(over http): 我们真的需要重新发明REST吗？
-- subagent和acp: 不太重要，acp完全可以变成mcp/api
+MCP over HTTP --- 我们真的需要重新发明REST吗？Subagent和ACP --- 不太重要，ACP完全可以变成MCP/API。
 
 ## 安装启动
 

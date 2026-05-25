@@ -16,59 +16,63 @@ A Multi-Machine Control Coding/Hacking Agent running on Mac/Linux/Android.
 
 ![[demo](https://asciinema.org/a/N6zgQTzjXTNKohXF)](./assets/demo.gif)
 
-## Stable Features
+## Any bash process is a first-class machine.
 
-### Process Control and Remote Machine Connection
+SSH. Sudo. Docker exec. ADB shell. Connect any of them --- LinHai treats it like local. Multi-hop is just stacking connections: ssh to the target, sudo bash inside it, and both are first-class machines in the same session.
 
-- Dynamically connect any bash process (ssh/sudo bash/docker exec/adb shell) as a machine, allowing the agent to control remote machines as if local
-- Multi-hop machine connections: ssh to a target machine and connect sudo bash, controlling it with the same toolset (instead of complex shell commands)
-- Toolset: process control toolkit more flexible than bash+run_in_background
-  - Long-running processes automatically background
-  - Force argv input to avoid excessive `&&` and pipe usage
-  - Background processes controllable via stdio, supporting REPLs
+- Dynamically connect any bash process (ssh/sudo bash/docker exec/adb shell) as a machine
+- Multi-hop connections: chain ssh into sudo bash with the same toolset
+- Long-running processes automatically background
+- argv enforced to avoid blind `&&` chaining
+- Background processes controllable via stdio --- REPLs just work
 
-### TUI
+## See every token. Interrupt whenever you want.
 
-- Stream all tokens: thinking content, conversation content, tool calls
-- Dynamically interrupt Agent output
-- Comprehensive context statistics and process management pages
+Thinking. Conversation. Tool calls. Everything streams as it happens. When the agent goes off track, interrupt mid-generation --- no waiting for a full response you're going to throw away.
+
+- All tokens stream in real time: thinking, conversation, and tool calls
+- Dynamically interrupt agent output
+- Context stats, token costs, and process management in dedicated panels
 - Real-time display of context length and token consumption
-- Nerd fonts support
+- Nerd fonts supported
 
-### Tools
+## Sandbox-first. No approval spam.
 
-- YOLO in mind: sandbox-based authorization philosophy instead of approval
-- Comprehensive software development and machine operations toolset: file read/write, terminal control, process control
-- MCP: Fully dynamic MCP connections - Agent connects to MCP servers on demand, avoiding token overhead and decision-making costs when MCP is not in use
-- Sandbox: file read/write permission rules and process sandbox - **dynamically connected MCP** also runs within the sandbox
+YOLO-mode sandboxing --- the agent works within rules, not around them. No per-action approval dialogs slowing you down. File read/write, terminal control, process control: one toolset for development and ops.
 
-### Context
+- Sandbox-based authorization instead of per-approval
+- File read/write permission rules and process sandbox enforced
+- MCP servers connect on demand and disconnect when idle --- **zero** token overhead when not in use
+- Even dynamically connected MCP runs inside the sandbox
 
-- Context Compacting: fully automatic cache-aware context compression - Agent automatically cleans context while maintaining cache hit rate above 90%
-- Context organization: pinned messages + regular messages + notification messages (Codex-like)
+## Context that compacts itself.
 
-### Practical Features
+Fully automatic, cache-aware context compression. The agent decides what to keep and what to compact, maintaining cache hit rate above **90%** --- you never hit the context ceiling.
 
-- Planning mode: Agent autonomously manages status, todo, and design documents; does not pause until all todos are completed (inspired by amp/oh my opencode)
-- Auto/manual LLM switching: use `@` syntax to switch LLMs; Agent can switch via tool calls; temporarily switches to fallback LLM on 429/API network issues
-- i18n: bilingual Chinese and English
+- Fully automatic cache-aware context compression
+- Agent automatically cleans context while maintaining 90%+ cache hit rate
+- Three-layer message organization: pinned, regular, notification (inspired by Codex)
+
+## Planning mode. LLM switching. i18n.
+
+Planning mode: the agent manages its own status, todo, and design documents, and doesn't stop until every item is checked off. Inspired by amp and oh-my-opencode.
+
+- Planning mode: autonomous status, todo, and design document management
+- Auto/manual LLM switching via `@` syntax or tool calls
+- Automatic fallback to alternative LLM on 429/API network issues
+- Bilingual Chinese and English interface
 
 ## WIP
 
-- CLAW mode: Continuous Living Autonomous Worker / OpenClaw-like mode - heartbeat messages, automatic memory file updates
-- Telegram remote control
-- Webshell control
-- Restore conversation: untested
+CLAW mode --- Continuous Living Autonomous Worker. Heartbeat messages, automatic memory file updates, the agent stays alive between sessions. Telegram remote control. Webshell control. Restore conversation: untested.
 
 ## Planned
 
-- WebUI
-- Skills: just a bunch of markdown + summaries
+WebUI. Skills: markdown playbooks the agent can pick up on the fly.
 
 ## On Hold
 
-- MCP (over http): do we really need to reinvent REST?
-- Subagent and ACP: not important; ACP can easily become MCP/API
+MCP over HTTP --- do we really need to reinvent REST? Subagent and ACP --- not important; ACP can become MCP/API.
 
 ## Installation and Setup
 
