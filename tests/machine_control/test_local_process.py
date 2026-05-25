@@ -118,5 +118,48 @@ class TestLocalProcessPid(unittest.TestCase):
         self.assertEqual(lp.returncode, 7)
 
 
+class TestLocalProcessWaitTimeout(unittest.IsolatedAsyncioTestCase):
+    async def test_wait_timeout_returns_success_with_none_returncode(self) -> None:
+        fake = _make_mock_process(stdout_data=b"")
+        lp = LocalProcess(fake)
+        result = await lp.wait(timeout=0.1)
+        self.assertTrue(result.success)
+        self.assertIsNone(result.returncode)
+        self.assertEqual(result.stdout, "")
+        self.assertEqual(result.stderr, "")
+
+
+class TestLocalProcessE2e(unittest.IsolatedAsyncioTestCase):
+    async def test_stdio_read_after_process_exit(self) -> None:
+        proc = await asyncio.create_subprocess_exec(
+            "bash",
+            "-c",
+            "ls / && sleep 1 && exit",
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+        )
+        lp = LocalProcess(proc)
+        await asyncio.sleep(3)
+        result = await lp.stdio_read(0.1)
+        self.assertTrue(result.success)
+        stdout_text = result.stdout.decode("utf-8", errors="replace")
+        self.assertIn("bin", stdout_text)
+        self.assertIn("etc", stdout_text)
+        self.assertIsNotNone(result.exit_note)
+
+    async def test_wait_timeout_on_long_running_process(self) -> None:
+        proc = await asyncio.create_subprocess_exec(
+            "sleep",
+            "30",
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+        )
+        lp = LocalProcess(proc)
+        result = await lp.wait(timeout=0.5)
+        self.assertTrue(result.success)
+        self.assertIsNone(result.returncode)
+        await lp.kill()
+
+
 if __name__ == "__main__":
     unittest.main()

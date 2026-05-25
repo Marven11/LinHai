@@ -73,8 +73,14 @@ class RemoteProcess:
         if isinstance(result, FailedToolResult):
             return ProcessIOError(error=result.content)
         data = json.loads(result.content)
-        if data.get("timeout"):
-            return ProcessWaitResult(pid=self._pid, success=False, error="等待超时")
+        if data.get("returncode") is None:
+            return ProcessWaitResult(
+                pid=self._pid,
+                success=True,
+                returncode=None,
+                stdout="",
+                stderr="",
+            )
         return ProcessWaitResult(
             pid=self._pid,
             success=True,

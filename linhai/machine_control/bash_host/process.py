@@ -108,8 +108,10 @@ class BashProcess:
             if loop.time() >= deadline:
                 return ProcessWaitResult(
                     pid=self._pid,
-                    success=False,
-                    error="等待超时",
+                    success=True,
+                    returncode=None,
+                    stdout="",
+                    stderr="",
                 )
 
             await asyncio.sleep(0.5)

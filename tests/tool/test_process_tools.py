@@ -179,6 +179,28 @@ class TestProcessTools(unittest.IsolatedAsyncioTestCase):
         self.assertIsInstance(result, FailedToolResult)
         self.assertIn("连接已失效", result.content)
 
+    async def test_process_wait_timeout_returns_success(self):
+        from linhai.machine_control.process import ProcessWaitResult
+
+        mock_proc = AsyncMock()
+        mock_proc.wait.return_value = ProcessWaitResult(
+            pid="123",
+            success=True,
+            returncode=None,
+            stdout="",
+            stderr="",
+        )
+        mock_host = Mock()
+        mock_host.get_process.return_value = mock_proc
+        mock_mc = Mock()
+        mock_mc.machines = {"master_host": mock_host}
+        mock_mc.target_machine = "master_host"
+        toolset = register_machine_control_tools(mock_mc)
+        tool_func = toolset.get_tool("process_wait")
+        result = await tool_func(pid="123", timeout=1.0)
+        self.assertIsInstance(result, SuccessfulToolResult)
+        self.assertIn("进程仍在运行", result.content)
+
 
 if __name__ == "__main__":
     unittest.main()

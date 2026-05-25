@@ -117,8 +117,8 @@ class TestBashProcess(unittest.TestCase):
             self.host.execute_raw = AsyncMock(return_value=(0, "NONE", ""))
             proc = BashProcess(pid="123", proc_dir="/tmp/proc_1", host=self.host)
             result = await proc.wait(timeout=0.5)
-            self.assertFalse(result.success)
-            self.assertEqual(result.error, "等待超时")
+            self.assertTrue(result.success)
+            self.assertIsNone(result.returncode)
 
         self.loop.run_until_complete(test())
 

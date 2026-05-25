@@ -583,6 +583,10 @@ def register_machine_control_tools(machine_control: "MachineControl") -> ToolSet
             return FailedToolResult(content=wait_result.error)
         if not wait_result.success:
             return FailedToolResult(content=wait_result.error or "等待失败")
+        if wait_result.returncode is None:
+            return SuccessfulToolResult(
+                content=f"<<pid>>{pid}<<pid>><<message>>等待超时，进程仍在运行<<message>>"
+            )
         return SuccessfulToolResult(
             content=f"<<pid>>{pid}<<pid>><<returncode>>{wait_result.returncode}<<returncode>><<stdout>>{wait_result.stdout}<<stdout>><<stderr>>{wait_result.stderr}<<stderr>>"
         )

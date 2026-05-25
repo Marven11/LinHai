@@ -160,7 +160,11 @@ class LocalProcess:
         exited = await _wait_process_exit(self._process, timeout)
         if not exited:
             return ProcessWaitResult(
-                pid=pid, success=False, error=f"等待进程 {pid} 超时"
+                pid=pid,
+                success=True,
+                returncode=None,
+                stdout="",
+                stderr="",
             )
         if self._reader_task and not self._reader_task.done():
             await asyncio.wait({self._reader_task}, timeout=2.0)
@@ -319,7 +323,11 @@ class LocalPtyProcess:
         exited = await _wait_process_exit(self._process, timeout)
         if not exited:
             return ProcessWaitResult(
-                pid=pid, success=False, error=f"等待进程 {pid} 超时"
+                pid=pid,
+                success=True,
+                returncode=None,
+                stdout="",
+                stderr="",
             )
         if self._reader_task and not self._reader_task.done():
             await asyncio.wait({self._reader_task}, timeout=2.0)
