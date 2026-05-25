@@ -390,8 +390,8 @@ def register_machine_control_tools(machine_control: "MachineControl") -> ToolSet
             "env": ToolArgInfo(
                 desc=t(
                     {
-                        "zh_CN": "环境变量字典，默认None表示继承当前环境变量",
-                        "en": "Environment variables dict, default None to inherit current environment",
+                        "zh_CN": "环境变量字典，默认None表示继承当前环境变量。如果指定则仅覆盖指定的key，其余环境变量保持不变",
+                        "en": "Environment variables dict, default None to inherit current environment. If specified, only overrides the given keys, keeping other environment variables unchanged",
                     }
                 ),
                 type="Optional[Dict[str, str]]",

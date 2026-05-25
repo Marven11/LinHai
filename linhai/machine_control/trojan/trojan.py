@@ -168,7 +168,9 @@ class Trojan:
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
             cwd=self.current_dir,
-            env=subprocess_env,
+            env=(
+                {**os.environ, **subprocess_env} if subprocess_env is not None else None
+            ),
             start_new_session=True,
         )
         pid = str(process.pid)

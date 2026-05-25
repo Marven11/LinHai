@@ -37,7 +37,11 @@ class TestMasterHostEnvParameter(unittest.IsolatedAsyncioTestCase):
             env = {"FOO": "bar", "BAZ": "qux"}
             await self.host_control.create_process(["env"], env=env)
             mock_create.assert_called_once()
-            self.assertEqual(mock_create.call_args.kwargs.get("env"), env)
+            actual_env = mock_create.call_args.kwargs.get("env")
+            self.assertIsNotNone(actual_env)
+            self.assertEqual(actual_env["FOO"], "bar")
+            self.assertEqual(actual_env["BAZ"], "qux")
+            self.assertIn("PATH", actual_env)
 
     async def test_create_process_env_none(self):
         with patch("asyncio.create_subprocess_exec") as mock_create:
@@ -159,7 +163,10 @@ class TestTrojanEnvParameter(unittest.IsolatedAsyncioTestCase):
             env = {"MY_KEY": "MY_VAL"}
             await trojan.process_create(["env"], env=env)
             mock_create.assert_called_once()
-            self.assertEqual(mock_create.call_args.kwargs.get("env"), env)
+            actual_env = mock_create.call_args.kwargs.get("env")
+            self.assertIsNotNone(actual_env)
+            self.assertEqual(actual_env["MY_KEY"], "MY_VAL")
+            self.assertIn("PATH", actual_env)
 
     async def test_create_process_env_none(self):
         trojan = Trojan(marker_bytes=b"<linhai_pulse_aabb>")

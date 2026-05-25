@@ -110,7 +110,7 @@ class MasterHostControl:
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
                 cwd=self._cwd,
-                env=env,
+                env={**os.environ, **env} if env is not None else None,
                 start_new_session=True,
             )
             pid = str(subprocess.pid)
