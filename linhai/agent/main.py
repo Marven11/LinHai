@@ -230,6 +230,13 @@ class Agent:
             if isinstance(last_msg, AssistantMessage):
                 empty_user_msg = RuntimeMessage("继续")
                 await self.message_processor.add_new_message(empty_user_msg)
+                await self.registry.send_if_exists(
+                    "ui_log",
+                    UiNotice(
+                        level="INFO",
+                        content="最后一条消息是Assistant消息，为避免API错误添加了'继续'消息",
+                    ),
+                )
 
         _, parsed_answer, completed_normally = await self.agent_llm.call_and_wait_llm()
         if not completed_normally:
@@ -272,9 +279,6 @@ class Agent:
             await self.lifecycle.after_message_generation.trigger(
                 parsed_answer, tool_calls
             )
-
-        if self.toolcall_processor.early_return:
-            return await self.generate_response()
 
         return parsed_answer
 

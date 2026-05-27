@@ -42,9 +42,21 @@ class Plugin(ABC):
 class WaitingUserPlugin(Plugin):
     """等待用户标记检查Plugin。"""
 
+    @staticmethod
+    def _extract_assistant_content(parsed_answer) -> str:
+        message = parsed_answer.get_message()
+        if not isinstance(message, AssistantMessage):
+            raise ValueError(
+                f"Expected AssistantMessage from parsed_answer, got {type(message).__name__}"
+            )
+        content = message.get_content()
+        if content is None:
+            raise ValueError("AssistantMessage.get_content() returned None")
+        return content
+
     async def after_message_generation(self, parsed_answer, tool_calls):
         """检查等待用户标记的位置和工具调用冲突。"""
-        full_response = parsed_answer.get_message().get_content() or ""
+        full_response = self._extract_assistant_content(parsed_answer)
         agent = self.registry.get_member_typechecked("agent", Agent)
         has_waiting_marker = WAITING_USER_MARKER in full_response
 

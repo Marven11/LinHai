@@ -4,6 +4,7 @@ import asyncio
 from pathlib import Path
 from unittest.mock import Mock, AsyncMock, patch
 
+from linhai.base import AssistantMessage
 from linhai.plugin.message_checkers import WaitingUserPlugin
 from linhai.plugin.afk_plugin import AfkPlugin
 from linhai.agent.main import Agent
@@ -50,10 +51,8 @@ class TestAfkParam(unittest.TestCase):
                 plugin.after_message_generation(
                     Mock(
                         get_message=Mock(
-                            return_value=Mock(
-                                get_content=Mock(
-                                    return_value="test response without marker"
-                                )
+                            return_value=AssistantMessage(
+                                message="test response without marker"
                             )
                         )
                     ),
@@ -95,10 +94,8 @@ class TestAfkParam(unittest.TestCase):
                 plugin.after_message_generation(
                     Mock(
                         get_message=Mock(
-                            return_value=Mock(
-                                get_content=Mock(
-                                    return_value="test response without marker"
-                                )
+                            return_value=AssistantMessage(
+                                message="test response without marker"
                             )
                         )
                     ),
