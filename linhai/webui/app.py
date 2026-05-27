@@ -21,7 +21,7 @@ def create_app(api_token: str) -> FastAPI:
     app = FastAPI(
         title="LinHai WebUI API",
         description="LinHai多Agent管理接口",
-        version="0.1.0",
+        version="0.1.1",
     )
 
     app.state.api_token = token

@@ -225,7 +225,7 @@ class TUIApp(App):
             self.messages_list.mount(rainbow_art)
             agent = self.registry.get_member_typechecked("agent", Agent)
             llm_name, _llm = agent.get_current_llm_info()
-            version = "v0.1.0"
+            version = "v0.1.1"
             animated_welcome = AnimatedWelcomeWidget(
                 version, llm_name, self.get_refresh_interval
             )
