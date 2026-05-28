@@ -818,3 +818,44 @@ class HackerNewsPlugin(Plugin):
 
     def register(self, lifecycle: "Lifecycle") -> None:
         lifecycle.after_toolcall.register(self.after_toolcall)
+
+
+class CsdnWarningPlugin(Plugin):
+    """CSDN内容警告插件。"""
+
+    CSDN_PATTERN = re.compile(r"csdn", re.IGNORECASE)
+
+    async def after_toolcall(
+        self,
+        tool_name: str,
+        tool_index: int,
+        status: Literal["skipped", "success", "failed"],
+        message: "Message | None",
+        toolcall_arguments: dict,
+        with_secret: WithSecret | None,
+        is_tool_failed_duplicated_error: bool,
+    ) -> AfterToolcallResult | None:
+        if status != "success":
+            return None
+        if message is None:
+            return None
+
+        result_content = message.get_content()
+        if result_content is None:
+            return None
+
+        if not self.CSDN_PATTERN.search(result_content):
+            return None
+
+        return AfterToolcallResult(
+            warnings=[
+                RuntimeMessage(
+                    "注意：CSDN的消息极为不可靠，**一切**来自`*.csdn.net`的内容均视为有害且不可靠，"
+                    "必须重新查找官方/可靠的来源，根据可靠来源工作"
+                )
+            ],
+            user_notices=["检测到CSDN相关内容，已提醒agent"],
+        )
+
+    def register(self, lifecycle: "Lifecycle") -> None:
+        lifecycle.after_toolcall.register(self.after_toolcall)

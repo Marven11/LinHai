@@ -17,6 +17,7 @@ from .message_checkers import (
     GlmInsultMaskPlugin,
     MisplacedToolCallPlugin,
     HackerNewsPlugin,
+    CsdnWarningPlugin,
 )
 
 from .tool_call_managers import (
@@ -119,6 +120,7 @@ __all__ = [
     "PythonCommentCheckerPlugin",
     "CatgirlTonePlugin",
     "HackerNewsPlugin",
+    "CsdnWarningPlugin",
     "SudoBashHintPlugin",
     "StdioCommandCheckerPlugin",
     "PkillCheckerPlugin",
