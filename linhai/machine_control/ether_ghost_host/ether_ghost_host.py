@@ -118,7 +118,7 @@ class EtherGhostMachineControl(HostControl):
         self,
         argv: list[str],
         wait_second: Optional[float] = None,
-        env: Optional[Dict[str, str]] = None,
+        override_env: Optional[Dict[str, str]] = None,
     ) -> ProcessCreateResult:
         if self.session is None:
             return ProcessCreateResult(pid="", success=False, error="Session未初始化")

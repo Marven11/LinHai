@@ -160,17 +160,17 @@ class Trojan:
     async def ping(self):
         return {"message": "pong"}
 
-    async def process_create(self, argv, wait_second=1.0, env=None):
-        subprocess_env = env
+    async def process_create(self, argv, wait_second=1.0, override_env=None):
+        effective_env = None
+        if override_env is not None:
+            effective_env = {**os.environ, **override_env}
         process = await asyncio.create_subprocess_exec(
             *argv,
             stdin=asyncio.subprocess.PIPE,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
             cwd=self.current_dir,
-            env=(
-                {**os.environ, **subprocess_env} if subprocess_env is not None else None
-            ),
+            env=effective_env,
             start_new_session=True,
         )
         pid = str(process.pid)

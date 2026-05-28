@@ -387,7 +387,7 @@ def register_machine_control_tools(machine_control: "MachineControl") -> ToolSet
                 ),
                 type="Optional[float]",
             ),
-            "env": ToolArgInfo(
+            "override_env": ToolArgInfo(
                 desc=t(
                     {
                         "zh_CN": "环境变量字典，默认None表示继承当前环境变量。如果指定则仅覆盖指定的key，其余环境变量保持不变",
@@ -411,11 +411,13 @@ def register_machine_control_tools(machine_control: "MachineControl") -> ToolSet
     async def process_create_tool(
         argv: list[str],
         wait_second: Optional[float] = None,
-        env: Optional[Dict[str, str]] = None,
+        override_env: Optional[Dict[str, str]] = None,
         with_stdin: Optional[str] = None,
     ) -> SuccessfulToolResult | FailedToolResult:
         host_control = machine_control.machines[machine_control.target_machine]
-        result = await host_control.create_process(argv, wait_second, env=env)
+        result = await host_control.create_process(
+            argv, wait_second, override_env=override_env
+        )
         if not result.success:
             return FailedToolResult(content=result.error or "创建进程失败")
         if result.returncode is not None:

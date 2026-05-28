@@ -35,7 +35,7 @@ class HostControl(Protocol):
         self,
         argv: list[str],
         wait_second: Optional[float] = None,
-        env: Optional[Dict[str, str]] = None,
+        override_env: Optional[Dict[str, str]] = None,
     ) -> ProcessCreateResult: ...
 
     def get_process(self, pid: str) -> Process | None: ...

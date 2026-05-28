@@ -120,13 +120,13 @@ class PosixShellControl:
         self,
         argv: list[str],
         wait_second: Optional[float] = None,
-        env: Optional[Dict[str, str]] = None,
+        override_env: Optional[Dict[str, str]] = None,
     ) -> ProcessCreateResult:
         if wait_second is None:
             wait_second = 1.0
         args: Dict[str, object] = {"argv": argv, "wait_second": wait_second}
-        if env is not None:
-            args["env"] = env
+        if override_env is not None:
+            args["override_env"] = override_env
         result = await self.call_tool("process_create", args)
         if isinstance(result, FailedToolResult):
             return ProcessCreateResult(pid="", success=False, error=result.content)

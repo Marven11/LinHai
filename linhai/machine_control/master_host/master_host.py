@@ -97,20 +97,23 @@ class MasterHostControl:
         self,
         argv: list[str],
         wait_second: Optional[float] = None,
-        env: Optional[dict[str, str]] = None,
+        override_env: Optional[dict[str, str]] = None,
     ) -> ProcessCreateResult:
         try:
             sandbox = self._registry.get_member_typechecked(
                 "process_sandbox", ProcessSandboxProtocol
             )
             wrapped_argv = sandbox.wrap_argv(argv)
+            effective_env = None
+            if override_env is not None:
+                effective_env = {**os.environ, **override_env}
             subprocess = await asyncio.create_subprocess_exec(
                 *wrapped_argv,
                 stdin=asyncio.subprocess.PIPE,
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
                 cwd=self._cwd,
-                env={**os.environ, **env} if env is not None else None,
+                env=effective_env,
                 start_new_session=True,
             )
             pid = str(subprocess.pid)

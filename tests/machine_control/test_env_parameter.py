@@ -1,3 +1,4 @@
+import os
 import unittest
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -35,13 +36,32 @@ class TestMasterHostEnvParameter(unittest.IsolatedAsyncioTestCase):
             mock_create.return_value = mock_process
 
             env = {"FOO": "bar", "BAZ": "qux"}
-            await self.host_control.create_process(["env"], env=env)
+            await self.host_control.create_process(["env"], override_env=env)
             mock_create.assert_called_once()
-            actual_env = mock_create.call_args.kwargs.get("env")
-            self.assertIsNotNone(actual_env)
-            self.assertEqual(actual_env["FOO"], "bar")
-            self.assertEqual(actual_env["BAZ"], "qux")
-            self.assertIn("PATH", actual_env)
+            effective_env = mock_create.call_args.kwargs.get("env")
+            self.assertIsNotNone(effective_env)
+            self.assertEqual(effective_env["FOO"], "bar")
+            self.assertEqual(effective_env["BAZ"], "qux")
+            self.assertIn("PATH", effective_env)
+
+    async def test_create_process_env_merges_with_os_environ(self):
+        with patch("asyncio.create_subprocess_exec") as mock_create:
+            mock_process = AsyncMock()
+            mock_process.pid = 77779
+            mock_process.returncode = 0
+            mock_process.stdout = AsyncMock()
+            mock_process.stdout.read = AsyncMock(return_value=b"")
+            mock_process.stderr = AsyncMock()
+            mock_process.stderr.read = AsyncMock(return_value=b"")
+            mock_create.return_value = mock_process
+
+            env = {"LINHAI_TEST_VAR": "test_value"}
+            await self.host_control.create_process(["env"], override_env=env)
+            effective_env = mock_create.call_args.kwargs.get("env")
+            self.assertIsNotNone(effective_env)
+            for key, value in os.environ.items():
+                self.assertEqual(effective_env.get(key), value)
+            self.assertEqual(effective_env["LINHAI_TEST_VAR"], "test_value")
 
     async def test_create_process_env_none(self):
         with patch("asyncio.create_subprocess_exec") as mock_create:
@@ -84,7 +104,7 @@ class TestBashHostEnvParameter(unittest.TestCase):
             )
             self.control._tmp_dir = "/tmp/test"
             result = await self.control.create_process(
-                ["echo", "hello"], env={"MY_VAR": "my_val"}, wait_second=0.0
+                ["echo", "hello"], override_env={"MY_VAR": "my_val"}, wait_second=0.0
             )
             self.assertTrue(result.success)
             start_cmd_call = self.control.execute_raw.call_args_list[1]
@@ -127,9 +147,9 @@ class TestPosixShellEnvParameter(unittest.IsolatedAsyncioTestCase):
         control.registry = MagicMock(spec=Registry)
         control.registry.members = {}
         env = {"KEY": "VALUE"}
-        await control.create_process(["env"], env=env)
+        await control.create_process(["env"], override_env=env)
         call_args = control.call_tool.call_args
-        self.assertEqual(call_args[0][1]["env"], env)
+        self.assertEqual(call_args[0][1]["override_env"], env)
 
     async def test_create_process_no_env(self):
         control = MagicMock(spec=PosixShellControl)
@@ -144,7 +164,7 @@ class TestPosixShellEnvParameter(unittest.IsolatedAsyncioTestCase):
         control.registry.members = {}
         await control.create_process(["env"])
         call_args = control.call_tool.call_args
-        self.assertNotIn("env", call_args[0][1])
+        self.assertNotIn("override_env", call_args[0][1])
 
 
 class TestTrojanEnvParameter(unittest.IsolatedAsyncioTestCase):
@@ -161,12 +181,12 @@ class TestTrojanEnvParameter(unittest.IsolatedAsyncioTestCase):
             mock_create.return_value = mock_process
 
             env = {"MY_KEY": "MY_VAL"}
-            await trojan.process_create(["env"], env=env)
+            await trojan.process_create(["env"], override_env=env)
             mock_create.assert_called_once()
-            actual_env = mock_create.call_args.kwargs.get("env")
-            self.assertIsNotNone(actual_env)
-            self.assertEqual(actual_env["MY_KEY"], "MY_VAL")
-            self.assertIn("PATH", actual_env)
+            effective_env = mock_create.call_args.kwargs.get("env")
+            self.assertIsNotNone(effective_env)
+            self.assertEqual(effective_env["MY_KEY"], "MY_VAL")
+            self.assertIn("PATH", effective_env)
 
     async def test_create_process_env_none(self):
         trojan = Trojan(marker_bytes=b"<linhai_pulse_aabb>")

@@ -751,7 +751,7 @@ EXAMPLE_MULTIHOP_MACHINES = t(
   "with_secret": {"in_arguments": ["EXAMPLECOM_FOOBAR_PASSWORD"], "in_result": ["EXAMPLECOM_FOOBAR_PASSWORD"]},
   "arguments": {
     "argv": ["ssh", "-o", "StrictHostKeyChecking=no", "-o", "UserKnownHostsFile=/dev/null", "user@host", "bash", "-i"],
-    "env": {
+    "override_env": {
       "SSH_ASKPASS": "/tmp/linhai_askpass.sh",
       "SSH_ASKPASS_REQUIRE": "force",
       "DISPLAY": ":0",
@@ -798,7 +798,7 @@ Then start SSH using the askpass method. Set environment variables: SSH_ASKPASS 
   "with_secret": {"in_arguments": ["EXAMPLECOM_FOOBAR_PASSWORD"], "in_result": ["EXAMPLECOM_FOOBAR_PASSWORD"]},
   "arguments": {
     "argv": ["ssh", "-o", "StrictHostKeyChecking=no", "-o", "UserKnownHostsFile=/dev/null", "user@host", "bash", "-i"],
-    "env": {
+    "override_env": {
       "SSH_ASKPASS": "/tmp/linhai_askpass.sh",
       "SSH_ASKPASS_REQUIRE": "force",
       "DISPLAY": ":0",

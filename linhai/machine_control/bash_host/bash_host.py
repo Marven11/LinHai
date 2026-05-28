@@ -291,7 +291,7 @@ class BashHostControl:
         self,
         argv: list[str],
         wait_second: Optional[float] = None,
-        env: Optional[Dict[str, str]] = None,
+        override_env: Optional[Dict[str, str]] = None,
     ) -> ProcessCreateResult:
         self._counter += 1
         proc_id = str(self._counter)
@@ -310,9 +310,12 @@ class BashHostControl:
             )
 
         env_prefix = ""
-        if env is not None:
+        if override_env is not None:
             env_prefix = (
-                " ".join(f"{shlex.quote(k)}={shlex.quote(v)}" for k, v in env.items())
+                " ".join(
+                    f"{shlex.quote(k)}={shlex.quote(v)}"
+                    for k, v in override_env.items()
+                )
                 + " "
             )
 
