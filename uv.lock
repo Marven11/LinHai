@@ -454,8 +454,8 @@ wheels = [
 
 [[package]]
 name = "ether-ghost"
-version = "0.2.0"
-source = { git = "https://github.com/Marven11/EtherGhost.git?rev=dev#42f1f660035bfab48b6e5dc16dd7b5daaed8e2d0" }
+version = "0.2.5"
+source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "chardet" },
     { name = "fastapi" },
@@ -467,6 +467,10 @@ dependencies = [
     { name = "sqlalchemy" },
     { name = "sqlalchemy-utils" },
     { name = "uvicorn" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/56/a6/e57f8c4cde56beb976e5b8736c2a8b7cd4a43ed02e9fe483ff797a75dab5/ether_ghost-0.2.5.tar.gz", hash = "sha256:cf1d1b71f81acd479ea44e07338ae39d40efa9cb0971f4cdce0856e3a34e1378", size = 3019455, upload-time = "2026-05-28T01:36:45.703Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/dd/f8/5884de658c97541d905f77822294695a730f58db7a90389e51d15a1ac9e6/ether_ghost-0.2.5-py3-none-any.whl", hash = "sha256:76d6ff24d4cf05df3f597a6c9dcb802968e9f7799611758a9a34f1e626379252", size = 3040629, upload-time = "2026-05-28T01:36:43.751Z" },
 ]
 
 [[package]]
@@ -756,7 +760,7 @@ wheels = [
 
 [[package]]
 name = "linhai"
-version = "0.1.1"
+version = "0.2.0"
 source = { editable = "." }
 dependencies = [
     { name = "bashlex" },
@@ -802,7 +806,7 @@ requires-dist = [
     { name = "black", marker = "extra == 'dev'" },
     { name = "chardet" },
     { name = "croniter" },
-    { name = "ether-ghost", git = "https://github.com/Marven11/EtherGhost.git?rev=dev" },
+    { name = "ether-ghost", specifier = ">=0.2.5" },
     { name = "httpx" },
     { name = "mcp" },
     { name = "mistune" },

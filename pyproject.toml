@@ -25,7 +25,7 @@ dependencies = [
     "bashlex",
     "pillow",
     "tomli-w",
-    "ether-ghost @ git+https://github.com/Marven11/EtherGhost.git@dev",
+    "ether-ghost>=0.2.5",
     "croniter",
     "python-telegram-bot>=22.7",
     "quickjs-ng",
