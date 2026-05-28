@@ -52,6 +52,8 @@ class CurrentDirectoryPlugin(Plugin):
 
 class CustomToolcallFormatPlugin(Plugin):
 
+    _TOOLCALL_EXAMPLE_TITLES = ("TOOL CALL", "SECRET", "MULTIHOP MACHINES")
+
     async def after_selecting_llm(self, llm):
         from linhai.base import SystemMessage
 
@@ -66,6 +68,9 @@ class CustomToolcallFormatPlugin(Plugin):
             t == "WAITING USER AND AUTO RUN"
             for t, _ in system_message.introduction_items
         )
+        has_toolcall_examples = any(
+            t in self._TOOLCALL_EXAMPLE_TITLES for t, _ in system_message.examples_items
+        )
 
         if llm.get_custom_toolcall_format():
             if not has_tool_use:
@@ -78,11 +83,25 @@ class CustomToolcallFormatPlugin(Plugin):
                 system_message.add_introduction(
                     "WAITING USER AND AUTO RUN", INTRODUCTION_WAITING_USER
                 )
+            if not has_toolcall_examples:
+                from linhai.prompt import (
+                    EXAMPLES_TOOL_CALL,
+                    EXAMPLES_SECRET_USAGE,
+                    EXAMPLE_MULTIHOP_MACHINES,
+                )
+
+                system_message.add_example("TOOL CALL", EXAMPLES_TOOL_CALL)
+                system_message.add_example("SECRET", EXAMPLES_SECRET_USAGE)
+                system_message.add_example(
+                    "MULTIHOP MACHINES", EXAMPLE_MULTIHOP_MACHINES
+                )
         else:
             if has_tool_use:
                 system_message.remove_introduction("TOOL USE")
             if has_waiting_user:
                 system_message.remove_introduction("WAITING USER AND AUTO RUN")
+            for title in self._TOOLCALL_EXAMPLE_TITLES:
+                system_message.remove_example(title)
 
     def register(self, lifecycle):
         lifecycle.after_selecting_llm.register(self.after_selecting_llm)
