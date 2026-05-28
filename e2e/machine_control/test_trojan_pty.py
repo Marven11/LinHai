@@ -214,7 +214,6 @@ async def test_trojan_file_operations_over_pty(pty_bash_with_trojan):
                 "params": {
                     "filepath": test_file,
                     "content": test_content,
-                    "override": True,
                 },
             }
             assert process.stdin is not None and process.stdout is not None

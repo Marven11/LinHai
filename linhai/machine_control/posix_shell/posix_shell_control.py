@@ -229,9 +229,14 @@ class PosixShellControl:
     async def write_file(
         self, filepath: str, content: str, override: bool = False
     ) -> SuccessfulToolResult | FailedToolResult:
+        if override:
+            return FailedToolResult(
+                content="禁止override: 非master_host，请妥善处理其他机器上的文件，"
+                "考虑手动备份到临时目录，如果你确实需要删除重写，尝试rm"
+            )
         return await self.call_tool(
             "write_file",
-            {"filepath": filepath, "content": content, "override": override},
+            {"filepath": filepath, "content": content, "override": False},
         )
 
     async def replace_file_content(

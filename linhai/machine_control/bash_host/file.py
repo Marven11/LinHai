@@ -77,12 +77,17 @@ async def write_file(
     if rc != 0:
         return FailedToolResult(content=f"目录不可写: {filepath!r}")
 
-    if not override:
-        rc, _, _ = await host.execute_raw(f"test -e {_quote(filepath)}")
-        if rc == 0:
-            return FailedToolResult(
-                content=f"文件{filepath!r}已存在，如果需要覆盖请使用override参数"
-            )
+    if override:
+        return FailedToolResult(
+            content="禁止override: 非master_host，请妥善处理其他机器上的文件，"
+            "考虑手动备份到临时目录，如果你确实需要删除重写，尝试rm"
+        )
+
+    rc, _, _ = await host.execute_raw(f"test -e {_quote(filepath)}")
+    if rc == 0:
+        return FailedToolResult(
+            content=f"文件{filepath!r}已存在，如果需要覆盖请使用override参数"
+        )
 
     encoded = base64.b64encode(content.encode("utf-8")).decode("ascii")
     cmd = f"echo '{encoded}' | base64 -d > {_quote(filepath)}"

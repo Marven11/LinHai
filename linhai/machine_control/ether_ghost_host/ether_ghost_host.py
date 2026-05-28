@@ -204,6 +204,12 @@ class EtherGhostMachineControl(HostControl):
         if self.session is None:
             return FailedToolResult(content="Session未初始化")
 
+        if override:
+            return FailedToolResult(
+                content="禁止override: 非master_host，请妥善处理其他机器上的文件，"
+                "考虑手动备份到临时目录，如果你确实需要删除重写，尝试rm"
+            )
+
         content_bytes = content.encode("utf-8")
         success = await self.session.put_file_contents(filepath, content_bytes)
         if success:

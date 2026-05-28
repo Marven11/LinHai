@@ -339,7 +339,11 @@ class Trojan:
         return {"message": text_content}
 
     async def write_file(self, filepath, content, override=False):
-        if os.path.exists(filepath) and not override:
+        if override:
+            return {
+                "error": "禁止override: 非master_host，请妥善处理其他机器上的文件，考虑手动备份到临时目录，如果你确实需要删除重写，尝试rm"
+            }
+        if os.path.exists(filepath):
             return {"error": f"文件已存在: {filepath}"}
         Path(filepath).write_text(content, encoding="utf-8")
         return {"message": f"文件已写入: {filepath}"}

@@ -54,13 +54,31 @@ class TestFileTools(unittest.TestCase):
         self.assertTrue(result.show_line_numbers)
 
     def test_write_file(self):
-        """测试写入文件"""
+        """测试写入新文件"""
+        new_file = Path(self.temp_dir) / "new_file.txt"
         new_content = "新的文件内容"
+        result = write_file(str(new_file), new_content)
+        self.assertIn("成功写入文件", result.content)
+
+        content = new_file.read_text(encoding="utf-8")
+        self.assertEqual(content, new_content)
+
+    def test_write_file_override_with_backup(self):
+        """测试override时备份原文件"""
+        new_content = "A" * len(self.test_content.encode("utf-8"))
         result = write_file(str(self.test_file), new_content, override=True)
         self.assertIn("成功写入文件", result.content)
+        self.assertIn("备份到", result.content)
 
         content = self.test_file.read_text(encoding="utf-8")
         self.assertEqual(content, new_content)
+
+    def test_write_file_override_rejects_oversized(self):
+        """测试override时原文件远大于新内容则拒绝"""
+        short_content = "短"
+        result = write_file(str(self.test_file), short_content, override=True)
+        self.assertIn("禁止直接override", result.content)
+        self.assertIn("倍大", result.content)
 
     def test_replace_file_content_default_behavior(self):
         """测试替换文件内容默认行为（不提供replace_times时验证只出现一次）"""

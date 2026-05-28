@@ -133,16 +133,15 @@ class TestWriteFile(unittest.TestCase):
 
         self.loop.run_until_complete(test())
 
-    def test_write_override(self):
+    def test_write_override_rejected(self):
         async def test():
             host = _make_host()
             host.execute_raw.side_effect = [
                 (0, "", ""),
-                (0, "", ""),
             ]
             result = await write_file(host, "/existing/file", "new data", override=True)
-            self.assertIsInstance(result, SuccessfulToolResult)
-            self.assertIn("成功", result.content)
+            self.assertIsInstance(result, FailedToolResult)
+            self.assertIn("禁止override", result.content)
 
         self.loop.run_until_complete(test())
 

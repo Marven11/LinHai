@@ -4,8 +4,10 @@ from pathlib import Path
 from typing import Callable
 import difflib
 import itertools
+import shutil
 import stat
 import subprocess
+import tempfile
 import time
 
 import pathspec
@@ -148,16 +150,6 @@ def read_file(
 def write_file(
     filepath: str, content: str, override: bool = False
 ) -> SuccessfulToolResult | FailedToolResult:
-    """写入内容到文件。
-
-    Args:
-        filepath: 文件路径
-        content: 要写入的内容
-        override: 是否覆盖已有文件
-
-    Returns:
-        成功或错误消息
-    """
     file_path = Path(filepath)
     if file_path.exists():
         if not override:
@@ -167,6 +159,22 @@ def write_file(
         validation_error = validate_file(file_path)
         if validation_error:
             return FailedToolResult(content=validation_error)
+        original_size = file_path.stat().st_size
+        new_size = len(content.encode("utf-8"))
+        if original_size >= new_size * 2:
+            ratio = original_size / new_size if new_size > 0 else float("inf")
+            return FailedToolResult(
+                content=f"禁止直接override: 文件原内容是新内容的{ratio:.1f}倍大，"
+                "你确定需要覆盖远大于新内容的文件？原来的内容是不重要的吗？"
+                "你应该重新确认文件内容并仔细修改！如果你必须删除，只能使用命令删除并重新写入"
+            )
+    backup_path: str | None = None
+    if file_path.exists() and override:
+        timestamp = int(time.time() * 1000)
+        backup_name = f"{file_path.name}.bak.{timestamp}"
+        backup_dir = Path(tempfile.gettempdir())
+        backup_path = str(backup_dir / backup_name)
+        shutil.copy2(str(file_path), backup_path)
     try:
         file_path.write_text(content, encoding="utf-8")
         if not file_path.exists():
@@ -180,7 +188,10 @@ def write_file(
             )
     except OSError as exc:
         return FailedToolResult(content=f"写入文件时发生错误: {exc!r}")
-    return SuccessfulToolResult(content=f"成功写入文件: {file_path.as_posix()!r}")
+    message = f"成功写入文件: {file_path.as_posix()!r}"
+    if backup_path is not None:
+        message += f"\n覆盖前的文件内容已经备份到 {backup_path}"
+    return SuccessfulToolResult(content=message)
 
 
 def replace_file_content(

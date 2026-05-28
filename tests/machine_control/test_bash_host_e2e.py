@@ -84,7 +84,8 @@ class TestBashHostE2e(unittest.IsolatedAsyncioTestCase):
             tmp_path = "/tmp/linhai_bash_e2e_write_test.txt"
             content = "hello world from bash e2e test\nline 2\nline 3"
 
-            write_result = await host.write_file(tmp_path, content, override=True)
+            await host.execute_raw(f"rm -f {tmp_path}")
+            write_result = await host.write_file(tmp_path, content)
             self.assertIsInstance(write_result, SuccessfulToolResult)
 
             read_result = await host.read_file(tmp_path)
@@ -103,7 +104,8 @@ class TestBashHostE2e(unittest.IsolatedAsyncioTestCase):
         try:
             tmp_path = "/tmp/linhai_bash_e2e_replace_test.txt"
             original = "aaa bbb ccc\naaa ddd eee"
-            await host.write_file(tmp_path, original, override=True)
+            await host.execute_raw(f"rm -f {tmp_path}")
+            await host.write_file(tmp_path, original)
 
             replace_result = await host.replace_file_content(
                 tmp_path, "bbb", "REPLACED"
