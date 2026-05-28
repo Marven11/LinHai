@@ -527,7 +527,7 @@ class TestDesignMdReminderPlugin(unittest.IsolatedAsyncioTestCase):
         self.assertFalse(self.plugin._design_notification_active)
         self.assertTrue(self.plugin._design_reminded)
         self.mock_agent.message_processor.update_notification_message.assert_called_once_with(
-            None, source="planning_design_reminder", sort_value=0
+            None, source="planning_design_reminder"
         )
         self.mock_agent.message_processor.add_new_message.assert_called_once()
         call_args = self.mock_agent.message_processor.add_new_message.call_args[0][0]

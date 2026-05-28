@@ -269,7 +269,6 @@ class AgentContextOrchestration:
 
         notification_message = None
         cache_ratio: float | None = None
-        cache_ratio_text = ""
         if token_manager.cumulative_token_usage is not None:
             input_tokens = token_manager.cumulative_token_usage["input_tokens"]
             cached_input_tokens = token_manager.cumulative_token_usage[
@@ -277,99 +276,93 @@ class AgentContextOrchestration:
             ]
             if input_tokens > 0:
                 cache_ratio = (cached_input_tokens / input_tokens) * 100
-                cache_ratio_text = t(
-                    {
-                        "zh_CN": f", 缓存比例: {cache_ratio:.0f}%",
-                        "en": f", cache ratio: {cache_ratio:.0f}%",
-                    }
-                )
 
         if current_state != "绿灯" or is_dirty:
-            total_large_count = len(self.large_messages)
             cleanable_messages = get_cleanable_large_messages(
                 self.large_messages,
                 self.agent_message,
                 cleaned_messages_dict=self.cleaned_messages,
             )
             cleanable_count = len(cleanable_messages)
+            can_clean = cleanable_count >= MIN_CLEANABLE_LARGE_MESSAGES
+
+            pct_5 = int(percentage / 5) * 5
+            cache_5_text = ""
+            if cache_ratio is not None:
+                cache_5 = int(cache_ratio / 5) * 5
+                cache_5_text = t(
+                    {
+                        "zh_CN": f"，缓存比例为约{cache_5}%",
+                        "en": f", cache ratio about {cache_5}%",
+                    }
+                )
+
+            cleanable_text = (
+                t({"zh_CN": "可清理大消息", "en": "can clean large messages"})
+                if can_clean
+                else t({"zh_CN": "不可清理大消息", "en": "cannot clean large messages"})
+            )
 
             if is_dirty:
-                base_info = t(
-                    {
-                        "zh_CN": f"当前上下文占用量失效, 总大消息数: {total_large_count}, 可清理: {cleanable_count}, token用量信息已失效{cache_ratio_text}",
-                        "en": f"Current context usage is stale, total large messages: {total_large_count}, cleanable: {cleanable_count}, token usage info is stale{cache_ratio_text}",
-                    }
+                reason = t(
+                    {"zh_CN": "token用量信息失效", "en": "token usage info is stale"}
                 )
                 suggestion = t(
                     {
-                        "zh_CN": "建议: 继续，在上下文实际长度更新之后runtime会另行通知",
-                        "en": "Suggestion: Continue, runtime will notify again after context length is updated",
+                        "zh_CN": "继续，在上下文实际长度更新之后runtime会另行通知",
+                        "en": "Continue, runtime will notify again after context length is updated",
                     }
                 )
-            else:
-                base_info = t(
-                    {
-                        "zh_CN": f"当前为{current_state}状态, 上下文占用量为{percentage:.1f}%, 总大消息数: {total_large_count}, 可清理: {cleanable_count}{cache_ratio_text}",
-                        "en": f"Current state is {current_state}, context usage is {percentage:.1f}%, total large messages: {total_large_count}, cleanable: {cleanable_count}{cache_ratio_text}",
-                    }
-                )
-                if current_state == "红灯":
-                    if cleanable_count >= MIN_CLEANABLE_LARGE_MESSAGES:
-                        suggestion = t(
-                            {
-                                "zh_CN": "建议: 立即暂停当前任务，开始使用context_forget_large_message清理上下文",
-                                "en": "Suggestion: Stop current task immediately and start using context_forget_large_message to clean up context",
-                            }
-                        )
-                    else:
-                        suggestion = t(
-                            {
-                                "zh_CN": "建议: 立即暂停当前任务，开始使用context_forget_range_step1清理上下文",
-                                "en": "Suggestion: Stop current task immediately and start using context_forget_range_step1 to clean up context",
-                            }
-                        )
-                elif current_state == "黄灯":
-                    if (
-                        cache_ratio is not None
-                        and cache_ratio >= CACHE_RATIO_ABNORMAL_THRESHOLD
-                        and cache_ratio < 80
-                    ):
-                        suggestion = t(
-                            {
-                                "zh_CN": f"建议: 当前缓存命中率{cache_ratio:.0f}%低于80%，优先保证缓存命中率而不是清理上下文",
-                                "en": f"Suggestion: Current cache hit ratio {cache_ratio:.0f}% is below 80%, prioritize cache hit ratio over context cleanup",
-                            }
-                        )
-                    else:
-                        suggestion = (
-                            t(
-                                {
-                                    "zh_CN": "建议: 根据缓存比例判断是否需要使用context_forget_large_message工具",
-                                    "en": "Suggestion: Decide based on cache ratio whether to use context_forget_large_message",
-                                }
-                            )
-                            if cleanable_count >= 5
-                            else ""
-                        )
-                else:
-                    suggestion = t(
+            elif current_state == "红灯":
+                if can_clean:
+                    reason = t(
                         {
-                            "zh_CN": "建议: 不要担心消息限制，立即工作",
-                            "en": "Suggestion: Do not worry about message limits, keep working",
+                            "zh_CN": "可清理大消息超过五条",
+                            "en": "cleanable large messages exceed five",
                         }
                     )
-                    if (
-                        cache_ratio is not None
-                        and cache_ratio >= CACHE_RATIO_ABNORMAL_THRESHOLD
-                        and cache_ratio < 90
-                    ):
-                        suggestion = t(
-                            {
-                                "zh_CN": f"建议: 当前缓存命中率{cache_ratio:.0f}%低于90%，优先保证缓存命中率而不是清理上下文",
-                                "en": f"Suggestion: Current cache hit ratio {cache_ratio:.0f}% is below 90%, prioritize cache hit ratio over context cleanup",
-                            }
-                        )
-            notification_message = f"{base_info}, {suggestion}"
+                    suggestion = t(
+                        {
+                            "zh_CN": "立即使用context_forget_large_message清理上下文",
+                            "en": "Use context_forget_large_message to clean up context immediately",
+                        }
+                    )
+                else:
+                    reason = t(
+                        {
+                            "zh_CN": "可清理大消息不足五条",
+                            "en": "cleanable large messages less than five",
+                        }
+                    )
+                    suggestion = t(
+                        {
+                            "zh_CN": "立即使用context_forget_range_step1清理上下文",
+                            "en": "Use context_forget_range_step1 to clean up context immediately",
+                        }
+                    )
+            else:
+                reason = t(
+                    {
+                        "zh_CN": (
+                            "可清理大消息超过五条"
+                            if can_clean
+                            else "可清理大消息不足五条"
+                        ),
+                        "en": (
+                            "cleanable large messages exceed five"
+                            if can_clean
+                            else "cleanable large messages less than five"
+                        ),
+                    }
+                )
+                suggestion = ""
+
+            notification_message = t(
+                {
+                    "zh_CN": f"当前为{current_state}状态，上下文占用量约{pct_5}%{cache_5_text}，{cleanable_text}，因为{reason}，建议: {suggestion}",
+                    "en": f"Current state is {current_state}, context usage about {pct_5}%{cache_5_text}, {cleanable_text}, because {reason}, Suggestion: {suggestion}",
+                }
+            )
 
         return {
             "threshold_info": threshold_info,
@@ -624,10 +617,10 @@ class RedStateToolBlockPlugin:
             if cache_ratio >= CACHE_RATIO_ABNORMAL_THRESHOLD:
                 if current_state == "绿灯" and cache_ratio < 90:
                     should_remind_due_to_cache = True
-                    cache_warning = f"当前缓存命中率{cache_ratio:.0f}%低于90%"
+                    cache_warning = f"当前缓存命中率{int(cache_ratio / 5) * 5}%低于90%"
                 elif current_state == "黄灯" and cache_ratio < 80:
                     should_remind_due_to_cache = True
-                    cache_warning = f"当前缓存命中率{cache_ratio:.0f}%低于80%"
+                    cache_warning = f"当前缓存命中率{int(cache_ratio / 5) * 5}%低于80%"
 
         if should_remind_due_to_cache:
             warning_msg = f"你在上下文健康且缓存命中率较低的情况下清理了上下文，这进一步破坏了缓存，为什么不优先保证缓存命中率而是清理上下文？{cache_warning}"
@@ -650,7 +643,7 @@ class RedStateToolBlockPlugin:
                 ui_msg = f"token用量信息已失效，禁止调用清理工具"
             else:
                 error_msg = (
-                    f"错误：当前处于{current_state}状态（token使用率{threshold_info['usage_ratio']*100:.1f}%），"
+                    f"错误：当前处于{current_state}状态（token使用率{int(threshold_info['usage_ratio']*100/5)*5}%），"
                     f"禁止调用{tool_name}工具！"
                     "红灯状态下只允许调用消息管理工具。"
                 )
@@ -667,7 +660,7 @@ class RedStateToolBlockPlugin:
 
         orchestration.consecutive_red_block_count = 0
         agent.message_processor.update_notification_message(
-            None, source="consecutive_red_block", sort_value=0
+            None, source="consecutive_red_block"
         )
         return None
 
@@ -707,7 +700,6 @@ class NotificationMessagePlugin:
             agent.message_processor.update_notification_message(
                 RuntimeMessage(notification_message),
                 source="threshold_notification",
-                sort_value=0,
             )
 
         if orchestration.consecutive_red_block_count >= 3:
@@ -746,7 +738,6 @@ class NotificationMessagePlugin:
             agent.message_processor.update_notification_message(
                 RuntimeMessage(message_content),
                 source="consecutive_red_block",
-                sort_value=0,
             )
 
     def register(self, lifecycle: "Lifecycle"):
@@ -790,12 +781,11 @@ class LargeMessageCountPlugin:
             agent.message_processor.update_notification_message(
                 RuntimeMessage(message_content),
                 source="large_message_count",
-                sort_value=0,
             )
         else:
 
             agent.message_processor.update_notification_message(
-                None, source="large_message_count", sort_value=0
+                None, source="large_message_count"
             )
 
     def register(self, lifecycle: "Lifecycle"):

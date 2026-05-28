@@ -120,9 +120,9 @@ class AgentSession:
         mp = agent.message_processor
         messages = mp.messages
         pinned_messages = mp.pinned_messages
-        notification_entries = list(
-            entry["message"] for entry in mp.notification_messages.values()
-        )
+        notification_entries = [
+            entry for entry in mp.notification_messages.values() if entry is not None
+        ]
 
         threshold_info = agent.get_threshold_info()
         _, current_llm = agent.get_current_llm_info()

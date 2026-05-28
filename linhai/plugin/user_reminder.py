@@ -33,7 +33,7 @@ class UserReminderPlugin(Plugin):
         if agent is None:
             return
         agent.message_processor.update_notification_message(
-            RuntimeMessage(content), source="user_reminder", sort_value=900
+            RuntimeMessage(content), source="user_reminder"
         )
 
     def register(self, lifecycle: Lifecycle):

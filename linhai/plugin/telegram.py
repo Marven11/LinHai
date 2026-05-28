@@ -419,13 +419,12 @@ class TelegramReactionReminderPlugin(Plugin):
         agent = self.registry.get_member_typechecked("agent", Agent)
         if self._has_responded:
             agent.message_processor.update_notification_message(
-                None, source=self.NOTIFICATION_SOURCE, sort_value=500
+                None, source=self.NOTIFICATION_SOURCE
             )
         else:
             agent.message_processor.update_notification_message(
                 RuntimeMessage(self.REMINDER_MESSAGE),
                 source=self.NOTIFICATION_SOURCE,
-                sort_value=500,
             )
 
     async def _on_before_add_new_message(self, message: "BaseMessage") -> None:

@@ -693,9 +693,8 @@ class TestPreviousReasoningPlugin(unittest.IsolatedAsyncioTestCase):
             ],
         )
 
-        # 检查source和sort_value
+        # 检查source
         self.assertEqual(call_args[1]["source"], "previous_reasoning")
-        self.assertEqual(call_args[1]["sort_value"], 1000)
 
     async def test_after_message_generation_no_reasoning_messages(self):
         """测试没有推理消息时清除notification message。"""
@@ -715,7 +714,7 @@ class TestPreviousReasoningPlugin(unittest.IsolatedAsyncioTestCase):
         call_args = self.agent.message_processor.update_notification_message.call_args
         self.assertIsNone(call_args[0][0])
         self.assertEqual(call_args[1]["source"], "previous_reasoning")
-        self.assertEqual(call_args[1]["sort_value"], 1000)
+        self.assertEqual(call_args[1]["source"], "previous_reasoning")
 
     async def test_after_message_generation_spoofed_reasoning_message_format(self):
         """测试SpoofedReasoningMessage的格式符合预期。"""

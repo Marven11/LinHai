@@ -50,7 +50,7 @@ class PromptFastAgentPlugin(Plugin):
     async def before_message_generation(self):
         agent = self.registry.get_member_typechecked("agent", Agent)
         agent.message_processor.update_notification_message(
-            None, source="prompt_fast_agent", sort_value=100
+            None, source="prompt_fast_agent"
         )
 
     async def after_token_generation(
@@ -234,16 +234,15 @@ class SingleToolCallReminderPlugin(Plugin):
                 agent.message_processor.update_notification_message(
                     notification,
                     source="single_tool_call_reminder",
-                    sort_value=0,
                 )
             else:
                 agent.message_processor.update_notification_message(
-                    None, source="single_tool_call_reminder", sort_value=0
+                    None, source="single_tool_call_reminder"
                 )
         else:
             self.single_tool_call_count = 0
             agent.message_processor.update_notification_message(
-                None, source="single_tool_call_reminder", sort_value=0
+                None, source="single_tool_call_reminder"
             )
 
     def register(self, lifecycle: "Lifecycle"):

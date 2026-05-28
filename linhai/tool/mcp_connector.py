@@ -283,6 +283,5 @@ class MCPConnector:
         agent_message.update_notification_message(
             RuntimeMessage("\n".join(lines)),
             source="mcp_disconnected",
-            sort_value=0,
         )
         self._saved_session_info = {}

@@ -99,10 +99,8 @@ class TestAgentContextOrchestration(unittest.IsolatedAsyncioTestCase):
         # 验证返回值
         self.assertIsNotNone(result)
         assert result is not None
-        self.assertIn("黄灯", result)
+        self.assertEqual(context["current_state"], "黄灯")
         self.assertIn("%", result)
-        self.assertIn(": 1", result)
-        # 消息数量应该仍然是3（2条pinned_messages + 1条普通消息），因为通知没有被添加，只是返回
         self.assertEqual(len(self.message_processor.get_messages()), 3)
 
     async def test_add_soft_threshold_notification_with_dirty_state(self):
@@ -131,9 +129,7 @@ class TestAgentContextOrchestration(unittest.IsolatedAsyncioTestCase):
         # 对于失效状态，应该返回消息字符串
         self.assertIsNotNone(result)
         assert result is not None
-        self.assertIn(": 1", result)
         self.assertIn("token", result)
-        # 消息数量应该仍然是3（2条pinned_messages + 1条普通消息）
         self.assertEqual(len(self.message_processor.get_messages()), 3)
 
     async def test_get_status_display_piece(self):
@@ -598,7 +594,7 @@ class TestAgentContextOrchestration(unittest.IsolatedAsyncioTestCase):
         )
         self.assertIsNotNone(notifications)
         # 验证消息内容符合issue要求
-        notification_msg = notifications["message"].get_content()
+        notification_msg = notifications.get_content()
         self.assertIn("json toolcall", notification_msg)
         self.assertIn("```json toolcall", notification_msg)
 

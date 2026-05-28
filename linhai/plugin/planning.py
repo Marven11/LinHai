@@ -100,10 +100,10 @@ class PlanningStatusReminderPlugin(Plugin):
             agent = self.registry.get_member_typechecked("agent", Agent)
             if agent:
                 agent.message_processor.update_notification_message(
-                    None, source="planning_status_reminder", sort_value=0
+                    None, source="planning_status_reminder"
                 )
                 agent.message_processor.update_notification_message(
-                    None, source="planning_todolist_reminder", sort_value=0
+                    None, source="planning_todolist_reminder"
                 )
             return
 
@@ -122,7 +122,6 @@ class PlanningStatusReminderPlugin(Plugin):
                     )
                 ),
                 source="planning_status_reminder",
-                sort_value=0,
             )
         elif self.status_counter >= 3:
             agent.message_processor.update_notification_message(
@@ -135,11 +134,10 @@ class PlanningStatusReminderPlugin(Plugin):
                     )
                 ),
                 source="planning_status_reminder",
-                sort_value=0,
             )
         else:
             agent.message_processor.update_notification_message(
-                None, source="planning_status_reminder", sort_value=0
+                None, source="planning_status_reminder"
             )
 
         if self.todolist_counter >= 8:
@@ -153,7 +151,6 @@ class PlanningStatusReminderPlugin(Plugin):
                     )
                 ),
                 source="planning_todolist_reminder",
-                sort_value=0,
             )
         if self.todolist_counter >= 6:
             agent.message_processor.update_notification_message(
@@ -166,11 +163,10 @@ class PlanningStatusReminderPlugin(Plugin):
                     )
                 ),
                 source="planning_todolist_reminder",
-                sort_value=0,
             )
         else:
             agent.message_processor.update_notification_message(
-                None, source="planning_todolist_reminder", sort_value=0
+                None, source="planning_todolist_reminder"
             )
 
     async def after_message_generation(
@@ -311,7 +307,6 @@ class DesignMdReminderPlugin(Plugin):
                     )
                 ),
                 source="planning_design_reminder",
-                sort_value=0,
             )
 
     async def before_message_generation(self) -> None:
@@ -328,7 +323,7 @@ class DesignMdReminderPlugin(Plugin):
             self._design_notification_active = False
             self._design_reminded = True
             agent.message_processor.update_notification_message(
-                None, source="planning_design_reminder", sort_value=0
+                None, source="planning_design_reminder"
             )
             await agent.message_processor.add_new_message(
                 RuntimeMessage(

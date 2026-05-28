@@ -507,6 +507,5 @@ class MachineControl:
         agent_message.update_notification_message(
             RuntimeMessage("\n".join(lines)),
             source="machine_disconnected",
-            sort_value=0,
         )
         self._saved_machine_info = {}

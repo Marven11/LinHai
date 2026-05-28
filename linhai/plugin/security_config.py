@@ -136,7 +136,6 @@ class CommandWhitelistPlugin(Plugin):
                     )
                 ),
                 source="command_whitelist",
-                sort_value=10,
             )
 
     async def before_tool_call(

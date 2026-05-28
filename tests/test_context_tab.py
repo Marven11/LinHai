@@ -623,13 +623,12 @@ class TestPinnedAndNotificationStats(unittest.TestCase):
 
     def test_notification_with_messages(self):
         from linhai.base import UserMessage
-        from linhai.agent.message import NotificationMessageEntry
 
         msg1 = UserMessage(message="通知1")
         msg2 = UserMessage(message="通知2")
         notifications = {
-            "a": NotificationMessageEntry(source="a", message=msg1, sort_value=1),
-            "b": NotificationMessageEntry(source="b", message=msg2, sort_value=2),
+            "a": msg1,
+            "b": msg2,
         }
         widget, _, _, mock_notif_text, _ = self._create_widget_with_mocks(
             notification_messages=notifications
@@ -647,17 +646,12 @@ class TestPinnedAndNotificationStats(unittest.TestCase):
     def test_notification_details_display(self):
         from linhai.base import UserMessage
         from linhai.agent.messages import RuntimeMessage
-        from linhai.agent.message import NotificationMessageEntry
 
         msg1 = RuntimeMessage("runtime内容")
         msg2 = UserMessage(message="通知内容")
         notifications = {
-            "a": NotificationMessageEntry(
-                source="source_a", message=msg1, sort_value=1
-            ),
-            "b": NotificationMessageEntry(
-                source="source_b", message=msg2, sort_value=2
-            ),
+            "a": msg1,
+            "b": msg2,
         }
         widget, _, _, _, mock_notif_list_text = self._create_widget_with_mocks(
             notification_messages=notifications
@@ -665,20 +659,19 @@ class TestPinnedAndNotificationStats(unittest.TestCase):
         widget.update_display()
 
         text_arg = mock_notif_list_text.update.call_args[0][0]
-        self.assertIn("[source_a]", text_arg)
+        self.assertIn("[a]", text_arg)
         self.assertIn("runtime内容", text_arg)
         self.assertNotIn("<<runtime>>", text_arg)
-        self.assertIn("[source_b]", text_arg)
+        self.assertIn("[b]", text_arg)
         self.assertIn("通知内容", text_arg)
 
     def test_notification_details_truncation(self):
         from linhai.base import UserMessage
-        from linhai.agent.message import NotificationMessageEntry
 
         long_content = "你好" * 200
         msg = UserMessage(message=long_content)
         notifications = {
-            "a": NotificationMessageEntry(source="long", message=msg, sort_value=1),
+            "a": msg,
         }
         widget, _, _, _, mock_notif_list_text = self._create_widget_with_mocks(
             notification_messages=notifications

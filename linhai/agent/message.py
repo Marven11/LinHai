@@ -2,7 +2,7 @@
 
 import json
 from pathlib import Path
-from typing import List, Optional, Sequence, TypedDict
+from typing import List, Optional, Sequence
 
 from linhai.registry import Registry
 from linhai.agent.conversation import save_context
@@ -27,14 +27,6 @@ from .messages import (
 )
 from linhai.base import UserMessage, AssistantMessage, OpenAiToolResultMessage
 from linhai.utils.common import UiNotice
-
-
-class NotificationMessageEntry(TypedDict):
-    """通知消息条目，包含源标识符、消息内容和排序值。"""
-
-    source: str
-    message: Message
-    sort_value: int
 
 
 @register_message
@@ -81,7 +73,7 @@ class AgentMessage:
 
         self.pinned_messages: List[Message] = list(pinned_messages)
         self.messages: List[Message] = []
-        self.notification_messages: dict[str, NotificationMessageEntry] = {}
+        self.notification_messages: dict[str, Message | None] = {}
         self.queued_messages: List[Message] = []
         self.explicit_cache_anchors: list[int] = []
         self.registry.add_postinit(self.postinit)
@@ -283,16 +275,12 @@ class AgentMessage:
         return msgs
 
     def get_messages(self) -> List[Message]:
-        """获取当前所有消息（包括pinned_messages和notification_messages）。
+        """获取当前所有消息（包括pinned_messages和messages）。
 
         Returns:
-            消息列表，顺序为：pinned_messages + messages + notification_messages
+            消息列表，顺序为：pinned_messages + messages
         """
-        sorted_entries = sorted(
-            self.notification_messages.values(), key=lambda x: x["sort_value"]
-        )
-        notification_messages = [entry["message"] for entry in sorted_entries]
-        messages = self.pinned_messages + self.messages + notification_messages
+        messages = self.pinned_messages + self.messages
         if self.is_explicit_cache_enabled():
             messages = self.mark_explicit_cache_savepoint(messages)
         return messages
@@ -383,26 +371,25 @@ class AgentMessage:
             self.messages[index] = processed_message
             await self._trigger_after_cache_invalidate()
 
-    def update_notification_message(
-        self, message: Message | None, source: str, sort_value: int
-    ) -> None:
-        """更新或移除通知消息（notification message）。
+    def update_notification_message(self, message: Message | None, source: str) -> None:
+        """将新通知消息放入普通消息列表，但是在消息和之前相同时不加入列表。
+
+        传入None表示清除该source的通知追踪（不添加任何消息）。
+        当message非None且与之前不同或之前为None时，将message追加到普通消息列表。
 
         Args:
-            message: 消息内容，如果为None则移除对应source的消息
-                  必须是Message实例
-            source: 消息来源标识符，用于区分不同的notification messages
-            sort_value: 排序权重，必须指定
+            message: 消息内容，如果为None则仅清除追踪
+            source: 消息来源标识符，用于区分不同的通知消息
         """
-        if source in self.notification_messages:
-            del self.notification_messages[source]
-
         if message is not None:
-            self.notification_messages[source] = {
-                "source": source,
-                "message": message,
-                "sort_value": sort_value,
-            }
+            previous = self.notification_messages.get(source)
+            previous_content = previous.get_content() if previous is not None else None
+            new_content = message.get_content()
+            if previous_content != new_content:
+                self.messages.append(message)
+            self.notification_messages[source] = message
+        else:
+            self.notification_messages[source] = None
 
     def add_queued_message(self, msg: Message) -> None:
         """添加排队消息。
@@ -475,17 +462,17 @@ class AgentMessage:
             msg for msg in self.pinned_messages if not isinstance(msg, SystemMessage)
         ]
         notification_data = []
-        for entry in self.notification_messages.values():
-            notification_data.append(
-                {
-                    "source": entry["source"],
-                    "sort_value": entry["sort_value"],
-                    "message": {
-                        "type": entry["message"].__class__.__name__,
-                        "data": entry["message"].to_json(),
-                    },
-                }
-            )
+        for source, msg in self.notification_messages.items():
+            if msg is not None:
+                notification_data.append(
+                    {
+                        "source": source,
+                        "message": {
+                            "type": msg.__class__.__name__,
+                            "data": msg.to_json(),
+                        },
+                    }
+                )
         return {
             "pinned_messages": self._serialize_messages(pinned_without_system),
             "messages": self._serialize_messages(self.messages),
@@ -511,8 +498,4 @@ class AgentMessage:
             if cls is None:
                 raise RuntimeError(f"Unknown message type: {entry['message']['type']}")
             msg = cls.from_json(entry["message"]["data"], self.registry)
-            self.notification_messages[entry["source"]] = {
-                "source": entry["source"],
-                "message": msg,
-                "sort_value": entry["sort_value"],
-            }
+            self.notification_messages[entry["source"]] = msg

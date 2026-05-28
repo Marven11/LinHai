@@ -176,7 +176,7 @@ class TestAfterConversationRestoreCallbacks(unittest.IsolatedAsyncioTestCase):
         lifecycle = registry.get_member_typechecked("lifecycle", Lifecycle)
         await lifecycle.after_conversation_restore.trigger()
         self.assertIn("mcp_disconnected", am.notification_messages)
-        msg = am.notification_messages["mcp_disconnected"]["message"]
+        msg = am.notification_messages["mcp_disconnected"]
         self.assertIsInstance(msg, RuntimeMessage)
         self.assertIn("server1", msg.message)
         self.assertIn("python test.py", msg.message)
@@ -210,7 +210,7 @@ class TestAfterConversationRestoreCallbacks(unittest.IsolatedAsyncioTestCase):
         mc.register_plugin(lifecycle)
         await lifecycle.after_conversation_restore.trigger()
         self.assertIn("machine_disconnected", am.notification_messages)
-        msg = am.notification_messages["machine_disconnected"]["message"]
+        msg = am.notification_messages["machine_disconnected"]
         self.assertIsInstance(msg, RuntimeMessage)
         self.assertIn("remote1", msg.message)
         self.assertIn("ssh user@host", msg.message)

@@ -1,12 +1,13 @@
 from __future__ import annotations
 
+import re
 from math import log2
 from typing import TypedDict
 
 from linhai.base import (
     AnswerTokenUsage,
     EstimateToken,
-    Message,
+    Message as Message,
     UserMessage,
     AssistantMessage,
     SystemMessage,
@@ -14,7 +15,7 @@ from linhai.base import (
 from linhai.agent.messages import RuntimeMessage
 from linhai.tool.base import ToolCallResultMessage
 from linhai.type_hints import CumulativeTokenUsage, ThresholdInfo
-from linhai.agent.message import NotificationMessageEntry
+from linhai.base import Message as BaseMessage
 from linhai.utils.tokenizer import count_tokens, get_cl100k_base_tokenizer
 
 
@@ -219,18 +220,20 @@ def _truncate_to_token_limit(content: str, max_tokens: int) -> str:
     return tokenizer.decode(tokens[:max_tokens]) + "..."
 
 
+def _strip_message_tags(content: str) -> str:
+    content = re.sub(r"^<<[^>]+>>", "", content)
+    return re.sub(r"<<[^>]+>>$", "", content)
+
+
 def compute_notification_details(
-    notification_messages: dict[str, NotificationMessageEntry],
+    notification_messages: dict[str, BaseMessage | None],
 ) -> list[NotificationMessageDisplay]:
-    sorted_entries = sorted(
-        notification_messages.values(), key=lambda x: x["sort_value"]
-    )
     result: list[NotificationMessageDisplay] = []
-    for entry in sorted_entries:
-        msg = entry["message"]
-        content = msg.message if isinstance(msg, RuntimeMessage) else msg.get_content()
-        if content is None:
-            content = ""
+    for source, msg in notification_messages.items():
+        if msg is None:
+            continue
+        content = msg.get_content()
+        content = _strip_message_tags(content) if content else ""
         token_count = count_tokens(content)
         if token_count > NOTIFICATION_DISPLAY_TOKEN_LIMIT:
             content = _truncate_to_token_limit(
@@ -238,7 +241,7 @@ def compute_notification_details(
             )
         result.append(
             NotificationMessageDisplay(
-                source=entry["source"],
+                source=source,
                 display_content=content,
                 token_count=token_count,
             )

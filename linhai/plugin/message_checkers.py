@@ -254,7 +254,6 @@ class OnlyReasoningPlugin(Plugin):
                     )
                 ),
                 source="only_reasoning",
-                sort_value=0,
             )
             await self.registry.send_if_exists(
                 "ui_log",
@@ -262,7 +261,7 @@ class OnlyReasoningPlugin(Plugin):
             )
         else:
             agent.message_processor.update_notification_message(
-                None, source="only_reasoning", sort_value=0
+                None, source="only_reasoning"
             )
 
     def register(self, lifecycle: "Lifecycle"):
@@ -288,11 +287,11 @@ class PreviousReasoningPlugin(Plugin):
         if msgs:
             previous_reasoning_msg = SpoofedReasoningMessage(msgs[-6:])
             agent.message_processor.update_notification_message(
-                previous_reasoning_msg, source="previous_reasoning", sort_value=1000
+                previous_reasoning_msg, source="previous_reasoning"
             )
         else:
             agent.message_processor.update_notification_message(
-                None, source="previous_reasoning", sort_value=1000
+                None, source="previous_reasoning"
             )
 
     def register(self, lifecycle: "Lifecycle"):
@@ -704,11 +703,10 @@ class WaitingUserReminderPlugin(Plugin):
             agent.message_processor.update_notification_message(
                 RuntimeMessage(self.REMINDER_MESSAGE),
                 source="waiting_user_reminder",
-                sort_value=800,
             )
         else:
             agent.message_processor.update_notification_message(
-                None, source="waiting_user_reminder", sort_value=800
+                None, source="waiting_user_reminder"
             )
 
     async def after_message_generation(self, parsed_answer, tool_calls):

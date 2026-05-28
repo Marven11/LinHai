@@ -30,7 +30,7 @@ class ReminderPlugin(Plugin):
         if self.reminder_file.exists():
             content = self.reminder_file.read_text(encoding="utf-8").strip()
             agent.message_processor.update_notification_message(
-                RuntimeMessage(content), source="reminder", sort_value=1000
+                RuntimeMessage(content), source="reminder"
             )
 
     def register(self, lifecycle: Lifecycle):

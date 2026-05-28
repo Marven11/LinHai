@@ -96,7 +96,7 @@ class TestPromptFastAgentPlugin(unittest.TestCase):
 
         # 应该清理notification消息（传入None）
         agent.message_processor.update_notification_message.assert_called_once_with(
-            None, source="prompt_fast_agent", sort_value=100
+            None, source="prompt_fast_agent"
         )
         self.registry.send_if_exists.assert_not_called()
 

@@ -120,16 +120,14 @@ class TestAgentMessageSerializeRestore(unittest.IsolatedAsyncioTestCase):
 
     def test_roundtrip_notification_messages(self):
         am = self._make_agent_message()
-        am.update_notification_message(RuntimeMessage("notif"), "test_source", 42)
+        am.update_notification_message(RuntimeMessage("notif"), "test_source")
         data = am.serialize()
         am2 = self._make_agent_message(fresh_registry=True)
         am2.restore_from(data)
         self.assertIn("test_source", am2.notification_messages)
-        entry = am2.notification_messages["test_source"]
-        self.assertEqual(entry["source"], "test_source")
-        self.assertEqual(entry["sort_value"], 42)
-        self.assertIsInstance(entry["message"], RuntimeMessage)
-        self.assertEqual(entry["message"].message, "notif")
+        msg = am2.notification_messages["test_source"]
+        self.assertIsInstance(msg, RuntimeMessage)
+        self.assertEqual(msg.message, "notif")
 
     def test_roundtrip_pinned_excludes_system(self):
         mock_reg = Registry()

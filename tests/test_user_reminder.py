@@ -58,7 +58,6 @@ class TestUserReminderPlugin(unittest.IsolatedAsyncioTestCase):
         self.agent.message_processor.update_notification_message.assert_called_once()
         call_args = self.agent.message_processor.update_notification_message.call_args
         self.assertEqual(call_args.kwargs["source"], "user_reminder")
-        self.assertEqual(call_args.kwargs["sort_value"], 900)
         message_obj = call_args.args[0]
         self.assertIn("test reminder content", str(message_obj))
 
