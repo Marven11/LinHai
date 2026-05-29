@@ -9,16 +9,15 @@
         "poetry2nix": "poetry2nix"
       },
       "locked": {
-        "lastModified": 1769473001,
-        "narHash": "sha256-0K84SrlCHNXphzKmttlO1p0kpHAbWyZZDmoIq8wJX4I=",
+        "lastModified": 1779948116,
+        "narHash": "sha256-Ryt5ASAQnZ9TnuYKnQW1fgWPxvJ4mBfB4Le2Mqejjqc=",
         "owner": "Marven11",
         "repo": "EtherGhost",
-        "rev": "42f1f660035bfab48b6e5dc16dd7b5daaed8e2d0",
+        "rev": "4595f23907566e6b8fe9f38419b38633237ed329",
         "type": "github"
       },
       "original": {
         "owner": "Marven11",
-        "ref": "dev",
         "repo": "EtherGhost",
         "type": "github"
       }

@@ -8,7 +8,7 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
     etherGhost = {
-      url = "github:Marven11/EtherGhost/dev";
+      url = "github:Marven11/EtherGhost";
       inputs.nixpkgs.follows = "nixpkgs";
     };
   };
