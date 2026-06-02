@@ -66,7 +66,6 @@ class TestAgentToolcall(unittest.IsolatedAsyncioTestCase):
         toolset = self.toolcall_processor.calculate_llm_toolset()
         self.assertIsNotNone(toolset)
         self.assertIn("switch_llm", toolset.get_tools())
-        self.assertIn("current_llm", toolset.get_tools())
         self.assertIn("list_llm", toolset.get_tools())
         self.assertIn("get_token_usage", toolset.get_tools())
 

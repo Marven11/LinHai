@@ -1,5 +1,6 @@
 """MachineControl类的单元测试"""
 
+import json
 import unittest
 from unittest.mock import Mock, AsyncMock, patch
 
@@ -7,7 +8,7 @@ from linhai.machine_control import MachineControl
 from linhai.machine_control.master_host.master_host import MasterHostControl
 from linhai.registry import Registry
 from linhai.tool.main import ToolManager
-from linhai.tool.base import ToolSet
+from linhai.tool.base import ToolSet, SuccessfulToolResult
 from linhai.base import ToolCallMessage
 from linhai.machine_control.process import ProcessCreateResult, ProcessCreateInfo
 from linhai.utils.common import UiNotice
@@ -97,7 +98,7 @@ class TestMachineControl(unittest.IsolatedAsyncioTestCase):
         tool_names = list(toolset.tools.keys())
         self.assertIn("list_machines", tool_names)
         self.assertIn("switch_machine", tool_names)
-        self.assertIn("current_machine", tool_names)
+        self.assertIn("get_meta", tool_names)
         self.assertIn("transfer_file", tool_names)
 
     def test_register_plugin(self):
@@ -858,21 +859,44 @@ class TestListProcesses(unittest.TestCase):
         self.assertEqual(result[0]["status"], "running")
 
 
-class TestCurrentMachineTool(unittest.IsolatedAsyncioTestCase):
-    """current_machine工具测试类"""
+class TestGetMetaTool(unittest.IsolatedAsyncioTestCase):
+    """get_meta工具测试类"""
 
     def setUp(self):
         self.registry = Mock(spec=Registry)
         self.machine_control = MachineControl(self.registry)
+        mock_llm = Mock()
+        mock_llm.get_name = Mock(return_value="test_llm")
+        mock_llm_manager = Mock()
+        mock_llm_manager.get_current_llm = Mock(return_value=mock_llm)
+        mock_orchestration = Mock()
+        mock_orchestration.compute_orchestration_context = Mock(
+            return_value={"current_state": "绿灯", "notification_message": None}
+        )
+        mock_agent = Mock()
+        mock_agent.get_threshold_info = Mock(return_value=None)
+        self.registry.get_member_typechecked = Mock(
+            side_effect=lambda name, t: {
+                "llm_manager": mock_llm_manager,
+                "agent_context_orchestration": mock_orchestration,
+                "agent": mock_agent,
+            }[name]
+        )
 
-    async def test_current_machine_default(self):
+    async def test_get_meta_default(self):
         from linhai.machine_control.tools import register_machine_control_tools
 
         toolset = register_machine_control_tools(self.machine_control)
-        result = await toolset.get_tool("current_machine")()
-        self.assertEqual(result.content, "master_host")
+        result = await toolset.get_tool("get_meta")()
+        self.assertIsInstance(result, SuccessfulToolResult)
+        parsed = json.loads(result.content)
+        self.assertEqual(parsed["machine_id"], "master_host")
+        self.assertIn("hostname", parsed)
+        self.assertIn("username", parsed)
+        self.assertEqual(parsed["llm_name"], "test_llm")
+        self.assertIn("orchestration_context", parsed)
 
-    async def test_current_machine_after_switch(self):
+    async def test_get_meta_after_switch(self):
         from linhai.machine_control.tools import register_machine_control_tools
 
         mock_host = Mock()
@@ -882,8 +906,9 @@ class TestCurrentMachineTool(unittest.IsolatedAsyncioTestCase):
         await self.machine_control.switch_machine("remote")
 
         toolset = register_machine_control_tools(self.machine_control)
-        result = await toolset.get_tool("current_machine")()
-        self.assertEqual(result.content, "remote")
+        result = await toolset.get_tool("get_meta")()
+        parsed = json.loads(result.content)
+        self.assertEqual(parsed["machine_id"], "remote")
 
 
 class TestToolResultFormat(unittest.IsolatedAsyncioTestCase):

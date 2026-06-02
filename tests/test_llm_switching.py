@@ -82,23 +82,6 @@ class TestLLMSwitching(unittest.IsolatedAsyncioTestCase):
             "llm", self.agent.toolcall_processor.calculate_llm_toolset()
         )
 
-    async def test_current_llm_tool(self):
-        """Test current_llm tool functionality."""
-        tool_call = ToolCallMessage(
-            function_name="current_llm",
-            function_arguments={},
-            assert_success=True,
-            with_secret=None,
-        )
-
-        result = await self.tool_manager.process_tool_call(tool_call, tool_index=1)
-
-        if isinstance(result, FailedToolResult):
-            self.fail(f"current_llm tool failed: {result.content}")  # type: ignore
-
-        self.assertIsInstance(result, ToolCallResultMessage)
-        self.assertIn("primary", str(result))
-
     async def test_switch_llm_tool_success(self):
         """Test successful LLM switching."""
         tool_call = ToolCallMessage(

@@ -90,22 +90,6 @@ class AgentToolcall:
             return SuccessfulToolResult(content=f"已切换到LLM: {llm_name}")
 
         @toolset.register_tool(
-            name="current_llm",
-            desc=t(
-                {
-                    "zh_CN": "显示当前使用的LLM名称",
-                    "en": "Display the currently used LLM name",
-                }
-            ),
-            args={},
-            required_args=[],
-        )
-        def current_llm():
-            current_llm_instance = llm_manager.get_current_llm()
-            current_name = current_llm_instance.get_name()
-            return SuccessfulToolResult(content=f"当前使用的LLM: {current_name}")
-
-        @toolset.register_tool(
             name="list_llm",
             desc=t(
                 {

@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import getpass
 import json
+import platform
 from typing import TYPE_CHECKING, Dict, Optional, Union, Any
 from linhai.machine_control.process import ProcessIOError
 from linhai.tool.base import (
@@ -45,13 +47,42 @@ def register_machine_control_tools(machine_control: "MachineControl") -> ToolSet
         return await machine_control.list_machines()
 
     @toolset.register_tool(
-        name="current_machine",
-        desc=t({"zh_CN": "返回当前机器名", "en": "Return the current machine name"}),
+        name="get_meta",
+        desc=t(
+            {
+                "zh_CN": "获得当前机器代号、hostname、用户名、LLM名、上下文红绿灯等编排上下文信息",
+                "en": "Get current machine ID, hostname, username, LLM name, context traffic light and other orchestration context info",
+            }
+        ),
         args={},
         required_args=[],
     )
-    async def current_machine_tool() -> SuccessfulToolResult:
-        return SuccessfulToolResult(content=machine_control.target_machine)
+    async def get_meta_tool() -> SuccessfulToolResult:
+        from linhai.agent.main import Agent
+        from linhai.agent.orchestration import AgentContextOrchestration
+        from linhai.llm_manager import LlmManager
+
+        result: dict[str, Any] = {
+            "machine_id": machine_control.target_machine,
+            "hostname": platform.node(),
+            "username": getpass.getuser(),
+        }
+
+        llm_manager = machine_control.registry.get_member_typechecked(
+            "llm_manager", LlmManager
+        )
+        result["llm_name"] = llm_manager.get_current_llm().get_name()
+
+        orchestration = machine_control.registry.get_member_typechecked(
+            "agent_context_orchestration", AgentContextOrchestration
+        )
+        agent = machine_control.registry.get_member_typechecked("agent", Agent)
+        threshold_info = agent.get_threshold_info()
+        result["orchestration_context"] = orchestration.compute_orchestration_context(
+            "", threshold_info
+        )
+
+        return SuccessfulToolResult(content=json.dumps(result, ensure_ascii=False))
 
     @toolset.register_tool(
         name="switch_machine",
