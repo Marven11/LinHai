@@ -357,6 +357,8 @@ def register_machine_control_tools(machine_control: "MachineControl") -> ToolSet
         verify: Optional[bool] = None,
     ) -> SuccessfulToolResult | FailedToolResult:
         host_control = machine_control.machines[machine_control.target_machine]
+        if auth is not None:
+            auth = (auth[0], auth[1])
         return await host_control.http_request(
             method,
             url,

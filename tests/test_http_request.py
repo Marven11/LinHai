@@ -416,6 +416,60 @@ class TestHttpRequest(unittest.IsolatedAsyncioTestCase):
             kwargs = call_args[1]
             self.assertEqual(kwargs["verify"], verify)
 
+    async def test_http_request_with_auth_list(self):
+        """测试带auth参数(列表类型，模拟LLM传入)的请求"""
+        mock_response = Mock()
+        mock_response.status_code = 200
+        mock_response.headers = {"content-type": "application/json"}
+        mock_response.text = '{"authenticated": true}'
+        mock_response.content = b'{"authenticated": true}'
+
+        with patch(
+            "linhai.machine_control.master_host.http.httpx.AsyncClient"
+        ) as mock_client_class:
+            mock_client = AsyncMock()
+            mock_client.__aenter__.return_value = mock_client
+            mock_client.__aexit__.return_value = None
+            mock_client.request.return_value = mock_response
+            mock_client_class.return_value = mock_client
+
+            auth_list = ["user", "pass"]
+            result = await self.host_control.http_request(
+                "GET", "http://example.com/protected", auth=tuple(auth_list)
+            )
+
+            self.assertIsInstance(result, SuccessfulToolResult)
+            mock_client.request.assert_called_once()
+            call_args = mock_client.request.call_args
+            kwargs = call_args[1]
+            self.assertEqual(kwargs["auth"], ("user", "pass"))
+
+    async def test_http_request_tool_auth_list_to_tuple(self):
+        """测试http_request_tool将list类型的auth转换为tuple"""
+        from unittest.mock import MagicMock
+        from linhai.machine_control.tools import register_machine_control_tools
+
+        mock_host = MagicMock()
+        mock_host.http_request = AsyncMock()
+        mock_machine_control = MagicMock()
+        mock_machine_control.machines = {"master_host": mock_host}
+        mock_machine_control.target_machine = "master_host"
+
+        toolset = register_machine_control_tools(mock_machine_control)
+        tool_func = toolset.get_tool("http_request")
+
+        await tool_func(
+            method="GET",
+            url="http://example.com",
+            auth=["admin", "xxx"],
+        )
+
+        mock_host.http_request.assert_called_once()
+        call_args = mock_host.http_request.call_args
+        auth_arg = call_args.args[7]
+        self.assertIsInstance(auth_arg, tuple)
+        self.assertEqual(auth_arg, ("admin", "xxx"))
+
 
 if __name__ == "__main__":
     unittest.main()
