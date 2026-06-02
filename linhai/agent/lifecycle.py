@@ -213,6 +213,7 @@ class Lifecycle:
         self.after_conversation_restore: BroadcastSlot[
             AfterConversationRestoreCallback
         ] = BroadcastSlot()
+        self.before_exit: BroadcastSlot[Callable[[], Awaitable[None]]] = BroadcastSlot()
 
     def serialize(self) -> dict:
         return {}

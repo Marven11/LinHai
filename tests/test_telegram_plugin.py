@@ -330,31 +330,62 @@ class TestTelegramPlugin(unittest.TestCase):
         self.assertIn("Download failed", str(context.exception))
 
     def test_before_agent_loop(self):
-        """测试Agent循环开始时启动telegram bot。"""
+        """测试Agent循环开始时启动telegram bot，使用run_polling + task supervisor。"""
         plugin = TelegramPlugin(self.registry, self.telegram_config)
-        plugin._application = Mock()
-        plugin._application.run_polling = AsyncMock()
-        plugin._application.initialize = AsyncMock()
-        plugin._application.start = AsyncMock()
-        plugin._application.shutdown = AsyncMock()
-        plugin._application.updater = Mock()
-        plugin._application.updater.start_polling = AsyncMock()
 
-        with patch("linhai.plugin.telegram.Application") as mock_app_class:
+        with (
+            patch("linhai.plugin.telegram.Application") as mock_app_class,
+            patch("telegram.Bot") as mock_bot_class,
+        ):
+            mock_bot = Mock()
+            mock_bot_class.return_value = mock_bot
             mock_builder = Mock()
             mock_application = Mock()
-            mock_application.initialize = AsyncMock()
-            mock_application.start = AsyncMock()
-            mock_application.shutdown = AsyncMock()
-            mock_application.updater = Mock()
-            mock_application.updater.start_polling = AsyncMock()
+            mock_application.run_polling = AsyncMock()
             mock_builder.token.return_value = mock_builder
+            mock_builder.bot.return_value = mock_builder
             mock_builder.build.return_value = mock_application
             mock_app_class.builder.return_value = mock_builder
 
             asyncio.run(plugin.before_agent_loop(None))
 
             self.assertTrue(plugin._running)
+            self.assertIs(plugin._bot, mock_bot)
+            mock_bot_class.assert_called_once_with(token="test_token")
+
+    def test_before_agent_loop_creates_supervised_tasks(self):
+        """测试before_agent_loop创建telegram_polling和telegram_send_loop任务。"""
+        plugin = TelegramPlugin(self.registry, self.telegram_config)
+
+        task_supervisor_mock = Mock()
+        task_supervisor_mock.create_supervised_task = Mock()
+        self.registry.get_member_typechecked = Mock(
+            side_effect=lambda name, cls: (
+                task_supervisor_mock if name == "task_supervisor" else self.agent
+            )
+        )
+
+        with (
+            patch("linhai.plugin.telegram.Application") as mock_app_class,
+            patch("telegram.Bot") as mock_bot_class,
+        ):
+            mock_bot = Mock()
+            mock_bot_class.return_value = mock_bot
+            mock_builder = Mock()
+            mock_application = Mock()
+            mock_application.run_polling = AsyncMock()
+            mock_builder.token.return_value = mock_builder
+            mock_builder.bot.return_value = mock_builder
+            mock_builder.build.return_value = mock_application
+            mock_app_class.builder.return_value = mock_builder
+
+            asyncio.run(plugin.before_agent_loop(None))
+
+            create_calls = task_supervisor_mock.create_supervised_task.call_args_list
+            self.assertEqual(len(create_calls), 2)
+            self.assertEqual(create_calls[0][0][0], "telegram_polling")
+            self.assertIs(create_calls[0][0][1], mock_application.run_polling)
+            self.assertEqual(create_calls[1][0][0], "telegram_send_loop")
 
     def test_before_agent_loop_already_running(self):
         """测试bot已在运行时不重复启动。"""
@@ -370,31 +401,59 @@ class TestTelegramPlugin(unittest.TestCase):
         plugin._application.start.assert_not_called()
 
     def test_shutdown(self):
-        """测试关闭telegram bot。"""
+        """测试关闭telegram bot，取消polling和send_loop任务。"""
         plugin = TelegramPlugin(self.registry, self.telegram_config)
+        task_supervisor_mock = Mock()
+        task_supervisor_mock.cancel = Mock()
+        self.registry.get_member_typechecked = Mock(return_value=task_supervisor_mock)
         plugin._application = Mock()
-        plugin._application.stop = AsyncMock()
-        plugin._application.shutdown = AsyncMock()
         plugin._running = True
 
         asyncio.run(plugin.shutdown())
 
         self.assertFalse(plugin._running)
-        plugin._application.stop.assert_called_once()
-        plugin._application.shutdown.assert_called_once()
+        cancel_calls = task_supervisor_mock.cancel.call_args_list
+        self.assertEqual(len(cancel_calls), 2)
+        self.assertEqual(cancel_calls[0][0][0], "telegram_send_loop")
+        self.assertEqual(cancel_calls[1][0][0], "telegram_polling")
 
     def test_shutdown_not_running(self):
         """测试bot未运行时不执行关闭。"""
         plugin = TelegramPlugin(self.registry, self.telegram_config)
+        task_supervisor_mock = Mock()
+        task_supervisor_mock.cancel = Mock()
+        self.registry.get_member_typechecked = Mock(return_value=task_supervisor_mock)
         plugin._application = Mock()
-        plugin._application.stop = AsyncMock()
-        plugin._application.shutdown = AsyncMock()
         plugin._running = False
 
         asyncio.run(plugin.shutdown())
 
-        plugin._application.stop.assert_not_called()
-        plugin._application.shutdown.assert_not_called()
+        task_supervisor_mock.cancel.assert_not_called()
+
+    def test_on_exit_calls_shutdown(self):
+        """测试_on_exit调用shutdown。"""
+        plugin = TelegramPlugin(self.registry, self.telegram_config)
+        plugin.shutdown = AsyncMock()
+        asyncio.run(plugin._on_exit())
+        plugin.shutdown.assert_called_once()
+
+    def test_register_includes_before_exit(self):
+        """测试register注册before_exit回调。"""
+        plugin = TelegramPlugin(self.registry, self.telegram_config)
+        lifecycle_mock = Mock()
+        lifecycle_mock.after_segment = Mock()
+        lifecycle_mock.after_segment.register = Mock()
+        lifecycle_mock.before_agent_loop = Mock()
+        lifecycle_mock.before_agent_loop.register = Mock()
+        lifecycle_mock.before_exit = Mock()
+        lifecycle_mock.before_exit.register = Mock()
+
+        plugin.register(lifecycle_mock)
+
+        lifecycle_mock.before_exit.register.assert_called_once()
+        call_arg = lifecycle_mock.before_exit.register.call_args[0][0]
+        self.assertEqual(call_arg.__func__, plugin._on_exit.__func__)
+        self.assertIs(call_arg.__self__, plugin)
 
 
 class TestTelegramReactionReminderPlugin(unittest.TestCase):

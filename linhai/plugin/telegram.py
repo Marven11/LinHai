@@ -327,9 +327,14 @@ class TelegramPlugin(Plugin):
         if self._running:
             return
 
+        from telegram import Bot
+
+        bot = Bot(token=self.config["bot_token"])
         self._application = (
-            Application.builder().token(self.config["bot_token"]).build()
+            Application.builder().token(self.config["bot_token"]).bot(bot).build()
         )
+        self._bot = bot
+
         self._application.add_handler(
             MessageHandler(
                 filters.TEXT & ~filters.COMMAND, self._handle_telegram_message
@@ -338,12 +343,6 @@ class TelegramPlugin(Plugin):
         self._application.add_handler(
             MessageHandler(filters.Sticker.ALL, self._handle_telegram_sticker)
         )
-
-        await self._application.initialize()
-        await self._application.start()
-        assert self._application.updater is not None
-        await self._application.updater.start_polling()
-        self._bot = self._application.bot
 
         self._running = True
 
@@ -357,6 +356,11 @@ class TelegramPlugin(Plugin):
         task_supervisor = self.registry.get_member_typechecked(
             "task_supervisor", TaskSupervisor
         )
+
+        from operator import attrgetter
+
+        run_polling_fn = attrgetter("run_polling")(self._application)
+        task_supervisor.create_supervised_task("telegram_polling", run_polling_fn)
         task_supervisor.create_supervised_task("telegram_send_loop", self._send_loop)
 
     async def shutdown(self):
@@ -369,13 +373,17 @@ class TelegramPlugin(Plugin):
                 "task_supervisor", TaskSupervisor
             )
             task_supervisor.cancel("telegram_send_loop")
-            await self._application.stop()
-            await self._application.shutdown()
+            task_supervisor.cancel("telegram_polling")
+
+    async def _on_exit(self):
+        """退出时优雅停止telegram。"""
+        await self.shutdown()
 
     def register(self, lifecycle: "Lifecycle") -> None:
         """注册到Lifecycle。"""
         lifecycle.after_segment.register(self._on_segment_start)
         lifecycle.before_agent_loop.register(self.before_agent_loop)
+        lifecycle.before_exit.register(self._on_exit)
 
 
 class TelegramReactionReminderPlugin(Plugin):

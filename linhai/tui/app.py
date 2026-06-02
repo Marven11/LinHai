@@ -275,6 +275,9 @@ class TUIApp(App):
         ).register_toolset("tui", cliapp_tool)
 
     async def on_unmount(self) -> None:
+        lifecycle = self.registry.get_member_typechecked("lifecycle", Lifecycle)
+        await lifecycle.before_exit.trigger()
+
         if hasattr(self, "messages_list"):
             await self.messages_list.cleanup()
 
