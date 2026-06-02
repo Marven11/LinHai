@@ -64,6 +64,7 @@ from .reminder import ReminderPlugin, ReminderWriteGuardPlugin
 from .python_chore import PythonCommentCheckerPlugin
 from .telegram import TelegramReactionReminderPlugin
 from .catgirl_tone import CatgirlTonePlugin
+from .interlink import InterlinkPlugin
 
 from .helpers import (
     is_small_file,
@@ -126,4 +127,5 @@ __all__ = [
     "PkillCheckerPlugin",
     "CustomToolcallFormatPlugin",
     "TelegramReactionReminderPlugin",
+    "InterlinkPlugin",
 ]

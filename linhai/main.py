@@ -107,6 +107,7 @@ async def run(args):
             if args.restore_conversation
             else None
         ),
+        "interlink": args.interlink,
     }
     context = create_agent_build_context(
         registry=registry,
@@ -206,6 +207,12 @@ def main():
         type=str,
         default=None,
         help="指定conversation的UUID以恢复saved.json",
+    )
+    parser.add_argument(
+        "--interlink",
+        type=str,
+        default=None,
+        help="启用Interlink通信模式，指定通信频道名称",
     )
 
     subparsers = parser.add_subparsers(dest="command", help="可用命令")

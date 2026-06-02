@@ -73,6 +73,7 @@ class AgentBuildArguments(TypedDict):
     profile_name: Optional[str]
     git_worktree: bool
     restore_path: Optional[Path]
+    interlink: Optional[str]
 
 
 class AgentBuildContext(TypedDict):
@@ -108,6 +109,7 @@ class AgentBuildContext(TypedDict):
     config: Config
     plugins: Optional[list[str]]
     git_worktree: bool
+    interlink: Optional[str]
 
 
 def _resolve_agent_profile(config: Config, profile_name: Optional[str]) -> AgentConfig:
@@ -253,6 +255,7 @@ def create_agent_build_context(
         "config": config,
         "plugins": agent_config.plugins,
         "git_worktree": build_args.get("git_worktree", False),
+        "interlink": build_args.get("interlink"),
     }
 
 
@@ -408,6 +411,13 @@ async def create_agent_from_context(
         from linhai.plugin import AfkPlugin
 
         AfkPlugin(context["registry"], afk=True).register(agent.lifecycle)
+
+    if context.get("interlink"):
+        from linhai.plugin.interlink import InterlinkPlugin
+
+        interlink_name = context["interlink"]
+        assert interlink_name is not None
+        InterlinkPlugin(context["registry"], interlink_name).register(agent.lifecycle)
 
     if context.get("config"):
         from linhai.plugin.user_reminder import UserReminderPlugin

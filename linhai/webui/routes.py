@@ -72,6 +72,7 @@ async def create_agent(request: AgentCreateRequest):
         "profile_name": request.profile_name,
         "git_worktree": False,
         "restore_path": Path(request.restore_path) if request.restore_path else None,
+        "interlink": None,
     }
 
     manager = get_manager()
