@@ -51,7 +51,7 @@ class WaitingUserPlugin(Plugin):
             )
         content = message.get_content()
         if content is None:
-            raise ValueError("AssistantMessage.get_content() returned None")
+            return ""
         return content
 
     async def after_message_generation(self, parsed_answer, tool_calls):
