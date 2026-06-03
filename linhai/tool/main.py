@@ -185,12 +185,17 @@ class ToolManager:
     async def update_tools_definition(self):
         """更新SystemMessage中的工具定义（before_message_generation回调）。"""
         from linhai.base import SystemMessage
+        from linhai.agent.main import Agent
 
         system_message = self.registry.get_member_typechecked(
             "system_message", SystemMessage
         )
 
         system_message.remove_introduction("TOOLS")
+
+        agent = self.registry.get_member_typechecked("agent", Agent)
+        if not agent.get_current_model().get_custom_toolcall_format():
+            return
 
         tools_info = self.get_tools_info()
         system_message.add_introduction(

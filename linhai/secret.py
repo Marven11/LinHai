@@ -354,6 +354,7 @@ class SecretToolsetPlugin:
             rule_content = _CALL_WITH_SECRET_RULE.format(secrets_list=secrets_message)
             system_message.remove_rule("CALL WITH SECRET")
             system_message.add_rule("CALL WITH SECRET", rule_content)
+            system_message.remove_introduction("SECRET SYSTEM")
 
     def register(self, lifecycle: "Lifecycle"):
         lifecycle.before_message_generation.register(self.before_message_generation)
