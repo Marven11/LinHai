@@ -444,6 +444,23 @@ class TestHttpRequest(unittest.IsolatedAsyncioTestCase):
             kwargs = call_args[1]
             self.assertEqual(kwargs["auth"], ("user", "pass"))
 
+    async def test_http_request_non_request_error(self):
+        """测试非httpx.RequestError异常被捕获"""
+        with patch(
+            "linhai.machine_control.master_host.http.httpx.AsyncClient"
+        ) as mock_client_class:
+            mock_client = AsyncMock()
+            mock_client.__aenter__.return_value = mock_client
+            mock_client.__aexit__.return_value = None
+            mock_client.request.side_effect = ValueError("unexpected error")
+            mock_client_class.return_value = mock_client
+
+            result = await self.host_control.http_request("GET", "http://example.com")
+
+            self.assertIsInstance(result, FailedToolResult)
+            self.assertIn("处理响应失败", result.content)
+            self.assertIn("ValueError", result.content)
+
     async def test_http_request_tool_auth_list_to_tuple(self):
         """测试http_request_tool将list类型的auth转换为tuple"""
         from unittest.mock import MagicMock

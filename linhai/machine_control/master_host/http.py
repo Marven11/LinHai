@@ -1,3 +1,4 @@
+import asyncio
 from typing import Any, Optional
 
 import httpx
@@ -24,14 +25,14 @@ async def http_request(
     headers.setdefault(
         "User-Agent", "Mozilla/5.0 (compatible; LinHai/1.0; Chrome-like)"
     )
-    try:
-        client_kwargs: dict[str, Any] = {}
-        if proxy is not None:
-            client_kwargs["proxy"] = proxy
-        if verify is not None:
-            client_kwargs["verify"] = verify
-        async with httpx.AsyncClient(**client_kwargs) as client:
-            response = await client.request(
+    client_kwargs: dict[str, Any] = {}
+    if proxy is not None:
+        client_kwargs["proxy"] = proxy
+    if verify is not None:
+        client_kwargs["verify"] = verify
+    async with httpx.AsyncClient(**client_kwargs) as client:
+        results = await asyncio.gather(
+            client.request(
                 method=method,
                 url=url,
                 params=params,
@@ -42,12 +43,20 @@ async def http_request(
                 auth=auth,
                 cookies=cookies,
                 json=json_data,
+            ),
+            return_exceptions=True,
+        )
+        result = results[0]
+        if isinstance(result, httpx.RequestError):
+            return FailedToolResult(content=f"请求失败: {str(result)}")
+        if isinstance(result, BaseException):
+            return FailedToolResult(
+                content=f"处理响应失败: {type(result).__name__}: {str(result)}"
             )
-            return await build_http_message(
-                status_code=response.status_code,
-                headers=dict(response.headers),
-                content=response.content,
-                content_type=response.headers.get("content-type", "").lower(),
-            )
-    except httpx.RequestError as e:
-        return FailedToolResult(content=f"请求失败: {str(e)}")
+        response = result
+        return await build_http_message(
+            status_code=response.status_code,
+            headers=dict(response.headers),
+            content=response.content,
+            content_type=response.headers.get("content-type", "").lower(),
+        )
