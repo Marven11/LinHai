@@ -93,7 +93,9 @@ class AgentLlm:
             else:
                 interrupt_msg = UiNotice(level="WARNING", content="Agent被打断")
 
-            current_content = self._current_parsed_answer._answer.get_current_content()
+            current_content = (
+                self._current_parsed_answer._answer.get_current_content() or ""
+            )
             has_tool_calls = "```json toolcall" in current_content or bool(
                 self._current_parsed_answer._openai_toolcall_segments
             )

@@ -361,7 +361,7 @@ class AgentManager:
                 session.add_user_message(msg.get_content())
             elif isinstance(msg, AssistantMessage):
                 idx = session.add_agent_message()
-                session.update_agent_message_content(idx, msg.get_content())
+                session.update_agent_message_content(idx, msg.get_content() or "")
 
     def get_registry(self, agent_id: str) -> Optional[Registry]:
         return self._registries.get(agent_id)

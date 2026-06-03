@@ -275,11 +275,17 @@ class AssistantMessage:
 
     def __init__(
         self,
-        message: str,
+        message: str | None,
         reasoning_message: str | None = None,
         name: str | None = None,
     ):
-        """初始化助理消息。"""
+        """初始化助理消息。
+
+        Args:
+            message: 助理消息文本内容，None表示API未返回content字段
+            reasoning_message: 推理内容
+            name: 消息来源名称
+        """
         self.message = message
         self.reasoning_message = reasoning_message
         self.name = name
@@ -287,15 +293,20 @@ class AssistantMessage:
 
     def to_llm_message(self) -> LanguageModelMessage:
         """转换为LLM消息格式。"""
-        result: AsstMsgType = AsstMsgType(role="assistant", content=self.get_content())
+        result: AsstMsgType = AsstMsgType(role="assistant")
+        if self.message is not None:
+            result["content"] = self.message
         if self.reasoning_message:
             result["reasoning_content"] = self.reasoning_message
         if self.tool_calls:
             result["tool_calls"] = self.tool_calls
         return result
 
-    def get_content(self) -> str:
-        """获取消息的文本内容。"""
+    def get_content(self) -> str | None:
+        """获取消息的文本内容。
+
+        返回str或None：None表示API未返回content字段。
+        """
         return self.message
 
     def __repr__(self) -> str:
@@ -391,7 +402,7 @@ class AnswerToken(BaseModel):
     """LLM回答的token表示，包含推理内容和普通内容。"""
 
     reasoning_content: str | None = None
-    content: str
+    content: str | None
 
 
 class OpenAiToolCallToken(BaseModel):
@@ -485,7 +496,7 @@ class Answer(Protocol):
         """截断当前回答的生成，相当于提前帮LLM结束输出"""
         raise NotImplementedError
 
-    def get_current_content(self) -> str:
+    def get_current_content(self) -> str | None:
         """获取当前累积的回答内容"""
         raise NotImplementedError
 

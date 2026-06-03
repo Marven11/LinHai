@@ -177,7 +177,7 @@ async def agent_websocket(websocket: WebSocket, agent_id: str):
                 if segment is None:
                     break
                 session.add_segment_to_agent_message(agent_idx, segment)
-                content = parsed_answer._answer.get_current_content()
+                content = parsed_answer._answer.get_current_content() or ""
                 session.update_agent_message_content(agent_idx, content)
 
         async with anyio.create_task_group() as tg:
@@ -185,7 +185,7 @@ async def agent_websocket(websocket: WebSocket, agent_id: str):
             await parsed_answer.wait_parsing()
             tg.cancel_scope.cancel()
 
-        content = parsed_answer._answer.get_current_content()
+        content = parsed_answer._answer.get_current_content() or ""
         session.update_agent_message_content(agent_idx, content)
 
     async with anyio.create_task_group() as tg:

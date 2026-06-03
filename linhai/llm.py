@@ -41,7 +41,7 @@ class OpenAiAnswer:
     ):
         """初始化OpenAI回答。"""
         self.reasoning_content = None
-        self.content = ""
+        self.content: str | None = None
         self.stream = stream
         self.interrupted = False
         self.truncated = False
@@ -98,8 +98,12 @@ class OpenAiAnswer:
             if len(chunk.choices) == 0:
                 return
             delta = chunk.choices[0].delta
-            content = delta.content or ""
-            self.content += content
+            content = delta.content
+            if content is not None:
+                if self.content is None:
+                    self.content = content
+                else:
+                    self.content += content
 
             reasoning_content = getattr(delta, "reasoning_content", None)
             if reasoning_content:
@@ -197,7 +201,7 @@ class OpenAiAnswer:
         self.truncated = True
         self.toyield.clear()
 
-    def get_current_content(self) -> str:
+    def get_current_content(self) -> str | None:
         """获取当前累积的回答内容。"""
         return self.content
 
@@ -296,7 +300,7 @@ class MinimaxAnswer:
             self.reasoning_content = reasoning_details.__dict__.get("text")
         else:
             self.reasoning_content = None
-        self.content = message_dict.get("content") or ""
+        self.content = message_dict.get("content")
         usage = response_dict.get("usage")
 
         self.interrupted = False
@@ -347,11 +351,11 @@ class MinimaxAnswer:
                     content="",
                 )
             )
-        if self.content:
+        if self.content is not None:
             self.toyield.append(
                 AnswerToken(
                     reasoning_content=None,
-                    content=self.content,
+                    content=self.content or "",
                 )
             )
 
@@ -388,7 +392,7 @@ class MinimaxAnswer:
         self.truncated = True
         self.toyield.clear()
 
-    def get_current_content(self) -> str:
+    def get_current_content(self) -> str | None:
         """获取当前累积的回答内容。"""
         return self.content
 

@@ -95,7 +95,7 @@ class AssistantMessage(TypedDict):
     """Assistant message type definition."""
 
     role: Required[Literal["assistant"]]
-    content: str
+    content: NotRequired[str]
     name: NotRequired[str]
     tool_calls: NotRequired[Iterable[ChatCompletionMessageToolCallParam]]
     function_call: NotRequired[Optional[FunctionCall]]

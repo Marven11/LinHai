@@ -124,3 +124,24 @@ class TestJsonSerialization(unittest.TestCase):
         json_str = failed_result.to_json()
         self.assertIn(chinese_text, json_str)
         self.assertNotIn("\\u", json_str)
+
+    def test_assistant_message_none_content(self):
+        msg = AssistantMessage(message=None)
+        self.assertIsNone(msg.get_content())
+        llm_msg = msg.to_llm_message()
+        self.assertEqual(llm_msg["role"], "assistant")
+        self.assertNotIn("content", llm_msg)
+
+    def test_assistant_message_none_content_serialization(self):
+        original = AssistantMessage(message=None)
+        json_str = original.to_json()
+        restored = AssistantMessage.from_json(json_str, self.mock_registry)
+        self.assertIsNone(restored.get_content())
+        self.assertEqual(original.to_llm_message(), restored.to_llm_message())
+
+    def test_assistant_message_with_content_serialization(self):
+        original = AssistantMessage(message="hello")
+        json_str = original.to_json()
+        restored = AssistantMessage.from_json(json_str, self.mock_registry)
+        self.assertEqual(restored.get_content(), "hello")
+        self.assertIn("content", restored.to_llm_message())

@@ -354,7 +354,7 @@ class ParsedAnswer:
             for parsed_token in parsed_tokens:
                 await self._process_token(parsed_token)
             interrupted = await self.lifecycle.after_token_generation.trigger(
-                self.agent, self._answer, self._answer.get_current_content()
+                self.agent, self._answer, self._answer.get_current_content() or ""
             )
             if interrupted:
                 self.interrupted = True
@@ -388,7 +388,7 @@ class ParsedAnswer:
         return self._answer.get_message()
 
     def extract_tool_calls_with_errors(self) -> Tuple[list[ToolCallDict], list[str]]:
-        full_response = self._answer.get_current_content()
+        full_response = self._answer.get_current_content() or ""
         tool_calls, errors = extract_tool_calls_with_errors(full_response)
         return tool_calls, errors
 
