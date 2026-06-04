@@ -2,7 +2,14 @@
 
 from textual.app import ComposeResult
 from textual.containers import VerticalScroll
-from textual.widgets import Collapsible, Label, ProgressBar, Sparkline, Static
+from textual.widgets import (
+    Collapsible,
+    DataTable,
+    Label,
+    ProgressBar,
+    Sparkline,
+    Static,
+)
 
 from linhai.context_statistics import (
     ContextStatistics,
@@ -151,6 +158,12 @@ class ContextTabWidget(Static):
                 collapsed=False,
             ):
                 yield Static(id="cumulative-token-stats-text")
+            with Collapsible(
+                title=t({"zh_CN": "最近缓存状态", "en": "Recent Cache Status"}),
+                id="recent-cache-collapsible",
+                collapsed=True,
+            ):
+                yield DataTable(id="recent-cache-table")
 
     def on_mount(self) -> None:
         self.set_interval(self.refresh_interval, self.update_display)
@@ -333,6 +346,33 @@ class ContextTabWidget(Static):
             f"{t({'zh_CN': '缓存失效次数', 'en': 'Cache miss count'})}: {stats['cumulative_cache_miss_count']}"
         )
 
+    def _update_recent_cache_status(self, stats: ContextStatistics) -> None:
+        table = self.query_one("#recent-cache-table", DataTable)
+        table.clear()
+        recent_rows = stats["recent_cache_rows"]
+        if recent_rows is None:
+            return
+
+        if len(table.columns) == 0:
+            table.add_columns(
+                t({"zh_CN": "输入Token", "en": "Input Tokens"}),
+                t({"zh_CN": "实际缓存", "en": "Actual Cache"}),
+                t({"zh_CN": "估算缓存", "en": "Est. Cache"}),
+                t({"zh_CN": "非缓存", "en": "Non-Cached"}),
+                t({"zh_CN": "输出Token", "en": "Output Tokens"}),
+                t({"zh_CN": "缓存比例", "en": "Cache Ratio"}),
+            )
+
+        for row in recent_rows:
+            table.add_row(
+                row["input_tokens"],
+                row["actual_cached_tokens"],
+                row["estimated_cached_tokens"],
+                row["non_cached_tokens"],
+                row["output_tokens"],
+                row["cache_ratio"],
+            )
+
     def update_display(self) -> None:
         agent_message: AgentMessage = self.registry.get_member_typechecked(
             "agent_message", AgentMessage
@@ -368,6 +408,9 @@ class ContextTabWidget(Static):
             current_token_usage = token_manager.current_token_usage
             generation_count = token_manager.generation_count
             cumulative_token_usage = token_manager.cumulative_token_usage
+            recent_generations = token_manager.recent_generations
+        else:
+            recent_generations = None
 
         cleanable_messages = get_cleanable_large_messages(
             orchestration.large_messages,
@@ -403,6 +446,7 @@ class ContextTabWidget(Static):
             current_token_usage=current_token_usage,
             cumulative_token_usage=cumulative_token_usage,
             system_prompt_tokens=system_prompt_tokens,
+            recent_generations=recent_generations,
         )
 
         self._update_cumulative_token_usage(stats)
@@ -412,3 +456,4 @@ class ContextTabWidget(Static):
         self._update_notification_details(stats)
         self._update_token_usage(stats)
         self._update_cache_status(stats)
+        self._update_recent_cache_status(stats)

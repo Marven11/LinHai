@@ -11,6 +11,9 @@ if TYPE_CHECKING:
     from linhai.agent import Agent
 
 
+MAX_RECENT_GENERATIONS = 50
+
+
 class TokenManager:
     """Manager for token usage tracking and display."""
 
@@ -20,6 +23,7 @@ class TokenManager:
         self.registry = registry
         self._current_token_usage: Optional[AnswerTokenUsage] = None
         self.cumulative_token_usage: Optional[CumulativeTokenUsage] = None
+        self.recent_generations: list[AnswerTokenUsage] = []
         self.explicit_cache_tokens: int = 0
         self.is_dirty: bool = False
         self.generation_count: int = 0
@@ -66,6 +70,9 @@ class TokenManager:
     def update_cumulative_usage(self, token_usage: AnswerTokenUsage) -> None:
         """更新累计token使用量"""
         self.is_dirty = False
+        self.recent_generations.append(token_usage)
+        if len(self.recent_generations) > MAX_RECENT_GENERATIONS:
+            self.recent_generations.pop(0)
         if self.cumulative_token_usage is None:
             self.cumulative_token_usage = {
                 "input_tokens": token_usage.input_tokens,
@@ -196,6 +203,7 @@ class TokenManager:
                 if self.cumulative_token_usage
                 else None
             ),
+            "recent_generations": [g.model_dump() for g in self.recent_generations],
             "explicit_cache_tokens": self.explicit_cache_tokens,
             "is_dirty": self.is_dirty,
             "generation_count": self.generation_count,
@@ -203,6 +211,9 @@ class TokenManager:
 
     def restore_from(self, data: dict) -> None:
         self.cumulative_token_usage = data.get("cumulative_token_usage")
+        self.recent_generations = [
+            AnswerTokenUsage(**g) for g in data.get("recent_generations", [])
+        ]
         self.explicit_cache_tokens = data.get("explicit_cache_tokens", 0)
         self.is_dirty = data.get("is_dirty", False)
         self.generation_count = data.get("generation_count", 0)

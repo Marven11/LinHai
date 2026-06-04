@@ -62,6 +62,15 @@ class NotificationMessageDisplay(TypedDict):
     token_count: int
 
 
+class RecentGenerationCacheRow(TypedDict):
+    input_tokens: str
+    actual_cached_tokens: str
+    estimated_cached_tokens: str
+    non_cached_tokens: str
+    output_tokens: str
+    cache_ratio: str
+
+
 class ContextStatistics(TypedDict):
     messages: MessageGroupStatistics
     pinned_messages: MessageGroupStatistics
@@ -82,6 +91,7 @@ class ContextStatistics(TypedDict):
     cumulative_output_tokens: int | None
     cumulative_cache_miss_count: int | None
     system_prompt_tokens: int | None
+    recent_cache_rows: list[RecentGenerationCacheRow] | None
 
 
 def estimate_message_tokens(msg: Message) -> int:
@@ -249,6 +259,45 @@ def compute_notification_details(
     return result
 
 
+def compute_recent_cache_rows(
+    recent_generations: list[AnswerTokenUsage] | None,
+) -> list[RecentGenerationCacheRow] | None:
+    if recent_generations is None or len(recent_generations) == 0:
+        return None
+    rows: list[RecentGenerationCacheRow] = []
+    for usage in recent_generations:
+        input_t = usage.input_tokens
+        actual = usage.cached_input_tokens
+        estimated = usage.estimated_cached_input_tokens
+        output_t = usage.output_tokens
+
+        cached_for_calc = actual if actual is not None else estimated
+        if cached_for_calc is not None:
+            non_cached = input_t - cached_for_calc
+            ratio = cached_for_calc / input_t * 100 if input_t > 0 else 0.0
+            row = RecentGenerationCacheRow(
+                input_tokens=str(input_t),
+                actual_cached_tokens=str(actual) if actual is not None else "-",
+                estimated_cached_tokens=(
+                    str(estimated) if estimated is not None else "-"
+                ),
+                non_cached_tokens=str(non_cached),
+                output_tokens=str(output_t),
+                cache_ratio=f"{ratio:.1f}%",
+            )
+        else:
+            row = RecentGenerationCacheRow(
+                input_tokens=str(input_t),
+                actual_cached_tokens="-",
+                estimated_cached_tokens="-",
+                non_cached_tokens="-",
+                output_tokens=str(output_t),
+                cache_ratio="-",
+            )
+        rows.append(row)
+    return rows
+
+
 def compute_context_statistics(
     messages: list[Message],
     pinned_messages: list[Message],
@@ -264,6 +313,7 @@ def compute_context_statistics(
     current_token_usage: AnswerTokenUsage | None,
     cumulative_token_usage: CumulativeTokenUsage | None,
     system_prompt_tokens: int | None = None,
+    recent_generations: list[AnswerTokenUsage] | None = None,
 ) -> ContextStatistics:
     msg_stats = compute_message_group_stats(messages)
     pinned_stats = compute_message_group_stats(pinned_messages)
@@ -294,6 +344,8 @@ def compute_context_statistics(
         cumulative_output_tokens = cumulative_token_usage["output_tokens"]
         cumulative_cache_miss_count = cumulative_token_usage["cache_miss_count"]
 
+    recent_cache_rows = compute_recent_cache_rows(recent_generations)
+
     return ContextStatistics(
         messages=msg_stats,
         pinned_messages=pinned_stats,
@@ -314,4 +366,5 @@ def compute_context_statistics(
         cumulative_output_tokens=cumulative_output_tokens,
         cumulative_cache_miss_count=cumulative_cache_miss_count,
         system_prompt_tokens=system_prompt_tokens,
+        recent_cache_rows=recent_cache_rows,
     )

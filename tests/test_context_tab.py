@@ -33,6 +33,7 @@ def _build_context_statistics(
     pinned_stats=None,
     notification_stats=None,
     notification_details=None,
+    recent_cache_rows=None,
 ):
     from linhai.context_statistics import (
         MessageGroupStatistics,
@@ -76,6 +77,7 @@ def _build_context_statistics(
         cumulative_output_tokens=cumulative_output_tokens,
         cumulative_cache_miss_count=cumulative_cache_miss_count,
         system_prompt_tokens=system_prompt_tokens,
+        recent_cache_rows=recent_cache_rows,
     )
 
 
@@ -169,6 +171,7 @@ class TestContextTab(unittest.TestCase):
         mock_token_manager.current_token_usage = mock_token_usage
         mock_token_manager.cumulative_token_usage = None
         mock_token_manager.generation_count = 0
+        mock_token_manager.recent_generations = []
 
         registry.register_member("agent", mock_agent)
         registry.register_member("agent_message", mock_agent_message)
@@ -247,6 +250,7 @@ class TestContextTab(unittest.TestCase):
         mock_token_manager.current_token_usage = mock_token_usage
         mock_token_manager.cumulative_token_usage = None
         mock_token_manager.generation_count = 0
+        mock_token_manager.recent_generations = []
 
         registry.register_member("agent_message", mock_agent_message)
         registry.register_member("agent_context_orchestration", mock_orchestration)
@@ -265,7 +269,7 @@ class TestContextTab(unittest.TestCase):
         mock_agent = Mock(spec=Agent)
         mock_messages = self._create_mock_registry(registry, mock_agent)
 
-        from textual.widgets import ProgressBar, Sparkline, Static
+        from textual.widgets import ProgressBar, Sparkline, Static, DataTable
 
         mock_cumulative_stats_text = Mock(spec=Static)
         mock_sparkline = Mock(spec=Sparkline)
@@ -294,6 +298,7 @@ class TestContextTab(unittest.TestCase):
                 "#token-stats-text": mock_token_stats_text,
                 "#pb-cache-ratio": mock_pb_cache,
                 "#cache-stats-text": mock_cache_stats_text,
+                "#recent-cache-table": Mock(spec=DataTable),
             }
             return mapping[selector]
 
@@ -468,7 +473,7 @@ class TestPinnedAndNotificationStats(unittest.TestCase):
     def _create_widget_with_mocks(
         self, pinned_messages=None, notification_messages=None
     ):
-        from textual.widgets import Sparkline, Static, ProgressBar
+        from textual.widgets import Sparkline, Static, ProgressBar, DataTable
         from linhai.agent.main import Agent
         from linhai.base import AnswerTokenUsage, UserMessage, AssistantMessage
         from linhai.token_manager import TokenManager
@@ -514,6 +519,7 @@ class TestPinnedAndNotificationStats(unittest.TestCase):
         mock_token_manager.current_token_usage = mock_token_usage
         mock_token_manager.cumulative_token_usage = None
         mock_token_manager.generation_count = 0
+        mock_token_manager.recent_generations = []
 
         registry.register_member("agent_message", mock_agent_message)
         registry.register_member("agent_context_orchestration", mock_orchestration)
@@ -546,6 +552,7 @@ class TestPinnedAndNotificationStats(unittest.TestCase):
             "#token-stats-text": mock_token_stats_text,
             "#pb-cache-ratio": mock_pb_cache,
             "#cache-stats-text": mock_cache_stats_text,
+            "#recent-cache-table": Mock(spec=DataTable),
         }
 
         widget.query_one = Mock(
