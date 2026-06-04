@@ -11,6 +11,8 @@ from textual.widgets import (
     Static,
 )
 
+from rich.text import Text
+
 from linhai.context_statistics import (
     ContextStatistics,
     LongestMessageInfo,
@@ -92,6 +94,13 @@ class ContextTabWidget(Static):
         height: auto;
     }
     ContextTabWidget #notification-list-text {
+        height: auto;
+    }
+    ContextTabWidget #recent-cache-table {
+        height: auto;
+        overflow: hidden;
+    }
+    ContextTabWidget #recent-cache-collapsible {
         height: auto;
     }
     """
@@ -363,15 +372,33 @@ class ContextTabWidget(Static):
                 t({"zh_CN": "缓存比例", "en": "Cache Ratio"}),
             )
 
+        token_keys = [
+            "input_tokens",
+            "actual_cached_tokens",
+            "estimated_cached_tokens",
+            "non_cached_tokens",
+            "output_tokens",
+        ]
         for row in recent_rows:
-            table.add_row(
-                row["input_tokens"],
-                row["actual_cached_tokens"],
-                row["estimated_cached_tokens"],
-                row["non_cached_tokens"],
-                row["output_tokens"],
-                row["cache_ratio"],
-            )
+            styled_row: list[Text | str] = []
+            for key in token_keys:
+                val = row[key]
+                if val is None:
+                    styled_row.append(Text("-"))
+                elif val < 1000:
+                    styled_row.append(Text(str(val), style="grey50"))
+                else:
+                    styled_row.append(str(val))
+            ratio = row["cache_ratio"]
+            if ratio is None:
+                styled_row.append(Text("-"))
+            else:
+                ratio_str = f"{ratio:.1f}%"
+                if ratio > 95:
+                    styled_row.append(Text(ratio_str, style="on green"))
+                else:
+                    styled_row.append(ratio_str)
+            table.add_row(*styled_row)
 
     def update_display(self) -> None:
         agent_message: AgentMessage = self.registry.get_member_typechecked(

@@ -466,6 +466,97 @@ class TestContextTab(unittest.TestCase):
         mock_pb_hard.update.assert_called_once_with(total=8000.0, progress=5000.0)
         mock_pb_model.update.assert_called_once_with(total=100.0, progress=100.0)
 
+    def test_compute_recent_cache_rows_types(self):
+        from linhai.context_statistics import compute_recent_cache_rows
+        from linhai.base import AnswerTokenUsage
+
+        usage = AnswerTokenUsage(
+            input_tokens=500,
+            output_tokens=100,
+            total_tokens=600,
+            cached_input_tokens=400,
+            estimated_cached_input_tokens=350,
+        )
+        rows = compute_recent_cache_rows([usage])
+        self.assertIsNotNone(rows)
+        row = rows[0]
+        self.assertIsInstance(row["input_tokens"], int)
+        self.assertIsInstance(row["actual_cached_tokens"], int)
+        self.assertIsInstance(row["estimated_cached_tokens"], int)
+        self.assertIsInstance(row["non_cached_tokens"], int)
+        self.assertIsInstance(row["output_tokens"], int)
+        self.assertIsInstance(row["cache_ratio"], float)
+        self.assertEqual(row["input_tokens"], 500)
+        self.assertEqual(row["actual_cached_tokens"], 400)
+        self.assertEqual(row["non_cached_tokens"], 100)
+
+    def test_compute_recent_cache_rows_none_values(self):
+        from linhai.context_statistics import compute_recent_cache_rows
+        from linhai.base import AnswerTokenUsage
+
+        usage = AnswerTokenUsage(
+            input_tokens=500,
+            output_tokens=100,
+            total_tokens=600,
+            cached_input_tokens=None,
+            estimated_cached_input_tokens=None,
+        )
+        rows = compute_recent_cache_rows([usage])
+        self.assertIsNotNone(rows)
+        row = rows[0]
+        self.assertIsNone(row["actual_cached_tokens"])
+        self.assertIsNone(row["estimated_cached_tokens"])
+        self.assertIsNone(row["non_cached_tokens"])
+        self.assertIsNone(row["cache_ratio"])
+
+    def test_recent_cache_table_styling(self):
+        from textual.widgets import DataTable
+        from rich.text import Text
+        from linhai.context_statistics import RecentGenerationCacheRow
+
+        registry = Registry()
+        widget = ContextTabWidget(registry)
+
+        mock_table = Mock(spec=DataTable)
+        mock_table.columns = []
+
+        widget.query_one = Mock(return_value=mock_table)
+
+        rows = [
+            RecentGenerationCacheRow(
+                input_tokens=500,
+                actual_cached_tokens=400,
+                estimated_cached_tokens=350,
+                non_cached_tokens=100,
+                output_tokens=50,
+                cache_ratio=80.0,
+            ),
+            RecentGenerationCacheRow(
+                input_tokens=2000,
+                actual_cached_tokens=1900,
+                estimated_cached_tokens=1850,
+                non_cached_tokens=100,
+                output_tokens=200,
+                cache_ratio=96.0,
+            ),
+        ]
+
+        stats = _build_context_statistics(recent_cache_rows=rows)
+        widget._update_recent_cache_status(stats)
+
+        self.assertTrue(mock_table.add_row.called)
+        self.assertEqual(mock_table.add_row.call_count, 2)
+
+        call_args = mock_table.add_row.call_args_list[0][0]
+        self.assertIsInstance(call_args[0], Text)
+        self.assertIn("grey50", str(call_args[0].style))
+        self.assertEqual(call_args[0].plain, "500")
+
+        call_args2 = mock_table.add_row.call_args_list[1][0]
+        self.assertIsInstance(call_args2[5], Text)
+        self.assertIn("on green", str(call_args2[5].style))
+        self.assertIn("96.0%", call_args2[5].plain)
+
 
 class TestPinnedAndNotificationStats(unittest.TestCase):
     """测试置顶消息和通知消息统计功能"""

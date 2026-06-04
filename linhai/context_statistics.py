@@ -63,12 +63,12 @@ class NotificationMessageDisplay(TypedDict):
 
 
 class RecentGenerationCacheRow(TypedDict):
-    input_tokens: str
-    actual_cached_tokens: str
-    estimated_cached_tokens: str
-    non_cached_tokens: str
-    output_tokens: str
-    cache_ratio: str
+    input_tokens: int
+    actual_cached_tokens: int | None
+    estimated_cached_tokens: int | None
+    non_cached_tokens: int | None
+    output_tokens: int
+    cache_ratio: float | None
 
 
 class ContextStatistics(TypedDict):
@@ -276,23 +276,21 @@ def compute_recent_cache_rows(
             non_cached = input_t - cached_for_calc
             ratio = cached_for_calc / input_t * 100 if input_t > 0 else 0.0
             row = RecentGenerationCacheRow(
-                input_tokens=str(input_t),
-                actual_cached_tokens=str(actual) if actual is not None else "-",
-                estimated_cached_tokens=(
-                    str(estimated) if estimated is not None else "-"
-                ),
-                non_cached_tokens=str(non_cached),
-                output_tokens=str(output_t),
-                cache_ratio=f"{ratio:.1f}%",
+                input_tokens=input_t,
+                actual_cached_tokens=actual,
+                estimated_cached_tokens=estimated,
+                non_cached_tokens=non_cached,
+                output_tokens=output_t,
+                cache_ratio=ratio,
             )
         else:
             row = RecentGenerationCacheRow(
-                input_tokens=str(input_t),
-                actual_cached_tokens="-",
-                estimated_cached_tokens="-",
-                non_cached_tokens="-",
-                output_tokens=str(output_t),
-                cache_ratio="-",
+                input_tokens=input_t,
+                actual_cached_tokens=None,
+                estimated_cached_tokens=None,
+                non_cached_tokens=None,
+                output_tokens=output_t,
+                cache_ratio=None,
             )
         rows.append(row)
     return rows
