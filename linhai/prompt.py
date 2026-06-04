@@ -930,10 +930,58 @@ EXAMPLES_PLANNING_MODE = t(
     }
 )
 
+EXAMPLE_SUDO_BASH_MACHINE = t(
+    {
+        "zh_CN": """
+master_host是Dell NixOS时，sudo不需要askpass，而是需要stdin写入密码。
+
+使用`call_with_secret`调用`process_create`，通过`with_stdin`传入sudo密码：
+
+```json toolcall
+{"name": "call_with_secret", "with_secret": {"in_arguments": ["CUBE_SUDO_PASSWORD"], "in_result": ["CUBE_SUDO_PASSWORD"]}, "arguments": {"tool_name": "process_create", "tool_arguments": {"argv": ["sudo", "-S", "bash"], "with_stdin": "<$CUBE_SUDO_PASSWORD$>"}}}
+```
+
+获取返回的PID后，使用`connect_posix_shell_as_machine`连接为机器：
+
+```json toolcall
+{"name": "connect_posix_shell_as_machine", "arguments": {"machine_id": "dell_nixos_sudo", "pid": "<上一步返回的PID>"}}
+```
+
+然后切换到该机器：
+
+```json toolcall
+{"name": "switch_machine", "arguments": {"machine_id": "dell_nixos_sudo"}}
+```
+""",
+        "en": """
+When master_host is Dell NixOS, sudo does not require askpass, but needs the password via stdin.
+
+Use `call_with_secret` to call `process_create`, passing the sudo password via `with_stdin`:
+
+```json toolcall
+{"name": "call_with_secret", "with_secret": {"in_arguments": ["CUBE_SUDO_PASSWORD"], "in_result": ["CUBE_SUDO_PASSWORD"]}, "arguments": {"tool_name": "process_create", "tool_arguments": {"argv": ["sudo", "-S", "bash"], "with_stdin": "<$CUBE_SUDO_PASSWORD$>"}}}
+```
+
+After getting the returned PID, use `connect_posix_shell_as_machine` to connect as a machine:
+
+```json toolcall
+{"name": "connect_posix_shell_as_machine", "arguments": {"machine_id": "dell_nixos_sudo", "pid": "<PID from previous step>"}}
+```
+
+Then switch to that machine:
+
+```json toolcall
+{"name": "switch_machine", "arguments": {"machine_id": "dell_nixos_sudo"}}
+```
+""",
+    }
+)
+
 EXAMPLES_ITEMS = [
     ("TOOL CALL", EXAMPLES_TOOL_CALL),
     ("SECRET", EXAMPLES_SECRET_USAGE),
     ("MULTIHOP MACHINES", EXAMPLE_MULTIHOP_MACHINES),
+    ("SUDO BASH MACHINE", EXAMPLE_SUDO_BASH_MACHINE),
 ]
 
 # ===============================

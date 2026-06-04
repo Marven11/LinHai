@@ -85,6 +85,7 @@ class TestCustomToolcallFormatPlugin(unittest.TestCase):
         self.assertNotIn("TOOL CALL", example_titles)
         self.assertNotIn("SECRET", example_titles)
         self.assertNotIn("MULTIHOP MACHINES", example_titles)
+        self.assertNotIn("SUDO BASH MACHINE", example_titles)
 
     def test_keeps_examples_when_custom_format_true(self):
         asyncio.run(self.call_after_helper(True))
@@ -92,6 +93,7 @@ class TestCustomToolcallFormatPlugin(unittest.TestCase):
         self.assertIn("TOOL CALL", example_titles)
         self.assertIn("SECRET", example_titles)
         self.assertIn("MULTIHOP MACHINES", example_titles)
+        self.assertIn("SUDO BASH MACHINE", example_titles)
 
     def test_removes_introductions_when_custom_format_false(self):
         asyncio.run(self.call_after_helper(False))
@@ -123,6 +125,7 @@ class TestCustomToolcallFormatPlugin(unittest.TestCase):
         self.assertIn("TOOL CALL", example_titles_on)
         self.assertIn("SECRET", example_titles_on)
         self.assertIn("MULTIHOP MACHINES", example_titles_on)
+        self.assertIn("SUDO BASH MACHINE", example_titles_on)
 
 
 if __name__ == "__main__":

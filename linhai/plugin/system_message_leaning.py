@@ -52,7 +52,12 @@ class CurrentDirectoryPlugin(Plugin):
 
 class CustomToolcallFormatPlugin(Plugin):
 
-    _TOOLCALL_EXAMPLE_TITLES = ("TOOL CALL", "SECRET", "MULTIHOP MACHINES")
+    _TOOLCALL_EXAMPLE_TITLES = (
+        "TOOL CALL",
+        "SECRET",
+        "MULTIHOP MACHINES",
+        "SUDO BASH MACHINE",
+    )
 
     async def after_selecting_llm(self, llm):
         from linhai.base import SystemMessage
@@ -88,12 +93,16 @@ class CustomToolcallFormatPlugin(Plugin):
                     EXAMPLES_TOOL_CALL,
                     EXAMPLES_SECRET_USAGE,
                     EXAMPLE_MULTIHOP_MACHINES,
+                    EXAMPLE_SUDO_BASH_MACHINE,
                 )
 
                 system_message.add_example("TOOL CALL", EXAMPLES_TOOL_CALL)
                 system_message.add_example("SECRET", EXAMPLES_SECRET_USAGE)
                 system_message.add_example(
                     "MULTIHOP MACHINES", EXAMPLE_MULTIHOP_MACHINES
+                )
+                system_message.add_example(
+                    "SUDO BASH MACHINE", EXAMPLE_SUDO_BASH_MACHINE
                 )
         else:
             if has_tool_use:

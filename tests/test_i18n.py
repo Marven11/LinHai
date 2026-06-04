@@ -171,6 +171,7 @@ class TestPromptI18n(unittest.TestCase):
             prompt.EXAMPLES_TOOL_CALL,
             prompt.EXAMPLES_SECRET_USAGE,
             prompt.EXAMPLE_MULTIHOP_MACHINES,
+            prompt.EXAMPLE_SUDO_BASH_MACHINE,
             prompt.EXAMPLES_PLANNING_MODE,
             prompt.AGENTS_MD,
             prompt.BOOTSTRAP_MD,
@@ -213,6 +214,16 @@ class TestPromptI18n(unittest.TestCase):
         self.assertIn("askpass", EXAMPLE_MULTIHOP_MACHINES)
         self.assertIn("process_create", EXAMPLE_MULTIHOP_MACHINES)
         self.assertIn("connect_posix_shell_as_machine", EXAMPLE_MULTIHOP_MACHINES)
+
+    def test_sudo_bash_example_contains_keywords(self):
+        from linhai.prompt import EXAMPLE_SUDO_BASH_MACHINE
+
+        self.assertIn("call_with_secret", EXAMPLE_SUDO_BASH_MACHINE)
+        self.assertIn("sudo", EXAMPLE_SUDO_BASH_MACHINE)
+        self.assertIn("with_stdin", EXAMPLE_SUDO_BASH_MACHINE)
+        self.assertIn("CUBE_SUDO_PASSWORD", EXAMPLE_SUDO_BASH_MACHINE)
+        self.assertIn("connect_posix_shell_as_machine", EXAMPLE_SUDO_BASH_MACHINE)
+        self.assertIn("dell_nixos_sudo", EXAMPLE_SUDO_BASH_MACHINE)
 
     def test_format_placeholders_in_compress_range(self):
         from linhai.prompt import COMPRESS_RANGE_PROMPT
