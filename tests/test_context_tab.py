@@ -554,7 +554,7 @@ class TestContextTab(unittest.TestCase):
 
         call_args2 = mock_table.add_row.call_args_list[1][0]
         self.assertIsInstance(call_args2[5], Text)
-        self.assertIn("on green", str(call_args2[5].style))
+        self.assertIn("on darkgreen", str(call_args2[5].style))
         self.assertIn("96.0%", call_args2[5].plain)
 
 

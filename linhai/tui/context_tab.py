@@ -49,6 +49,10 @@ def _format_longest_message(longest: LongestMessageInfo | None) -> str:
     return f"{t({'zh_CN': '最长消息', 'en': 'Longest message'})}: {type_display}, {longest['tokens']} token"
 
 
+def _format_token_number(val: int) -> str:
+    return f"{val:,}"
+
+
 class ContextTabWidget(Static):
     """Widget for displaying context information: message stats, token usage, etc."""
 
@@ -98,7 +102,8 @@ class ContextTabWidget(Static):
     }
     ContextTabWidget #recent-cache-table {
         height: auto;
-        overflow: hidden;
+        overflow: hidden hidden;
+        scrollbar-size: 0 0;
     }
     ContextTabWidget #recent-cache-collapsible {
         height: auto;
@@ -386,16 +391,16 @@ class ContextTabWidget(Static):
                 if val is None:
                     styled_row.append(Text("-"))
                 elif val < 1000:
-                    styled_row.append(Text(str(val), style="grey50"))
+                    styled_row.append(Text(_format_token_number(val), style="grey50"))
                 else:
-                    styled_row.append(str(val))
+                    styled_row.append(_format_token_number(val))
             ratio = row["cache_ratio"]
             if ratio is None:
                 styled_row.append(Text("-"))
             else:
                 ratio_str = f"{ratio:.1f}%"
                 if ratio > 95:
-                    styled_row.append(Text(ratio_str, style="on green"))
+                    styled_row.append(Text(ratio_str, style="on darkgreen"))
                 else:
                     styled_row.append(ratio_str)
             table.add_row(*styled_row)
