@@ -46,12 +46,12 @@ def create_planning_files(planning_folder: Path) -> None:
 
     if not status_file.exists():
         status_file.write_text(
-            "# 状态\n\n当前任务: 未设置\n当前attempt: 1\n\n描述你的当前状态和下一步计划。\n"
+            "当前任务: 未设置\n当前attempt: 1\n\n描述你的当前状态和下一步计划。\n"
         )
     if not todolist_file.exists():
-        todolist_file.write_text("# 待办任务列表\n\n- [ ] 开始规划任务\n")
+        todolist_file.write_text("- [ ] 开始规划任务\n")
     if not design_file.exists():
-        design_file.write_text("# 设计介绍\n\n描述任务的设计思路。\n")
+        design_file.write_text("描述任务的设计思路。\n")
 
 
 def setup_planning_for_agent(context: "AgentBuildContext") -> RuntimeMessage:
