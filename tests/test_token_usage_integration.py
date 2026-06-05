@@ -12,59 +12,40 @@ from linhai.agent.orchestration import AgentContextOrchestration
 class TestTokenUsageIntegration(unittest.IsolatedAsyncioTestCase):
     """Test cases for token usage integration."""
 
-    async def test_openai_answer_sends_token_usage(self):
-        """测试OpenAiAnswer将token usage发送到registry。"""
-        # 避免循环导入，使用mock
+    async def test_token_manager_on_answer_generated(self):
+        """测试TokenManager通过_on_answer_generated集成更新token用量。"""
         from linhai.registry import Registry
         from linhai.base import AnswerTokenUsage
+        from linhai.token_manager import TokenManager
 
-        # 模拟OpenAiAnswer的核心逻辑
         registry = Registry()
-        registry.register_queue("token_usage")
+        token_manager = TokenManager(registry)
 
-        # 记录发送的消息
-        sent_messages = []
-        original_send = registry.send
+        mock_parsed_answer = MagicMock()
+        mock_answer = MagicMock()
+        token_usage = AnswerTokenUsage(
+            input_tokens=50,
+            output_tokens=20,
+            total_tokens=70,
+            cached_input_tokens=100,
+        )
+        mock_answer.get_token_usage = MagicMock(return_value=token_usage)
+        mock_parsed_answer._answer = mock_answer
 
-        async def mock_send(name: str, message: Any):
-            sent_messages.append((name, message))
-            return await original_send(name, message)
+        await token_manager._on_answer_generated(mock_parsed_answer, [])
 
-        registry.send = mock_send
-
-        try:
-            # 手动创建AnswerTokenUsage并发送
-            token_usage = AnswerTokenUsage(
-                input_tokens=50,
-                output_tokens=20,
-                total_tokens=70,
-                cached_input_tokens=100,
-            )
-
-            await registry.send("token_usage", token_usage)
-
-            # 验证发送了消息
-            self.assertEqual(len(sent_messages), 1)
-            self.assertEqual(sent_messages[0][0], "token_usage")
-            self.assertIsInstance(sent_messages[0][1], AnswerTokenUsage)
-
-            sent_usage = sent_messages[0][1]
-            self.assertEqual(sent_usage.input_tokens, 50)
-            self.assertEqual(sent_usage.output_tokens, 20)
-            self.assertEqual(sent_usage.total_tokens, 70)
-            self.assertEqual(sent_usage.cached_input_tokens, 100)
-        finally:
-            registry.send = original_send
+        self.assertEqual(token_manager.current_token_usage.input_tokens, 50)
+        self.assertEqual(token_manager.current_token_usage.output_tokens, 20)
+        self.assertEqual(token_manager.current_token_usage.total_tokens, 70)
+        self.assertEqual(token_manager.current_token_usage.cached_input_tokens, 100)
 
     async def test_notification_message_plugin_integration(self):
         """测试NotificationMessagePlugin的基本集成。"""
-        # 使用mock避免复杂导入
         from linhai.registry import Registry
         from linhai.agent.messages import RuntimeMessage
 
         registry = Registry()
 
-        # Mock agent - 使用spec确保类型匹配
         mock_agent = MagicMock(spec=Agent)
         threshold_info = {
             "hard_limit": 80000,
@@ -77,7 +58,6 @@ class TestTokenUsageIntegration(unittest.IsolatedAsyncioTestCase):
 
         registry.register_member("agent", mock_agent)
 
-        # Mock orchestration - 使用spec确保类型匹配
         mock_orchestration = MagicMock(spec=AgentContextOrchestration)
         mock_orchestration.consecutive_red_block_count = 0
         notification_msg = (
@@ -99,54 +79,66 @@ class TestTokenUsageIntegration(unittest.IsolatedAsyncioTestCase):
         )
         registry.register_member("agent_context_orchestration", mock_orchestration)
 
-        # 导入并测试NotificationMessagePlugin
         from linhai.agent.orchestration import NotificationMessagePlugin
 
         plugin = NotificationMessagePlugin(registry)
 
-        # 测试before_message_generation
         await plugin.before_message_generation()
 
-        # 验证调用
         mock_agent.get_threshold_info.assert_called_once()
         mock_orchestration.compute_orchestration_context.assert_called_once_with(
             "", threshold_info
         )
         mock_agent.message_processor.update_notification_message.assert_called_once()
 
-        # 验证参数
         call_args = mock_agent.message_processor.update_notification_message.call_args
         runtime_message = call_args[0][0]
         self.assertIsInstance(runtime_message, RuntimeMessage)
         self.assertEqual(runtime_message.message, notification_msg)
         self.assertEqual(call_args[1]["source"], "threshold_notification")
 
-    async def test_cli_token_usage_receiving(self):
-        """测试TUI接收token usage的基本逻辑。"""
+    async def test_token_manager_cumulative_usage(self):
+        """测试TokenManager累计用量通过多次_on_answer_generated更新。"""
         from linhai.registry import Registry
         from linhai.base import AnswerTokenUsage
+        from linhai.token_manager import TokenManager
 
         registry = Registry()
-        registry.register_queue("token_usage")
+        token_manager = TokenManager(registry)
 
-        # 发送token usage
-        token_usage = AnswerTokenUsage(
+        usage1 = AnswerTokenUsage(
             input_tokens=100,
             output_tokens=50,
             total_tokens=150,
             cached_input_tokens=25,
         )
+        mock_answer1 = MagicMock()
+        mock_answer1.get_token_usage = MagicMock(return_value=usage1)
+        mock_parsed1 = MagicMock()
+        mock_parsed1._answer = mock_answer1
+        await token_manager._on_answer_generated(mock_parsed1, [])
 
-        await registry.send("token_usage", token_usage)
+        usage2 = AnswerTokenUsage(
+            input_tokens=200,
+            output_tokens=80,
+            total_tokens=280,
+            cached_input_tokens=30,
+        )
+        mock_answer2 = MagicMock()
+        mock_answer2.get_token_usage = MagicMock(return_value=usage2)
+        mock_parsed2 = MagicMock()
+        mock_parsed2._answer = mock_answer2
+        await token_manager._on_answer_generated(mock_parsed2, [])
 
-        # 接收并验证
-        received = await registry.receive("token_usage")
-
-        self.assertIsInstance(received, AnswerTokenUsage)
-        self.assertEqual(received.input_tokens, 100)
-        self.assertEqual(received.output_tokens, 50)
-        self.assertEqual(received.total_tokens, 150)
-        self.assertEqual(received.cached_input_tokens, 25)
+        self.assertIsNotNone(token_manager.cumulative_token_usage)
+        assert token_manager.cumulative_token_usage is not None
+        self.assertEqual(token_manager.cumulative_token_usage["input_tokens"], 300)
+        self.assertEqual(token_manager.cumulative_token_usage["output_tokens"], 130)
+        self.assertEqual(token_manager.cumulative_token_usage["total_tokens"], 430)
+        self.assertEqual(
+            token_manager.cumulative_token_usage["cached_input_tokens"], 55
+        )
+        self.assertEqual(token_manager.cumulative_token_usage["message_count"], 2)
 
 
 if __name__ == "__main__":

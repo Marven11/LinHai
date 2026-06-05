@@ -1,7 +1,6 @@
 """Token management logic for TUI."""
 
 from __future__ import annotations
-import asyncio
 from typing import Optional, TYPE_CHECKING
 from linhai.base import AnswerTokenUsage
 from linhai.registry import Registry
@@ -19,7 +18,6 @@ class TokenManager:
 
     def __init__(self, registry: Registry):
         registry.register_member("token_manager", self)
-        registry.register_queue("token_usage")
         self.registry = registry
         self._current_token_usage: Optional[AnswerTokenUsage] = None
         self.cumulative_token_usage: Optional[CumulativeTokenUsage] = None
@@ -38,34 +36,17 @@ class TokenManager:
         if self.cumulative_token_usage is not None:
             self.cumulative_token_usage["cache_miss_count"] += 1
 
-    async def watch_token_usage_queue(self) -> None:
-        """监听token_usage队列并处理token使用信息"""
-        while True:
-            output = await self.registry.receive("token_usage")
-            if isinstance(output, AnswerTokenUsage):
-                self._current_token_usage = output
-                self.update_cumulative_usage(output)
-            else:
-                raise RuntimeError(
-                    f"Unknown Type in token_usage: {type(output)=} {output=}"
-                )
-
-    async def _on_before_message_generation(self) -> None:
-        self.generation_count += 1
-
     def start_watching(self) -> None:
-        from linhai.task_supervisor import TaskSupervisor
         from linhai.agent.lifecycle import Lifecycle
 
         lifecycle = self.registry.get_member_typechecked("lifecycle", Lifecycle)
-        lifecycle.before_message_generation.register(self._on_before_message_generation)
+        lifecycle.after_message_generation.register(self._on_answer_generated)
 
-        task_supervisor = self.registry.get_member_typechecked(
-            "task_supervisor", TaskSupervisor
-        )
-        task_supervisor.create_supervised_task(
-            "token_usage_watcher", self.watch_token_usage_queue
-        )
+    async def _on_answer_generated(self, parsed_answer, tool_calls) -> None:
+        token_usage = parsed_answer._answer.get_token_usage()
+        if token_usage is not None:
+            self._current_token_usage = token_usage
+            self.update_cumulative_usage(token_usage)
 
     def update_cumulative_usage(self, token_usage: AnswerTokenUsage) -> None:
         """更新累计token使用量"""
