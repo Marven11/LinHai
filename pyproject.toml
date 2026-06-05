@@ -7,7 +7,7 @@ allow-direct-references = true
 
 [project]
 name = "linhai"
-version = "0.2.0"
+version = "0.3.0"
 description = "AI Agent for software engineering and penetration testing"
 authors = [
     {name = "LinHai"},
