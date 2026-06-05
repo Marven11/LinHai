@@ -629,6 +629,11 @@ class OpenAi:
             raise ValueError("history is empty")
         messages = [msg.to_llm_message() for msg in history]
 
+        if self.compatibility == "baizhi":
+            from linhai.utils.baizhi_compat import fix_baizhi_messages
+
+            messages = await fix_baizhi_messages(messages)
+
         estimated_cached_input_tokens = 0
         if self.previous_input_tokens is not None:
             estimated_cached_input_tokens = self._estimate_cached_input_tokens(history)
