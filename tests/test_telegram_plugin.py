@@ -373,7 +373,7 @@ class TestTelegramPlugin(unittest.TestCase):
             mock_bot_class.return_value = mock_bot
             mock_builder = Mock()
             mock_application = Mock()
-            mock_application.run_polling = AsyncMock()
+            mock_application.run_polling = Mock()
             mock_builder.token.return_value = mock_builder
             mock_builder.bot.return_value = mock_builder
             mock_builder.build.return_value = mock_application
@@ -384,8 +384,42 @@ class TestTelegramPlugin(unittest.TestCase):
             create_calls = task_supervisor_mock.create_supervised_task.call_args_list
             self.assertEqual(len(create_calls), 2)
             self.assertEqual(create_calls[0][0][0], "telegram_polling")
-            self.assertIs(create_calls[0][0][1], mock_application.run_polling)
+            self.assertIs(
+                create_calls[0][0][1].__func__, plugin._run_polling_forever.__func__
+            )
             self.assertEqual(create_calls[1][0][0], "telegram_send_loop")
+
+    def test_run_polling_forever_retries(self):
+        """测试_run_polling_forever在run_polling退出后重试。"""
+        plugin = TelegramPlugin(self.registry, self.telegram_config)
+        plugin._application = Mock()
+        call_count = 0
+
+        def run_polling_side_effect(**kwargs):
+            nonlocal call_count
+            call_count += 1
+            if call_count >= 3:
+                plugin._running = False
+            return None
+
+        plugin._application.run_polling = Mock(side_effect=run_polling_side_effect)
+        plugin._running = True
+
+        asyncio.run(plugin._run_polling_forever())
+
+        self.assertEqual(call_count, 3)
+        plugin._application.run_polling.assert_called_with(bootstrap_retries=-1)
+
+    def test_run_polling_forever_stops_when_not_running(self):
+        """测试_run_polling_forever在_running为False时立即停止。"""
+        plugin = TelegramPlugin(self.registry, self.telegram_config)
+        plugin._application = Mock()
+        plugin._application.run_polling = Mock()
+        plugin._running = False
+
+        asyncio.run(plugin._run_polling_forever())
+
+        plugin._application.run_polling.assert_not_called()
 
     def test_before_agent_loop_already_running(self):
         """测试bot已在运行时不重复启动。"""

@@ -13,6 +13,7 @@ draft API的问题：send_message_draft会为每次调用创建独立的临时�
 
 from typing import TYPE_CHECKING, Literal
 import asyncio
+import logging
 from collections import deque
 from telegram import Update, Message, ReactionTypeEmoji
 from telegram.ext import Application, MessageHandler, filters
@@ -357,11 +358,28 @@ class TelegramPlugin(Plugin):
             "task_supervisor", TaskSupervisor
         )
 
-        from operator import attrgetter
-
-        run_polling_fn = attrgetter("run_polling")(self._application)
-        task_supervisor.create_supervised_task("telegram_polling", run_polling_fn)
+        task_supervisor.create_supervised_task(
+            "telegram_polling", self._run_polling_forever
+        )
         task_supervisor.create_supervised_task("telegram_send_loop", self._send_loop)
+
+    async def _run_polling_forever(self):
+        """Run polling with infinite retry on any failure.
+
+        Wraps Application.run_polling() in a while loop that catches all exceptions
+        and retries after a delay. bootstrap_retries=-1 ensures the bootstrap phase
+        also retries on network failures rather than crashing immediately.
+        """
+        logger = logging.getLogger(__name__)
+        while self._running:
+            assert self._application is not None
+            self._application.run_polling(bootstrap_retries=-1)
+            if not self._running:
+                break
+            logger.warning(
+                "Telegram polling stopped unexpectedly, restarting in 5 seconds"
+            )
+            await asyncio.sleep(5)
 
     async def shutdown(self):
         """关闭telegram bot和发送任务。"""
