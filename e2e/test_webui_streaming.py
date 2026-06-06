@@ -264,7 +264,7 @@ async def _wait_for_agent_turn(ws, sub, timeout=300):
     raise NotImplementedError("Use AsyncEventFeeder instead")
 
 
-async def _retry_short_response(ws, feeder, sub, min_chars=50, max_retries=2):
+async def _retry_short_response(ws, feeder, sub, min_chars=50, max_retries=4):
     for _ in range(max_retries):
         assert isinstance(sub.data, dict)
         agent_msgs = [

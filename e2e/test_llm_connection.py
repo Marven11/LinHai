@@ -55,7 +55,9 @@ async def test_basic_streaming_response():
         async for t in answer:
             tokens.append(t)
         content = answer.get_current_content()
-        return content if len(content) > 0 and len(tokens) > 0 else None
+        if content is None or len(content) == 0 or len(tokens) == 0:
+            return None
+        return content
 
     await retry_llm_call(try_once)
 
@@ -69,7 +71,10 @@ async def _stream_and_collect(llm, history):
 async def _stream_with_retry(llm, history):
     async def try_once():
         answer = await _stream_and_collect(llm, history)
-        return answer if len(answer.get_current_content()) > 0 else None
+        content = answer.get_current_content()
+        if content is None:
+            return None
+        return answer if len(content) > 0 else None
 
     return await retry_llm_call(try_once)
 
