@@ -11,7 +11,7 @@ from rich.text import Text
 from textual import work, events
 from textual.app import ComposeResult
 from textual.timer import Timer
-from textual.widgets import Markdown, Static, TextArea
+from textual.widgets import Markdown, Static, TextArea, RadioSet, RadioButton, Button
 from textual.widgets._markdown import MarkdownStream
 from textual.widgets.markdown import MarkdownBlock
 
@@ -1120,6 +1120,89 @@ class MessageGenerationWidget(Static):
             if isinstance(child, MessageWidget):
                 child.add_class("has-runtime-message")
                 break
+
+
+class ProblemWidget(Static):
+    DEFAULT_CSS = """
+    ProblemWidget {
+        display: none;
+        width: 100%;
+        height: auto;
+        border: tall $accent;
+        padding: 0 1;
+        background: $surface;
+    }
+    ProblemWidget .problem-content {
+        color: $text;
+        margin-bottom: 1;
+    }
+    ProblemWidget .problem-options {
+        margin-bottom: 1;
+    }
+    ProblemWidget .problem-submit {
+        margin-top: 1;
+    }
+    """
+
+    def __init__(self, registry):
+        super().__init__()
+        self.registry = registry
+        self._current_problem_id: str | None = None
+        self._current_options: list[str] = []
+        self._timer: Timer | None = None
+
+    def compose(self) -> ComposeResult:
+        yield Static(classes="problem-content")
+        yield RadioSet(classes="problem-options")
+        yield Button(
+            t({"zh_CN": "\u63d0\u4ea4", "en": "Submit"}), classes="problem-submit"
+        )
+
+    def on_mount(self) -> None:
+        self._timer = self.set_interval(0.5, self._check_problems)
+
+    def on_unmount(self) -> None:
+        if self._timer:
+            self._timer.stop()
+
+    def _check_problems(self) -> None:
+        if self._current_problem_id is not None:
+            return
+        if not self.registry.has_member("problem_manager"):
+            return
+        from linhai.problem_manager import PlainProblemManager
+
+        pm = self.registry.get_member_typechecked(
+            "problem_manager", PlainProblemManager
+        )
+        unanswered = pm.get_unanswered_problems()
+        if not unanswered:
+            return
+        pid, data = unanswered[0]
+        self._current_problem_id = pid
+        self._current_options = data.options
+        self.query_one(".problem-content", Static).update(data.content)
+        radioset = self.query_one(".problem-options", RadioSet)
+        radioset.remove_children()
+        for opt in data.options:
+            radioset.mount(RadioButton(opt))
+        self.display = True
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        radioset = self.query_one(".problem-options", RadioSet)
+        idx = radioset.pressed_index
+        if idx < 0 or self._current_problem_id is None:
+            return
+        answer = self._current_options[idx]
+        from linhai.problem_manager import ProblemManagerProtocol
+
+        pm = self.registry.get_member_typechecked(
+            "problem_manager", ProblemManagerProtocol
+        )
+        pm.set_answer(self._current_problem_id, answer)
+        self._current_problem_id = None
+        self._current_options = []
+        self.display = False
 
 
 class CommandCompletionMenu(Static):

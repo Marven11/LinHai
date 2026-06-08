@@ -23,6 +23,7 @@ from .components import (
     FooterWidget,
     ExtendedTextArea,
     CommandCompletionMenu,
+    ProblemWidget,
 )
 from .context_tab import ContextTabWidget
 from .planning_tab import PlanningTabWidget
@@ -149,6 +150,7 @@ class TUIApp(App):
                 yield self.messages_list
 
                 yield CommandCompletionMenu(id="completion-menu")
+                yield ProblemWidget(self.registry)
                 with Horizontal(id="input-container"):
                     yield ExtendedTextArea(
                         on_enter_key=self._handle_message_submission,
