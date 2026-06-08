@@ -120,5 +120,42 @@ class TestGetUnansweredProblems(unittest.TestCase):
             mgr.get_problem("problem_nonexistent")
 
 
+class TestCreateToolset(unittest.IsolatedAsyncioTestCase):
+    def test_create_toolset_returns_toolset(self):
+        from linhai.tool.base import ToolSet
+
+        mgr = PlainProblemManager(_make_registry())
+        ts = mgr.create_toolset()
+        self.assertIsInstance(ts, ToolSet)
+        tool_names = list(ts.get_tools().keys())
+        self.assertIn("problem_create", tool_names)
+        self.assertIn("problem_wait_answer", tool_names)
+
+    def test_problem_create_tool(self):
+        mgr = PlainProblemManager(_make_registry())
+        ts = mgr.create_toolset()
+        create_tool = ts.get_tools()["problem_create"]
+        result = create_tool["func"]("q?", ["a", "b"])
+        self.assertIn("problem_", result.content)
+        self.assertIsNotNone(mgr.get_problem(result.content))
+
+    async def test_problem_wait_answer_tool(self):
+        mgr = PlainProblemManager(_make_registry())
+        ts = mgr.create_toolset()
+        create_tool = ts.get_tools()["problem_create"]
+        wait_tool = ts.get_tools()["problem_wait_answer"]
+
+        pid_result = create_tool["func"]("q?", ["a", "b"])
+        pid = pid_result.content
+
+        async def answer_later():
+            await asyncio.sleep(0.05)
+            mgr.set_answer(pid, "a")
+
+        asyncio.create_task(answer_later())
+        result = await wait_tool["func"](problem_id=pid, timeout=1.0)
+        self.assertEqual(result.content, "a")
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -338,6 +338,7 @@ AVAILABLE_TOOLSETS = frozenset(
         "mcp",
         "web_search",
         "telegram",
+        "problem",
     ]
 )
 

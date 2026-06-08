@@ -474,6 +474,7 @@ class TestToolsetsConfig(unittest.TestCase):
             "mcp",
             "web_search",
             "telegram",
+            "problem",
         }
         self.assertEqual(set(AVAILABLE_TOOLSETS), expected)
 

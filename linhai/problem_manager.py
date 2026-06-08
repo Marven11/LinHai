@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import asyncio
 import time
 from dataclasses import dataclass, field
@@ -7,6 +9,7 @@ from linhai.utils.common import generate_id
 
 if TYPE_CHECKING:
     from linhai.registry import Registry
+    from linhai.tool.base import ToolSet
 
 
 @runtime_checkable
@@ -67,3 +70,83 @@ class PlainProblemManager:
 
     def get_unanswered_problems(self) -> list[tuple[str, ProblemData]]:
         return [(pid, p) for pid, p in self._problems.items() if p.answer is None]
+
+    def create_toolset(self) -> ToolSet:
+        from linhai.tool.base import (
+            ToolSet,
+            ToolArgInfo,
+            SuccessfulToolResult,
+        )
+        from linhai.utils.i18n import t
+
+        toolset = ToolSet()
+
+        @toolset.register_tool(
+            name="problem_create",
+            desc=t(
+                {
+                    "zh_CN": "创建一个选择题问题，等待用户回答。返回问题ID",
+                    "en": "Create a multiple-choice problem, wait for user answer. Returns problem ID",
+                }
+            ),
+            args={
+                "content": ToolArgInfo(
+                    desc=t(
+                        {
+                            "zh_CN": "问题内容",
+                            "en": "Problem content",
+                        }
+                    ),
+                    type="str",
+                ),
+                "options": ToolArgInfo(
+                    desc=t(
+                        {
+                            "zh_CN": '选项列表，例如 ["是 - 允许...", "否 - 不允许...", "其他 - ..."]',
+                            "en": 'List of options, e.g. ["yes - allow...", "no - disallow...", "other - ..."]',
+                        }
+                    ),
+                    type="list[str]",
+                ),
+            },
+            required_args=["content", "options"],
+        )
+        def problem_create(content: str, options: list[str]):
+            pid = self.create_problem(content, options)
+            return SuccessfulToolResult(content=pid)
+
+        @toolset.register_tool(
+            name="problem_wait_answer",
+            desc=t(
+                {
+                    "zh_CN": "等待问题回答，有回答则立即返回回答内容",
+                    "en": "Wait for problem answer, return answer content immediately when available",
+                }
+            ),
+            args={
+                "problem_id": ToolArgInfo(
+                    desc=t(
+                        {
+                            "zh_CN": "问题ID",
+                            "en": "Problem ID",
+                        }
+                    ),
+                    type="str",
+                ),
+                "timeout": ToolArgInfo(
+                    desc=t(
+                        {
+                            "zh_CN": "超时时间（秒），默认60秒",
+                            "en": "Timeout in seconds, default 60",
+                        }
+                    ),
+                    type="float",
+                ),
+            },
+            required_args=["problem_id"],
+        )
+        async def problem_wait_answer(problem_id: str, timeout: float = 60.0):
+            answer = await self.wait_answer(problem_id, timeout)
+            return SuccessfulToolResult(content=answer)
+
+        return toolset

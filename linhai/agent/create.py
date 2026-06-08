@@ -542,6 +542,11 @@ async def _create_tool_manager(
         )
 
     tool_manager.register_toolset("utils", utils_tools)
+
+    from linhai.problem_manager import PlainProblemManager
+
+    problem_manager = PlainProblemManager(registry)
+    tool_manager.register_toolset("problem", problem_manager.create_toolset())
     tool_manager.register_toolset("multimodal", multimodal_toolset)
 
     from linhai.tool.search import create_web_search_toolset
