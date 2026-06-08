@@ -12,7 +12,6 @@ from linhai.tool.base import (
     FileContentToolResult,
     ToolSet,
 )
-from rich.text import Text
 from linhai.utils.i18n import t
 
 if TYPE_CHECKING:
@@ -568,23 +567,10 @@ def register_machine_control_tools(machine_control: "MachineControl") -> ToolSet
             return FailedToolResult(content=read_result.error)
         if not read_result.success:
             return FailedToolResult(content=read_result.error or "读取失败")
-        stdout_text = Text.from_ansi(
-            read_result.stdout.decode("utf-8", errors="replace")
-        ).plain
-        stderr_text = Text.from_ansi(
-            read_result.stderr.decode("utf-8", errors="replace")
-        ).plain
+        stdout_text = read_result.stdout.decode("utf-8", errors="replace")
+        stderr_text = read_result.stderr.decode("utf-8", errors="replace")
         return SuccessfulToolResult(
-            content=json.dumps(
-                {
-                    "pid": pid,
-                    "success": True,
-                    "stdout": stdout_text,
-                    "stderr": stderr_text,
-                    "exit_note": read_result.exit_note,
-                },
-                ensure_ascii=False,
-            )
+            content=f"<<pid>>{pid}<<pid>><<stdout>>{stdout_text}<<stdout>><<stderr>>{stderr_text}<<stderr>>"
         )
 
     @toolset.register_tool(

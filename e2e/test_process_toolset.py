@@ -1,5 +1,4 @@
 import asyncio
-import json
 
 import pytest
 
@@ -83,9 +82,7 @@ async def test_tool_interactive_bash_lifecycle():
 
     read_result = await ts.call_tool("process_stdio_read", {"pid": pid, "timeout": 2.0})
     read_content = _tool_ok(read_result)
-    read_data = json.loads(read_content)
-    assert read_data["success"] is True
-    assert "first_cmd" in read_data["stdout"]
+    assert "first_cmd" in read_content
 
     await ts.call_tool(
         "process_stdio_write",
@@ -97,8 +94,7 @@ async def test_tool_interactive_bash_lifecycle():
         "process_stdio_read", {"pid": pid, "timeout": 2.0}
     )
     read_content2 = _tool_ok(read_result2)
-    read_data2 = json.loads(read_content2)
-    assert "second_cmd" in read_data2["stdout"]
+    assert "second_cmd" in read_content2
 
     await ts.call_tool(
         "process_stdio_write",
@@ -115,8 +111,7 @@ async def test_tool_interactive_bash_lifecycle():
         "process_stdio_read", {"pid": pid, "timeout": 2.0}
     )
     read_content3 = _tool_ok(read_result3)
-    read_data3 = json.loads(read_content3)
-    assert "toolset_test" in read_data3["stdout"]
+    assert "toolset_test" in read_content3
 
     await ts.call_tool(
         "process_stdio_write",
@@ -187,8 +182,7 @@ async def test_tool_stderr_in_read():
 
     read_result = await ts.call_tool("process_stdio_read", {"pid": pid, "timeout": 2.0})
     read_content = _tool_ok(read_result)
-    read_data = json.loads(read_content)
-    assert "stderr_line" in read_data["stderr"]
+    assert "stderr_line" in read_content
 
     await ts.call_tool("process_kill", {"pid": pid, "graceful": False})
 
@@ -204,8 +198,6 @@ async def test_tool_nonblocking_read():
 
     read_empty = await ts.call_tool("process_stdio_read", {"pid": pid, "timeout": 1.0})
     read_empty_content = _tool_ok(read_empty)
-    read_empty_data = json.loads(read_empty_content)
-    assert read_empty_data["success"] is True
 
     await ts.call_tool(
         "process_stdio_write",
@@ -215,7 +207,6 @@ async def test_tool_nonblocking_read():
 
     read_after = await ts.call_tool("process_stdio_read", {"pid": pid, "timeout": 2.0})
     read_after_content = _tool_ok(read_after)
-    read_after_data = json.loads(read_after_content)
-    assert "after_empty" in read_after_data["stdout"]
+    assert "after_empty" in read_after_content
 
     await ts.call_tool("process_kill", {"pid": pid, "graceful": False})
