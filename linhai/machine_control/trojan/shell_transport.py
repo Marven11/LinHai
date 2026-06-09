@@ -98,7 +98,7 @@ async def _upload_trojan_chunked(
     process: Process, encoded_content: str
 ) -> tuple[int, str, str]:
     exit_code, output, error = await _execute_in_shell(
-        process, "B64_PATH=$(mktemp --suffix=.b64) && echo $B64_PATH"
+        process, 'B64_PATH=$(mktemp) && echo "$B64_PATH"'
     )
     if exit_code != 0:
         return exit_code, output, error
@@ -115,7 +115,7 @@ async def _upload_trojan_chunked(
 
     exit_code, output, error = await _execute_in_shell(
         process,
-        f"REMOTE_TEMP_PATH=$(mktemp --suffix=.py) && "
+        f"REMOTE_TEMP_PATH=$(mktemp) && "
         f'base64 -d "{b64_path}" | gzip -d > "$REMOTE_TEMP_PATH" && '
         f'rm "{b64_path}" && '
         f'echo "$REMOTE_TEMP_PATH"',
@@ -172,7 +172,7 @@ async def setup_trojan_in_shell(
         )
     else:
         command = (
-            "REMOTE_TEMP_PATH=$(mktemp --suffix=.py) && "
+            "REMOTE_TEMP_PATH=$(mktemp) && "
             f"echo '{encoded_content}' | base64 -d | gzip -d > \"$REMOTE_TEMP_PATH\" && "
             'echo "$REMOTE_TEMP_PATH"'
         )
