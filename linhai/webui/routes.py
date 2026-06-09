@@ -18,6 +18,9 @@ from .schemas import (
     LlmListResponse,
     SwitchLlmRequest,
     KillProcessRequest,
+    ProblemInfo,
+    ProblemListResponse,
+    ProblemAnswerRequest,
 )
 from pathlib import Path
 
@@ -26,6 +29,7 @@ from ..config import get_default_config_path
 
 router = APIRouter(prefix="/api/agents", tags=["agents"])
 config_router = APIRouter(prefix="/api", tags=["config"])
+problem_router = APIRouter(prefix="/api/agents", tags=["problems"])
 
 _manager: Optional[AgentManager] = None
 
@@ -294,3 +298,46 @@ async def get_config():
         profiles=[ProfileInfo(**p) for p in info["profiles"]],
         llms=[LlmInfo(**l) for l in info["llms"]],
     )
+
+
+@problem_router.get("/{agent_id}/problems", response_model=ProblemListResponse)
+async def get_problems(agent_id: str):
+    from linhai.problem_manager import PlainProblemManager
+
+    manager = get_manager()
+    session = manager.get_agent(agent_id)
+    if session is None:
+        raise HTTPException(status_code=404, detail="Agent不存在")
+    if not session.registry.has_member("problem_manager"):
+        return ProblemListResponse(problems=[])
+    pm = session.registry.get_member_typechecked("problem_manager", PlainProblemManager)
+    problems = [
+        ProblemInfo(id=pid, content=data.content, options=data.options)
+        for pid, data in pm.get_unanswered_problems()
+    ]
+    return ProblemListResponse(problems=problems)
+
+
+@problem_router.post("/{agent_id}/problems/{problem_id}/answer")
+async def answer_problem(agent_id: str, problem_id: str, request: ProblemAnswerRequest):
+    from linhai.problem_manager import PlainProblemManager
+
+    manager = get_manager()
+    session = manager.get_agent(agent_id)
+    if session is None:
+        raise HTTPException(status_code=404, detail="Agent不存在")
+    if not session.registry.has_member("problem_manager"):
+        raise HTTPException(status_code=404, detail="ProblemManager未注册")
+    pm = session.registry.get_member_typechecked("problem_manager", PlainProblemManager)
+    problem = pm.get_problem(problem_id)
+    if problem is None:
+        raise HTTPException(status_code=404, detail="问题不存在")
+    if problem.answer is not None:
+        raise HTTPException(status_code=400, detail="问题已被回答")
+    if request.answer not in problem.options:
+        raise HTTPException(
+            status_code=400,
+            detail=f"答案不在选项中，可用: {', '.join(problem.options)}",
+        )
+    pm.set_answer(problem_id, request.answer)
+    return {"message": f"已提交答案: {request.answer}"}

@@ -151,5 +151,21 @@ class ConfigResponse(BaseModel):
     llms: list[LlmInfo] = Field(default_factory=list, description="可用LLM列表")
 
 
+class ProblemInfo(BaseModel):
+    id: str = Field(..., description="问题ID")
+    content: str = Field(..., description="问题内容")
+    options: list[str] = Field(..., description="选项列表")
+
+
+class ProblemListResponse(BaseModel):
+    problems: list[ProblemInfo] = Field(
+        default_factory=list, description="未回答问题列表"
+    )
+
+
+class ProblemAnswerRequest(BaseModel):
+    answer: str = Field(..., description="选择的答案")
+
+
 class AuthRequest(BaseModel):
     api_key: str = Field(..., description="API密钥")

@@ -720,3 +720,33 @@ class TestAuthMiddleware(unittest.TestCase):
     def test_query_param_wrong_token(self):
         response = self.client.get("/api/agents?token=wrong")
         self.assertEqual(response.status_code, 401)
+
+
+class TestProblemSchemas(unittest.TestCase):
+    def test_problem_info(self):
+        from linhai.webui.schemas import ProblemInfo
+
+        info = ProblemInfo(id="p1", content="question?", options=["a", "b"])
+        self.assertEqual(info.id, "p1")
+        self.assertEqual(info.content, "question?")
+        self.assertEqual(info.options, ["a", "b"])
+
+    def test_problem_list_response(self):
+        from linhai.webui.schemas import ProblemListResponse, ProblemInfo
+
+        resp = ProblemListResponse(
+            problems=[ProblemInfo(id="p1", content="q?", options=["a", "b"])]
+        )
+        self.assertEqual(len(resp.problems), 1)
+
+    def test_problem_list_response_default_empty(self):
+        from linhai.webui.schemas import ProblemListResponse
+
+        resp = ProblemListResponse()
+        self.assertEqual(resp.problems, [])
+
+    def test_problem_answer_request(self):
+        from linhai.webui.schemas import ProblemAnswerRequest
+
+        req = ProblemAnswerRequest(answer="opt_a")
+        self.assertEqual(req.answer, "opt_a")

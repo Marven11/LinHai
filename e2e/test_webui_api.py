@@ -184,3 +184,109 @@ async def test_agent_not_found_kill_process(client):
         json={"machine_id": "master_host"},
     )
     assert resp.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_get_problems_no_manager(mock_manager, client):
+    manager, session = mock_manager
+    resp = await client.get("/api/agents/test-agent-id/problems")
+    assert resp.status_code == 200
+    assert resp.json()["problems"] == []
+
+
+@pytest.mark.asyncio
+async def test_get_problems_with_problems(mock_manager, client):
+    manager, session = mock_manager
+    session.registry.has_member = MagicMock(
+        side_effect=lambda name: name == "problem_manager"
+    )
+    mock_pm = MagicMock()
+    mock_pm.get_unanswered_problems.return_value = [
+        ("p1", MagicMock(content="q?", options=["a", "b"])),
+    ]
+    session.registry.get_member_typechecked = MagicMock(return_value=mock_pm)
+    resp = await client.get("/api/agents/test-agent-id/problems")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert len(data["problems"]) == 1
+    assert data["problems"][0]["id"] == "p1"
+
+
+@pytest.mark.asyncio
+async def test_answer_problem(mock_manager, client):
+    manager, session = mock_manager
+    session.registry.has_member = MagicMock(
+        side_effect=lambda name: name == "problem_manager"
+    )
+    mock_pm = MagicMock()
+    mock_problem = MagicMock()
+    mock_problem.answer = None
+    mock_problem.options = ["a", "b"]
+    mock_pm.get_problem.return_value = mock_problem
+    session.registry.get_member_typechecked = MagicMock(return_value=mock_pm)
+    resp = await client.post(
+        "/api/agents/test-agent-id/problems/p1/answer",
+        json={"answer": "a"},
+    )
+    assert resp.status_code == 200
+    mock_pm.set_answer.assert_called_once_with("p1", "a")
+
+
+@pytest.mark.asyncio
+async def test_answer_problem_already_answered(mock_manager, client):
+    manager, session = mock_manager
+    session.registry.has_member = MagicMock(
+        side_effect=lambda name: name == "problem_manager"
+    )
+    mock_pm = MagicMock()
+    mock_problem = MagicMock()
+    mock_problem.answer = "a"
+    mock_problem.options = ["a", "b"]
+    mock_pm.get_problem.return_value = mock_problem
+    session.registry.get_member_typechecked = MagicMock(return_value=mock_pm)
+    resp = await client.post(
+        "/api/agents/test-agent-id/problems/p1/answer",
+        json={"answer": "a"},
+    )
+    assert resp.status_code == 400
+
+
+@pytest.mark.asyncio
+async def test_answer_problem_invalid_option(mock_manager, client):
+    manager, session = mock_manager
+    session.registry.has_member = MagicMock(
+        side_effect=lambda name: name == "problem_manager"
+    )
+    mock_pm = MagicMock()
+    mock_problem = MagicMock()
+    mock_problem.answer = None
+    mock_problem.options = ["a", "b"]
+    mock_pm.get_problem.return_value = mock_problem
+    session.registry.get_member_typechecked = MagicMock(return_value=mock_pm)
+    resp = await client.post(
+        "/api/agents/test-agent-id/problems/p1/answer",
+        json={"answer": "c"},
+    )
+    assert resp.status_code == 400
+
+
+@pytest.mark.asyncio
+async def test_answer_problem_not_found(mock_manager, client):
+    manager, session = mock_manager
+    session.registry.has_member = MagicMock(
+        side_effect=lambda name: name == "problem_manager"
+    )
+    mock_pm = MagicMock()
+    mock_pm.get_problem.return_value = None
+    session.registry.get_member_typechecked = MagicMock(return_value=mock_pm)
+    resp = await client.post(
+        "/api/agents/test-agent-id/problems/nonexistent/answer",
+        json={"answer": "a"},
+    )
+    assert resp.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_problems_agent_not_found(client):
+    resp = await client.get("/api/agents/nonexistent/problems")
+    assert resp.status_code == 404

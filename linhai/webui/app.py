@@ -4,7 +4,7 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from .routes import router as agents_router, config_router
+from .routes import router as agents_router, config_router, problem_router
 from .schemas import AuthRequest
 
 _AUTH_WHITELIST_PATHS = frozenset({"/health", "/api/auth"})
@@ -58,6 +58,7 @@ def create_app(api_token: str) -> FastAPI:
 
     app.include_router(agents_router)
     app.include_router(config_router)
+    app.include_router(problem_router)
 
     @app.get("/health")
     async def health_check():
