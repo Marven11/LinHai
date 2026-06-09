@@ -331,9 +331,7 @@ class TelegramPlugin(Plugin):
         from telegram import Bot
 
         bot = Bot(token=self.config["bot_token"])
-        self._application = (
-            Application.builder().token(self.config["bot_token"]).bot(bot).build()
-        )
+        self._application = Application.builder().bot(bot).build()
         self._bot = bot
 
         self._application.add_handler(
