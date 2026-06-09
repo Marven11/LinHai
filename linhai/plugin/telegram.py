@@ -173,6 +173,12 @@ class TelegramPlugin(Plugin):
             final_content = segment["content"].removesuffix(WAITING_USER_MARKER).strip()
             if final_content and final_content != last_sent_content:
                 await self._edit_with_retry(chat_id, message_id, final_content)
+            elif not final_content:
+                assert self._bot is not None
+                await asyncio.gather(
+                    self._bot.delete_message(chat_id=chat_id, message_id=message_id),
+                    return_exceptions=True,
+                )
 
     async def _handle_telegram_message(self, update: Update, _context):
         """处理来自telegram的消息。"""
