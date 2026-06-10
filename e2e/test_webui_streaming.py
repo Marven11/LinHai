@@ -265,12 +265,16 @@ async def _wait_for_agent_turn(ws, sub, timeout=300):
 
 
 async def _retry_short_response(ws, feeder, sub, min_chars=50, max_retries=4):
+    agent_count_before = len(
+        [m for m in sub.data.get("messages", []) if m.get("type") == "agent"]
+    )
     for _ in range(max_retries):
         assert isinstance(sub.data, dict)
         agent_msgs = [
             m for m in sub.data.get("messages", []) if m.get("type") == "agent"
         ]
-        if not agent_msgs or len(agent_msgs[-1].get("content", "")) < min_chars:
+        new_msgs = agent_msgs[agent_count_before:]
+        if not new_msgs or all(len(m.get("content", "")) < min_chars for m in new_msgs):
             await ws.send(
                 json.dumps(
                     {
