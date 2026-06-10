@@ -236,6 +236,7 @@ class TodolistCheckerPlugin(Plugin):
                     "是否还有其他要求应该列为未完成项？当前的未完成项应该怎么完成？"
                     "你应该重新审视用户的**所有要求**，**诚实地**列出所有已经完成的和没有完成的任务！"
                     "完成的任务**必须**标记为已经完成！没有完成的任务**必须**标记为没有完成！！"
+                    "用户明确不需要完成的任务不要列进TODOLIST.md，更不要标记为'完成'"
                 )
             )
             state_machine = self.registry.get_member_typechecked(
