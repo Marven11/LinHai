@@ -58,3 +58,42 @@ def parse_skill_md(content: str, default_name: str | None = None) -> SkillConfig
     if default_name is not None and "name" not in config:
         config["name"] = default_name
     return config
+
+
+from pathlib import Path
+
+
+class SkillsManager:
+    def __init__(self, skills_dir: Path) -> None:
+        self._skills_dir = skills_dir
+        self._skills: dict[str, SkillConfig] = {}
+
+    def load(self) -> None:
+        if not self._skills_dir.is_dir():
+            return
+        for child in sorted(self._skills_dir.iterdir()):
+            skill_md = child / "SKILL.md"
+            if child.is_dir() and skill_md.is_file():
+                content = skill_md.read_text(encoding="utf-8")
+                config = parse_skill_md(content, default_name=child.name)
+                name = config.get("name", child.name)
+                self._skills[name] = config
+
+    @property
+    def skills(self) -> dict[str, SkillConfig]:
+        return self._skills
+
+    def get_introduction(self) -> str | None:
+        if not self._skills:
+            return None
+        lines = [
+            "Skills是用户自定义的skill文件。"
+            "用户可以使用`/<skill_name> <args>`来触发skill。"
+            "触发skill时，将`/<skill_name> <args>`消息本身和对应的SKILL.md"
+            "加入消息列表，打断agent。\n\n## 可用Skills:\n"
+        ]
+        for name, config in sorted(self._skills.items()):
+            desc = config.get("description", "")
+            skill_path = str(self._skills_dir / name / "SKILL.md")
+            lines.append(f"[{name}]({skill_path}): {desc}")
+        return "\n".join(lines)

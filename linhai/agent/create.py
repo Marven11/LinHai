@@ -363,6 +363,19 @@ async def create_agent_from_context(
     MachineControlIntroductionPlugin(context["registry"]).register(agent.lifecycle)
     CurrentDirectoryPlugin(context["registry"]).register(agent.lifecycle)
 
+    from linhai.skills import SkillsManager
+
+    skills_dir = Path.home() / ".config" / "linhai" / "skills"
+    skills_manager = SkillsManager(skills_dir)
+    skills_manager.load()
+    context["registry"].register_member("skills_manager", skills_manager)
+    intro = skills_manager.get_introduction()
+    if intro is not None:
+        system_message = context["registry"].get_member_typechecked(
+            "system_message", SystemMessage
+        )
+        system_message.add_introduction("SKILLS", intro)
+
     for cron_arg in context["cron"]:
         cron_expression, command = parse_cron_arg(cron_arg)
         CronPlugin(
