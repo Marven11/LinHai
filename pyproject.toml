@@ -32,6 +32,7 @@ dependencies = [
     "rich",
     "pathspec",
     "websockets",
+    "pyyaml",
 ]
 requires-python = ">=3.10"
 

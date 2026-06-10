@@ -91,6 +91,7 @@
             croniter
             pathspec
             websockets
+            pyyaml
             python-telegram-bot'
             quickjs-ng'
           ];
