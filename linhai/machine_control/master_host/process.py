@@ -91,7 +91,7 @@ class LocalProcess:
 
     async def drain_buffers(self) -> tuple[bytes, bytes]:
         if self._reader_task and not self._reader_task.done():
-            await asyncio.wait({self._reader_task}, timeout=2.0)
+            await asyncio.wait({self._reader_task}, timeout=0.5)
         stdout = self._stdout_buffer
         stderr = self._stderr_buffer
         self._stdout_buffer = b""
@@ -257,7 +257,7 @@ class LocalPtyProcess:
 
     async def drain_buffers(self) -> tuple[bytes, bytes]:
         if self._reader_task and not self._reader_task.done():
-            await asyncio.wait({self._reader_task}, timeout=2.0)
+            await asyncio.wait({self._reader_task}, timeout=0.5)
         stdout = self._stdout_buffer
         self._stdout_buffer = b""
         return stdout, b""

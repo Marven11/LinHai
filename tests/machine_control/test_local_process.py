@@ -129,6 +129,27 @@ class TestLocalProcessWaitTimeout(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(result.stderr, "")
 
 
+class TestLocalProcessStdioReadThenWait(unittest.IsolatedAsyncioTestCase):
+    async def test_stdio_read_partial_then_wait_gets_remaining(self) -> None:
+        proc = await asyncio.create_subprocess_exec(
+            "bash",
+            "-c",
+            "echo hello; sleep 0.5; echo world",
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+        )
+        lp = LocalProcess(proc)
+        await asyncio.sleep(0.8)
+        read_result = await lp.stdio_read(0.1)
+        self.assertIn(b"hello", read_result.stdout)
+        wait_result = await lp.wait(timeout=5.0)
+        self.assertTrue(wait_result.success)
+        self.assertEqual(wait_result.returncode, 0)
+        combined = read_result.stdout + wait_result.stdout.encode()
+        self.assertIn(b"hello", combined)
+        self.assertIn(b"world", combined)
+
+
 class TestLocalProcessE2e(unittest.IsolatedAsyncioTestCase):
     async def test_stdio_read_after_process_exit(self) -> None:
         proc = await asyncio.create_subprocess_exec(

@@ -204,6 +204,125 @@ async def test_get_process_unknown_pid():
     assert host.get_process("nonexistent_pid") is None
 
 
+async def test_stdio_read_then_wait_captures_remaining_output():
+    host = _create_host()
+    result = await host.create_process(
+        [
+            "python3",
+            "-c",
+            "import sys,time;sys.stdout.write('hello\\n');sys.stdout.flush();"
+            "time.sleep(1);sys.stdout.write('world\\n');sys.stdout.flush()",
+        ],
+        wait_second=0.3,
+    )
+    assert result.success
+    proc = host.get_process(result.pid)
+    assert proc is not None
+
+    read_result = await proc.stdio_read(wait_seconds=0.3)
+    assert isinstance(read_result, ProcessReadResult)
+    assert read_result.success
+    assert b"hello" in read_result.stdout
+    assert b"world" not in read_result.stdout
+
+    wait_result = await proc.wait(timeout=10.0)
+    assert isinstance(wait_result, ProcessWaitResult)
+    assert wait_result.success
+    assert wait_result.returncode == 0
+    assert "world" in wait_result.stdout
+
+
+async def test_stdio_read_then_wait_tight_timing():
+    host = _create_host()
+    result = await host.create_process(
+        [
+            "python3",
+            "-c",
+            "import sys,time;sys.stdout.write('hello\\n');sys.stdout.flush();"
+            "time.sleep(0.3);sys.stdout.write('world\\n');sys.stdout.flush()",
+        ],
+        wait_second=0.1,
+    )
+    assert result.success
+    proc = host.get_process(result.pid)
+    assert proc is not None
+
+    read_result = await proc.stdio_read(wait_seconds=0.1)
+    assert isinstance(read_result, ProcessReadResult)
+    assert read_result.success
+
+    wait_result = await proc.wait(timeout=10.0)
+    assert isinstance(wait_result, ProcessWaitResult)
+    assert wait_result.success
+    assert wait_result.returncode == 0
+
+    total_output = (read_result.stdout or b"") + wait_result.stdout.encode()
+    assert (
+        b"hello" in total_output
+    ), f"read={read_result.stdout!r} wait={wait_result.stdout!r}"
+    assert (
+        b"world" in total_output
+    ), f"read={read_result.stdout!r} wait={wait_result.stdout!r}"
+
+
+async def test_stdio_read_then_wait_large_output():
+    host = _create_host()
+    result = await host.create_process(
+        [
+            "python3",
+            "-c",
+            "import sys,time;sys.stdout.write('hello\\n');sys.stdout.flush();"
+            "time.sleep(1);sys.stdout.write('x'*2000000);sys.stdout.flush()",
+        ],
+        wait_second=0.5,
+    )
+    assert result.success
+    proc = host.get_process(result.pid)
+    assert proc is not None
+
+    read_result = await proc.stdio_read(wait_seconds=0.5)
+    assert isinstance(read_result, ProcessReadResult)
+    assert read_result.success
+    assert b"hello" in read_result.stdout
+
+    wait_result = await proc.wait(timeout=30.0)
+    assert isinstance(wait_result, ProcessWaitResult)
+    assert wait_result.success
+    assert wait_result.returncode == 0
+
+    total_x = read_result.stdout.count(b"x") + wait_result.stdout.count("x")
+    assert total_x == 2000000, f"Expected 2000000 x's, got {total_x}"
+
+
+async def test_stdio_read_exit_note_when_process_exits():
+    host = _create_host()
+    result = await host.create_process(
+        [
+            "python3",
+            "-c",
+            "import sys,time;sys.stdout.write('hello\\n');sys.stdout.flush();"
+            "time.sleep(0.3);sys.stdout.write('world\\n');sys.stdout.flush()",
+        ],
+        wait_second=0.1,
+    )
+    assert result.success
+    proc = host.get_process(result.pid)
+    assert proc is not None
+
+    read_result = await proc.stdio_read(wait_seconds=1.0)
+    assert isinstance(read_result, ProcessReadResult)
+    assert read_result.success
+    assert b"hello" in read_result.stdout
+    assert b"world" in read_result.stdout
+    assert read_result.exit_note is not None
+    assert "已经退出" in read_result.exit_note
+
+    wait_result = await proc.wait(timeout=5.0)
+    assert isinstance(wait_result, ProcessWaitResult)
+    assert wait_result.success
+    assert wait_result.returncode == 0
+
+
 async def test_stdio_write_without_enter():
     host = _create_host()
     result = await host.create_process(["/usr/bin/env", "bash"], wait_second=2.0)
