@@ -240,7 +240,8 @@ class AgentContextOrchestration:
         token_manager = self.registry.get_member_typechecked(
             "token_manager", TokenManager
         )
-        is_dirty = token_manager.is_dirty
+        token_info = token_manager.get_token_info()
+        is_dirty = token_info.is_dirty
 
         actual_category = (
             "cleanup"
@@ -269,9 +270,9 @@ class AgentContextOrchestration:
 
         notification_message = None
         cache_ratio: float | None = None
-        if token_manager.cumulative_token_usage is not None:
-            input_tokens = token_manager.cumulative_token_usage["input_tokens"]
-            cached_input_tokens = token_manager.cumulative_token_usage[
+        if token_info.cumulative_token_usage is not None:
+            input_tokens = token_info.cumulative_token_usage["input_tokens"]
+            cached_input_tokens = token_info.cumulative_token_usage[
                 "cached_input_tokens"
             ]
             if input_tokens > 0:

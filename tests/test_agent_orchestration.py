@@ -41,6 +41,17 @@ class TestAgentContextOrchestration(unittest.IsolatedAsyncioTestCase):
         mock_token_manager.get_large_message_reprs = Mock(return_value=[])
         mock_token_manager.cumulative_token_usage = None
         mock_token_manager.is_dirty = False
+        mock_token_manager.get_token_info = MagicMock(
+            side_effect=lambda: type(
+                "TokenInfo",
+                (),
+                {
+                    "is_dirty": mock_token_manager.is_dirty,
+                    "last_valid_token_usage": None,
+                    "cumulative_token_usage": mock_token_manager.cumulative_token_usage,
+                },
+            )()
+        )
         self.registry.register_member("token_manager", mock_token_manager)
 
         # 注册一个mock的llm_manager，因为is_explicit_cache_enabled需要它

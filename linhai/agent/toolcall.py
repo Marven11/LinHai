@@ -132,8 +132,13 @@ class AgentToolcall:
             token_manager = self.registry.get_member_typechecked(
                 "token_manager", TokenManager
             )
-            if token_manager.cumulative_token_usage is not None:
-                total = token_manager.cumulative_token_usage["total_tokens"]
+            token_info = token_manager.get_token_info()
+            if token_info.is_dirty:
+                return SuccessfulToolResult(
+                    content="token用量信息已失效，暂无可靠的token用量信息"
+                )
+            if token_info.cumulative_token_usage is not None:
+                total = token_info.cumulative_token_usage["total_tokens"]
                 return SuccessfulToolResult(
                     content=f"当前token总用量为: {total} ({total/1000:.2f} k)"
                 )

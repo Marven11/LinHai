@@ -155,12 +155,13 @@ class TestLLMTokenUsage(unittest.IsolatedAsyncioTestCase):
         mock_answer.get_token_usage = MagicMock(return_value=token_usage)
         mock_parsed_answer._answer = mock_answer
 
-        await token_manager._on_answer_generated(mock_parsed_answer, [])
+        await token_manager._on_answer_generated(mock_parsed_answer)
 
-        self.assertEqual(token_manager.current_token_usage.input_tokens, 100)
-        self.assertEqual(token_manager.current_token_usage.output_tokens, 50)
-        self.assertEqual(token_manager.current_token_usage.total_tokens, 150)
-        self.assertEqual(token_manager.current_token_usage.cached_input_tokens, 20)
+        self.assertEqual(token_manager._current_token_usage.input_tokens, 100)
+        self.assertEqual(token_manager._current_token_usage.output_tokens, 50)
+        self.assertEqual(token_manager._current_token_usage.total_tokens, 150)
+        self.assertEqual(token_manager._current_token_usage.cached_input_tokens, 20)
+        await token_manager.finalize_round(mock_parsed_answer, [])
         self.assertIsNotNone(token_manager.cumulative_token_usage)
         assert token_manager.cumulative_token_usage is not None
         self.assertEqual(token_manager.cumulative_token_usage["input_tokens"], 100)

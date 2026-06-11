@@ -91,7 +91,8 @@ class Agent:
         token_manager = self.registry.get_member_typechecked(
             "token_manager", TokenManager
         )
-        if token_manager.current_token_usage is None:
+        token_info = token_manager.get_token_info()
+        if token_info.is_dirty or token_info.last_valid_token_usage is None:
             return None
 
         current_llm = self.llm_manager.get_current_llm()
@@ -111,7 +112,7 @@ class Agent:
             else threshold_config
         )
 
-        used_tokens = token_manager.current_token_usage.total_tokens
+        used_tokens = token_info.last_valid_token_usage.total_tokens
         usage_ratio = min(used_tokens / hard_limit, 1.0) if hard_limit > 0 else 0.0
         remaining_tokens = max(hard_limit - used_tokens, 0)
 

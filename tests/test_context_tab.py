@@ -168,7 +168,11 @@ class TestContextTab(unittest.TestCase):
         from linhai.token_manager import TokenManager
 
         mock_token_manager = Mock(spec=TokenManager)
-        mock_token_manager.current_token_usage = mock_token_usage
+        mock_token_info = Mock()
+        mock_token_info.is_dirty = False
+        mock_token_info.last_valid_token_usage = mock_token_usage
+        mock_token_info.cumulative_token_usage = None
+        mock_token_manager.get_token_info.return_value = mock_token_info
         mock_token_manager.cumulative_token_usage = None
         mock_token_manager.generation_count = 0
         mock_token_manager.recent_generations = []
@@ -247,7 +251,11 @@ class TestContextTab(unittest.TestCase):
             cached_input_tokens=500,
         )
         mock_token_manager = Mock(spec=TokenManager)
-        mock_token_manager.current_token_usage = mock_token_usage
+        mock_token_info = Mock()
+        mock_token_info.is_dirty = False
+        mock_token_info.last_valid_token_usage = mock_token_usage
+        mock_token_info.cumulative_token_usage = None
+        mock_token_manager.get_token_info.return_value = mock_token_info
         mock_token_manager.cumulative_token_usage = None
         mock_token_manager.generation_count = 0
         mock_token_manager.recent_generations = []
@@ -607,7 +615,11 @@ class TestPinnedAndNotificationStats(unittest.TestCase):
             cached_input_tokens=500,
         )
         mock_token_manager = Mock(spec=TokenManager)
-        mock_token_manager.current_token_usage = mock_token_usage
+        mock_token_info = Mock()
+        mock_token_info.is_dirty = False
+        mock_token_info.last_valid_token_usage = mock_token_usage
+        mock_token_info.cumulative_token_usage = None
+        mock_token_manager.get_token_info.return_value = mock_token_info
         mock_token_manager.cumulative_token_usage = None
         mock_token_manager.generation_count = 0
         mock_token_manager.recent_generations = []

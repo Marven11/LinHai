@@ -136,7 +136,8 @@ class AgentSession:
             token_manager = registry.get_member_typechecked(
                 "token_manager", TokenManager
             )
-            current_token_usage = token_manager.current_token_usage
+            token_info = token_manager.get_token_info()
+            current_token_usage = token_info.last_valid_token_usage
             generation_count = token_manager.generation_count
             cumulative_token_usage = token_manager.cumulative_token_usage
 
