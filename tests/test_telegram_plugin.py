@@ -389,37 +389,45 @@ class TestTelegramPlugin(unittest.TestCase):
             )
             self.assertEqual(create_calls[1][0][0], "telegram_send_loop")
 
-    def test_run_polling_forever_retries(self):
-        """测试_run_polling_forever在run_polling退出后重试。"""
+    def test_run_polling_forever_calls_async_api(self):
+        """测试_run_polling_forever调用initialize、start和updater.start_polling。"""
         plugin = TelegramPlugin(self.registry, self.telegram_config)
         plugin._application = Mock()
-        call_count = 0
-
-        def run_polling_side_effect(**kwargs):
-            nonlocal call_count
-            call_count += 1
-            if call_count >= 3:
-                plugin._running = False
-            return None
-
-        plugin._application.run_polling = Mock(side_effect=run_polling_side_effect)
+        plugin._application.initialize = AsyncMock()
+        plugin._application.start = AsyncMock()
+        plugin._application.updater = Mock()
+        plugin._application.updater.start_polling = AsyncMock()
         plugin._running = True
 
-        asyncio.run(plugin._run_polling_forever())
+        async def run_and_stop():
+            task = asyncio.create_task(plugin._run_polling_forever())
+            await asyncio.sleep(0.1)
+            plugin._running = False
+            await asyncio.sleep(0.1)
+            await task
 
-        self.assertEqual(call_count, 3)
-        plugin._application.run_polling.assert_called_with(bootstrap_retries=-1)
+        asyncio.run(run_and_stop())
+
+        plugin._application.initialize.assert_called_once()
+        plugin._application.start.assert_called_once()
+        plugin._application.updater.start_polling.assert_called_once_with(
+            bootstrap_retries=-1
+        )
 
     def test_run_polling_forever_stops_when_not_running(self):
-        """测试_run_polling_forever在_running为False时立即停止。"""
+        """测试_run_polling_forever在_running为False时不启动polling。"""
         plugin = TelegramPlugin(self.registry, self.telegram_config)
         plugin._application = Mock()
-        plugin._application.run_polling = Mock()
+        plugin._application.initialize = AsyncMock()
+        plugin._application.start = AsyncMock()
+        plugin._application.updater = Mock()
+        plugin._application.updater.start_polling = AsyncMock()
         plugin._running = False
 
         asyncio.run(plugin._run_polling_forever())
 
-        plugin._application.run_polling.assert_not_called()
+        plugin._application.initialize.assert_not_called()
+        plugin._application.updater.start_polling.assert_not_called()
 
     def test_before_agent_loop_already_running(self):
         """测试bot已在运行时不重复启动。"""
@@ -435,12 +443,14 @@ class TestTelegramPlugin(unittest.TestCase):
         plugin._application.start.assert_not_called()
 
     def test_shutdown(self):
-        """测试关闭telegram bot，取消polling和send_loop任务。"""
+        """测试关闭telegram bot，取消任务并停止Application。"""
         plugin = TelegramPlugin(self.registry, self.telegram_config)
         task_supervisor_mock = Mock()
         task_supervisor_mock.cancel = Mock()
         self.registry.get_member_typechecked = Mock(return_value=task_supervisor_mock)
         plugin._application = Mock()
+        plugin._application.stop = AsyncMock()
+        plugin._application.shutdown = AsyncMock()
         plugin._running = True
 
         asyncio.run(plugin.shutdown())
@@ -450,6 +460,8 @@ class TestTelegramPlugin(unittest.TestCase):
         self.assertEqual(len(cancel_calls), 2)
         self.assertEqual(cancel_calls[0][0][0], "telegram_send_loop")
         self.assertEqual(cancel_calls[1][0][0], "telegram_polling")
+        plugin._application.stop.assert_called_once()
+        plugin._application.shutdown.assert_called_once()
 
     def test_shutdown_not_running(self):
         """测试bot未运行时不执行关闭。"""
@@ -458,11 +470,15 @@ class TestTelegramPlugin(unittest.TestCase):
         task_supervisor_mock.cancel = Mock()
         self.registry.get_member_typechecked = Mock(return_value=task_supervisor_mock)
         plugin._application = Mock()
+        plugin._application.stop = AsyncMock()
+        plugin._application.shutdown = AsyncMock()
         plugin._running = False
 
         asyncio.run(plugin.shutdown())
 
         task_supervisor_mock.cancel.assert_not_called()
+        plugin._application.stop.assert_not_called()
+        plugin._application.shutdown.assert_not_called()
 
     def test_on_exit_calls_shutdown(self):
         """测试_on_exit调用shutdown。"""

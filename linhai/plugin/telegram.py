@@ -368,22 +368,22 @@ class TelegramPlugin(Plugin):
         task_supervisor.create_supervised_task("telegram_send_loop", self._send_loop)
 
     async def _run_polling_forever(self):
-        """Run polling with infinite retry on any failure.
+        """Initialize and start polling using async API.
 
-        Wraps Application.run_polling() in a while loop that catches all exceptions
-        and retries after a delay. bootstrap_retries=-1 ensures the bootstrap phase
-        also retries on network failures rather than crashing immediately.
+        Uses Application.initialize() + start() + updater.start_polling() instead of
+        Application.run_polling() to avoid creating a new event loop inside
+        the already-running Textual event loop. bootstrap_retries=-1 ensures
+        infinite retry during the bootstrap phase.
         """
-        logger = logging.getLogger(__name__)
+        if not self._running:
+            return
+        assert self._application is not None
+        assert self._application.updater is not None
+        await self._application.initialize()
+        await self._application.start()
+        await self._application.updater.start_polling(bootstrap_retries=-1)
         while self._running:
-            assert self._application is not None
-            self._application.run_polling(bootstrap_retries=-1)
-            if not self._running:
-                break
-            logger.warning(
-                "Telegram polling stopped unexpectedly, restarting in 5 seconds"
-            )
-            await asyncio.sleep(5)
+            await asyncio.sleep(1)
 
     async def shutdown(self):
         """关闭telegram bot和发送任务。"""
@@ -396,6 +396,8 @@ class TelegramPlugin(Plugin):
             )
             task_supervisor.cancel("telegram_send_loop")
             task_supervisor.cancel("telegram_polling")
+            await self._application.stop()
+            await self._application.shutdown()
 
     async def _on_exit(self):
         """退出时优雅停止telegram。"""
