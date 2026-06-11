@@ -1219,16 +1219,28 @@ class CommandCompletionMenu(Static):
     }
     """
 
-    def __init__(self, *args, **kwargs) -> None:
+    def __init__(self, registry, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
+        self.registry = registry
+        self._candidates: list[str] = []
         self.candidates: list[str] = []
         self.selected_index: int = 0
         self.is_visible: bool = False
 
-    def update_candidates(self, _prefix: str, candidates: list[str]) -> None:
-        if not candidates:
+    def on_mount(self) -> None:
+        self.registry.register_member("command_completion_menu", self)
+
+    def add_candidates(self, candidates: list[str]) -> None:
+        self._candidates.extend(candidates)
+
+    def update_for_prefix(self, prefix: str) -> None:
+        matches = [c for c in self._candidates if c.startswith(prefix)]
+        if not matches or (len(matches) == 1 and matches[0] == prefix):
             self.hide_menu()
             return
+        self._show_candidates(prefix, matches)
+
+    def _show_candidates(self, _prefix: str, candidates: list[str]) -> None:
         self.candidates = candidates[:8]
         self.selected_index = min(self.selected_index, len(self.candidates) - 1)
         self.is_visible = True
@@ -1272,13 +1284,11 @@ class ExtendedTextArea(TextArea):
     def __init__(
         self,
         on_enter_key: Callable[[], Awaitable],
-        get_command_completions: Callable[[], list[str]],
         *args,
         **kwargs,
     ):
         super().__init__(*args, **kwargs)
         self.on_enter_key = on_enter_key
-        self.get_command_completions = get_command_completions
         self._completion_timer: Timer | None = None
 
     def _get_completion_menu(self) -> CommandCompletionMenu | None:
@@ -1309,12 +1319,7 @@ class ExtendedTextArea(TextArea):
                 menu.hide_menu()
             return
         prefix, _, _ = result
-        commands = self.get_command_completions()
-        matches = [c for c in commands if c.startswith(prefix)]
-        if not matches or (len(matches) == 1 and matches[0] == prefix):
-            menu.hide_menu()
-        else:
-            menu.update_candidates(prefix, matches)
+        menu.update_for_prefix(prefix)
 
     def _complete_command(self) -> None:
         menu = self._get_completion_menu()

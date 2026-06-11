@@ -84,6 +84,12 @@ class TestCommandCompletion(unittest.IsolatedAsyncioTestCase):
         app = _create_test_app()
 
         async with app.run_test() as pilot:
+            from linhai.agent.command_callback import CommandCallback
+            from linhai.tui.components import CommandCompletionMenu
+
+            menu = pilot.app.query_one("#completion-menu", CommandCompletionMenu)
+            menu.add_candidates(CommandCallback.get_command_completions())
+
             input_el = pilot.app.query_one("#input")
             input_el.text = "/qu"
             input_el.move_cursor((0, 3))
@@ -98,18 +104,19 @@ class TestCommandCompletion(unittest.IsolatedAsyncioTestCase):
         app = _create_test_app()
 
         async with app.run_test() as pilot:
+            from linhai.agent.command_callback import CommandCallback
+            from linhai.tui.components import CommandCompletionMenu
+
+            menu = pilot.app.query_one("#completion-menu", CommandCompletionMenu)
+            menu.add_candidates(CommandCallback.get_command_completions())
+
             input_el = pilot.app.query_one("#input")
             input_el.text = "/"
             input_el.move_cursor((0, 1))
             input_el._update_completion()
 
-            from linhai.tui.components import CommandCompletionMenu
-
-            menu = pilot.app.query_one("#completion-menu", CommandCompletionMenu)
             menu.select_down()
             input_el._complete_command()
-
-            from linhai.agent.command_callback import CommandCallback
 
             commands = CommandCallback.get_command_completions()
             expected = commands[1] + " "
@@ -121,6 +128,12 @@ class TestCommandCompletion(unittest.IsolatedAsyncioTestCase):
         app = _create_test_app()
 
         async with app.run_test() as pilot:
+            from linhai.agent.command_callback import CommandCallback
+            from linhai.tui.components import CommandCompletionMenu
+
+            menu = pilot.app.query_one("#completion-menu", CommandCompletionMenu)
+            menu.add_candidates(CommandCallback.get_command_completions())
+
             input_el = pilot.app.query_one("#input")
             input_el.text = "/qu不要忘了测试"
             input_el.move_cursor((0, 3))
@@ -135,6 +148,12 @@ class TestCommandCompletion(unittest.IsolatedAsyncioTestCase):
         app = _create_test_app()
 
         async with app.run_test() as pilot:
+            from linhai.agent.command_callback import CommandCallback
+            from linhai.tui.components import CommandCompletionMenu
+
+            menu = pilot.app.query_one("#completion-menu", CommandCompletionMenu)
+            menu.add_candidates(CommandCallback.get_command_completions())
+
             input_el = pilot.app.query_one("#input")
             input_el.text = "/qu xxx"
             input_el.move_cursor((0, 3))

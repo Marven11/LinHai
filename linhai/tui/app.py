@@ -149,12 +149,11 @@ class TUIApp(App):
                 )
                 yield self.messages_list
 
-                yield CommandCompletionMenu(id="completion-menu")
+                yield CommandCompletionMenu(self.registry, id="completion-menu")
                 yield ProblemWidget(self.registry)
                 with Horizontal(id="input-container"):
                     yield ExtendedTextArea(
                         on_enter_key=self._handle_message_submission,
-                        get_command_completions=self._get_command_completions,
                         placeholder=t(
                             {
                                 "zh_CN": "Enter发送，Shift+Enter换行（如果终端支持）",
@@ -208,10 +207,21 @@ class TUIApp(App):
         agent = self.registry.get_member_typechecked("agent", Agent)
         await agent.run()
 
-    def _get_command_completions(self) -> list[str]:
+    def _get_command_completions_to_menu(self) -> None:
         from linhai.agent.command_callback import CommandCallback
+        from .components import CommandCompletionMenu
 
-        return CommandCallback.get_command_completions()
+        completion_menu = self.query_one("#completion-menu", CommandCompletionMenu)
+        completion_menu.add_candidates(CommandCallback.get_command_completions())
+
+        if self.registry.has_member("skills_manager"):
+            from linhai.skills import SkillsManager
+
+            skills_manager = self.registry.get_member_typechecked(
+                "skills_manager", SkillsManager
+            )
+            skill_names = [f"/{name}" for name in skills_manager.skills]
+            completion_menu.add_candidates(skill_names)
 
     async def on_mount(self) -> None:
         """应用挂载时启动输出队列监听"""
@@ -234,6 +244,7 @@ class TUIApp(App):
             animated_welcome.add_class("welcome-message")
             self.messages_list.mount(animated_welcome)
 
+        self._get_command_completions_to_menu()
         self._run_agent()
 
         input_element = self.query_one("#input", ExtendedTextArea)

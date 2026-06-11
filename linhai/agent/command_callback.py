@@ -31,6 +31,20 @@ class CommandCallback:
             if parsed_input.command == "save":
                 return await self._handle_save_command()
 
+            if self.registry.has_member("skills_manager"):
+                from linhai.skills import SkillsManager
+
+                skills_manager = self.registry.get_member_typechecked(
+                    "skills_manager", SkillsManager
+                )
+                if (
+                    isinstance(skills_manager, SkillsManager)
+                    and parsed_input.command in skills_manager.skills
+                ):
+                    return await self._handle_skill_command(
+                        parsed_input.command, parsed_input.arguments, msg
+                    )
+
         return None
 
     @staticmethod
@@ -150,6 +164,27 @@ class CommandCallback:
         await save_conversation(self.registry, filepath)
         await self._show_runtime_message("INFO", f"Conversation saved to {filepath}")
         return False
+
+    async def _handle_skill_command(
+        self, skill_name: str, arguments: list[str], msg: UserMessage
+    ) -> bool:
+        from .main import Agent
+        from .message import AgentMessage
+        from linhai.skills import SkillsManager
+
+        agent = self.registry.get_member_typechecked("agent", Agent)
+        skills_manager = self.registry.get_member_typechecked(
+            "skills_manager", SkillsManager
+        )
+        skill_config = skills_manager.skills[skill_name]
+
+        await agent.message_processor.add_new_message(msg)
+
+        skill_msg = UserMessage(message=skill_config["body"])
+        await agent.message_processor.add_new_message(skill_msg)
+
+        await self._show_runtime_message("INFO", f"已触发skill: {skill_name}")
+        return True
 
     async def _handle_context_tool_command(self, parsed_input) -> bool:
         from .main import Agent
