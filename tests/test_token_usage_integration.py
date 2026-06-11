@@ -32,18 +32,12 @@ class TestTokenUsageIntegration(unittest.IsolatedAsyncioTestCase):
         mock_answer.get_token_usage = MagicMock(return_value=token_usage)
         mock_parsed_answer._answer = mock_answer
 
-        await token_manager._on_answer_generated(mock_parsed_answer)
+        await token_manager._on_answer_generated(mock_parsed_answer, [])
 
-        self.assertEqual(token_manager._current_token_usage.input_tokens, 50)
-        self.assertEqual(token_manager._current_token_usage.output_tokens, 20)
-        self.assertEqual(token_manager._current_token_usage.total_tokens, 70)
-        self.assertEqual(token_manager._current_token_usage.cached_input_tokens, 100)
-
-        await token_manager.finalize_round(mock_parsed_answer, [])
-        token_info = token_manager.get_token_info()
-        self.assertFalse(token_info.is_dirty)
-        assert token_info.last_valid_token_usage is not None
-        self.assertEqual(token_info.last_valid_token_usage.input_tokens, 50)
+        self.assertEqual(token_manager.current_token_usage.input_tokens, 50)
+        self.assertEqual(token_manager.current_token_usage.output_tokens, 20)
+        self.assertEqual(token_manager.current_token_usage.total_tokens, 70)
+        self.assertEqual(token_manager.current_token_usage.cached_input_tokens, 100)
 
     async def test_notification_message_plugin_integration(self):
         """测试NotificationMessagePlugin的基本集成。"""
@@ -122,8 +116,7 @@ class TestTokenUsageIntegration(unittest.IsolatedAsyncioTestCase):
         mock_answer1.get_token_usage = MagicMock(return_value=usage1)
         mock_parsed1 = MagicMock()
         mock_parsed1._answer = mock_answer1
-        await token_manager._on_answer_generated(mock_parsed1)
-        await token_manager.finalize_round(mock_parsed1, [])
+        await token_manager._on_answer_generated(mock_parsed1, [])
 
         usage2 = AnswerTokenUsage(
             input_tokens=200,
@@ -135,8 +128,7 @@ class TestTokenUsageIntegration(unittest.IsolatedAsyncioTestCase):
         mock_answer2.get_token_usage = MagicMock(return_value=usage2)
         mock_parsed2 = MagicMock()
         mock_parsed2._answer = mock_answer2
-        await token_manager._on_answer_generated(mock_parsed2)
-        await token_manager.finalize_round(mock_parsed2, [])
+        await token_manager._on_answer_generated(mock_parsed2, [])
 
         self.assertIsNotNone(token_manager.cumulative_token_usage)
         assert token_manager.cumulative_token_usage is not None

@@ -174,11 +174,7 @@ class TestAgentMarkerValidation(unittest.IsolatedAsyncioTestCase):
         from linhai.token_manager import TokenManager
 
         self.token_manager = MagicMock()
-        mock_info = MagicMock()
-        mock_info.is_dirty = False
-        mock_info.last_valid_token_usage = None
-        mock_info.cumulative_token_usage = None
-        self.token_manager.get_token_info.return_value = mock_info
+        self.token_manager.current_token_usage = None
 
         self.agent = Agent(
             llm_manager=llm_manager,

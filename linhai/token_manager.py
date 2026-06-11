@@ -1,7 +1,6 @@
 """Token management logic for TUI."""
 
 from __future__ import annotations
-from dataclasses import dataclass
 from typing import Optional, TYPE_CHECKING
 from linhai.base import AnswerTokenUsage
 from linhai.registry import Registry
@@ -14,13 +13,6 @@ if TYPE_CHECKING:
 MAX_RECENT_GENERATIONS = 50
 
 
-@dataclass
-class TokenInfo:
-    is_dirty: bool
-    last_valid_token_usage: Optional[AnswerTokenUsage]
-    cumulative_token_usage: Optional[CumulativeTokenUsage]
-
-
 class TokenManager:
     """Manager for token usage tracking and display."""
 
@@ -28,23 +20,19 @@ class TokenManager:
         registry.register_member("token_manager", self)
         self.registry = registry
         self._current_token_usage: Optional[AnswerTokenUsage] = None
-        self._last_valid_token_usage: Optional[AnswerTokenUsage] = None
         self.cumulative_token_usage: Optional[CumulativeTokenUsage] = None
         self.recent_generations: list[AnswerTokenUsage] = []
         self.explicit_cache_tokens: int = 0
         self.is_dirty: bool = False
         self.generation_count: int = 0
 
-    def get_token_info(self) -> TokenInfo:
-        return TokenInfo(
-            is_dirty=self.is_dirty,
-            last_valid_token_usage=self._last_valid_token_usage,
-            cumulative_token_usage=self.cumulative_token_usage,
-        )
+    @property
+    def current_token_usage(self) -> Optional[AnswerTokenUsage]:
+        return self._current_token_usage
 
     def mark_dirty(self) -> None:
+        """标记token用量为失效状态，由上下文清理工具调用"""
         self.is_dirty = True
-        self._current_token_usage = None
         if self.cumulative_token_usage is not None:
             self.cumulative_token_usage["cache_miss_count"] += 1
 
@@ -52,23 +40,17 @@ class TokenManager:
         from linhai.agent.lifecycle import Lifecycle
 
         lifecycle = self.registry.get_member_typechecked("lifecycle", Lifecycle)
-        lifecycle.after_new_parsed_answer.register(self._on_answer_generated)
-        lifecycle.after_message_generation.register(self.finalize_round)
+        lifecycle.after_message_generation.register(self._on_answer_generated)
 
-    async def _on_answer_generated(self, parsed_answer) -> None:
+    async def _on_answer_generated(self, parsed_answer, tool_calls) -> None:
         token_usage = parsed_answer._answer.get_token_usage()
         if token_usage is not None:
             self._current_token_usage = token_usage
+            self.update_cumulative_usage(token_usage)
 
-    async def finalize_round(self, _parsed_answer, _tool_calls) -> None:
-        if self._current_token_usage is None:
-            return
-        self._last_valid_token_usage = self._current_token_usage
-        self._update_cumulative_from(self._current_token_usage)
+    def update_cumulative_usage(self, token_usage: AnswerTokenUsage) -> None:
+        """更新累计token使用量"""
         self.is_dirty = False
-        self._current_token_usage = None
-
-    def _update_cumulative_from(self, token_usage: AnswerTokenUsage) -> None:
         self.recent_generations.append(token_usage)
         if len(self.recent_generations) > MAX_RECENT_GENERATIONS:
             self.recent_generations.pop(0)
@@ -129,6 +111,11 @@ class TokenManager:
     def get_token_display_pieces(
         self, agent: Agent, current_answer_token: int, use_nerd_font: bool = False
     ) -> list[str]:
+        """获取token使用量显示片段列表
+
+        返回一个字符串列表，调用者可以自行用" | "或其他分隔符拼接。
+        这样可以更灵活地处理空字符串和添加额外信息。
+        """
         if self.cumulative_token_usage is None:
             return []
 
@@ -201,11 +188,6 @@ class TokenManager:
             "explicit_cache_tokens": self.explicit_cache_tokens,
             "is_dirty": self.is_dirty,
             "generation_count": self.generation_count,
-            "_last_valid_token_usage": (
-                self._last_valid_token_usage.model_dump()
-                if self._last_valid_token_usage
-                else None
-            ),
         }
 
     def restore_from(self, data: dict) -> None:
@@ -216,6 +198,3 @@ class TokenManager:
         self.explicit_cache_tokens = data.get("explicit_cache_tokens", 0)
         self.is_dirty = data.get("is_dirty", False)
         self.generation_count = data.get("generation_count", 0)
-        last_valid = data.get("_last_valid_token_usage")
-        if last_valid is not None:
-            self._last_valid_token_usage = AnswerTokenUsage(**last_valid)

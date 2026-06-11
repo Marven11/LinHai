@@ -92,7 +92,6 @@ class ContextStatistics(TypedDict):
     cumulative_cache_miss_count: int | None
     system_prompt_tokens: int | None
     recent_cache_rows: list[RecentGenerationCacheRow] | None
-    is_token_dirty: bool
 
 
 def estimate_message_tokens(msg: Message) -> int:
@@ -313,7 +312,6 @@ def compute_context_statistics(
     cumulative_token_usage: CumulativeTokenUsage | None,
     system_prompt_tokens: int | None = None,
     recent_generations: list[AnswerTokenUsage] | None = None,
-    is_token_dirty: bool = False,
 ) -> ContextStatistics:
     msg_stats = compute_message_group_stats(messages)
     pinned_stats = compute_message_group_stats(pinned_messages)
@@ -367,5 +365,4 @@ def compute_context_statistics(
         cumulative_cache_miss_count=cumulative_cache_miss_count,
         system_prompt_tokens=system_prompt_tokens,
         recent_cache_rows=recent_cache_rows,
-        is_token_dirty=is_token_dirty,
     )
