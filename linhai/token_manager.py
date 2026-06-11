@@ -1,6 +1,7 @@
 """Token management logic for TUI."""
 
 from __future__ import annotations
+from dataclasses import dataclass
 from typing import Optional, TYPE_CHECKING
 from linhai.base import AnswerTokenUsage
 from linhai.registry import Registry
@@ -11,6 +12,13 @@ if TYPE_CHECKING:
 
 
 MAX_RECENT_GENERATIONS = 50
+
+
+@dataclass
+class TokenInfo:
+    is_dirty: bool
+    current_token_usage: Optional[AnswerTokenUsage]
+    cumulative_token_usage: Optional[CumulativeTokenUsage]
 
 
 class TokenManager:
@@ -24,15 +32,24 @@ class TokenManager:
         self.recent_generations: list[AnswerTokenUsage] = []
         self.explicit_cache_tokens: int = 0
         self.is_dirty: bool = False
+        self._dirty_in_this_round: bool = False
         self.generation_count: int = 0
 
     @property
     def current_token_usage(self) -> Optional[AnswerTokenUsage]:
         return self._current_token_usage
 
+    def get_token_info(self) -> TokenInfo:
+        return TokenInfo(
+            is_dirty=self.is_dirty,
+            current_token_usage=self._current_token_usage,
+            cumulative_token_usage=self.cumulative_token_usage,
+        )
+
     def mark_dirty(self) -> None:
         """标记token用量为失效状态，由上下文清理工具调用"""
         self.is_dirty = True
+        self._dirty_in_this_round = True
         if self.cumulative_token_usage is not None:
             self.cumulative_token_usage["cache_miss_count"] += 1
 
@@ -43,14 +60,17 @@ class TokenManager:
         lifecycle.after_message_generation.register(self._on_answer_generated)
 
     async def _on_answer_generated(self, parsed_answer, tool_calls) -> None:
+        if self._dirty_in_this_round:
+            self._dirty_in_this_round = False
+            self._current_token_usage = None
+            return
         token_usage = parsed_answer._answer.get_token_usage()
         if token_usage is not None:
             self._current_token_usage = token_usage
-            self.update_cumulative_usage(token_usage)
+            self._update_cumulative_from(token_usage)
+            self.is_dirty = False
 
-    def update_cumulative_usage(self, token_usage: AnswerTokenUsage) -> None:
-        """更新累计token使用量"""
-        self.is_dirty = False
+    def _update_cumulative_from(self, token_usage: AnswerTokenUsage) -> None:
         self.recent_generations.append(token_usage)
         if len(self.recent_generations) > MAX_RECENT_GENERATIONS:
             self.recent_generations.pop(0)

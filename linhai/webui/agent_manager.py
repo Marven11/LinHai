@@ -131,14 +131,17 @@ class AgentSession:
         current_token_usage = None
         generation_count = None
         cumulative_token_usage = None
+        is_token_dirty = False
 
         if registry.has_member("token_manager"):
             token_manager = registry.get_member_typechecked(
                 "token_manager", TokenManager
             )
-            current_token_usage = token_manager.current_token_usage
+            token_info = token_manager.get_token_info()
+            current_token_usage = token_info.current_token_usage
+            is_token_dirty = token_info.is_dirty
             generation_count = token_manager.generation_count
-            cumulative_token_usage = token_manager.cumulative_token_usage
+            cumulative_token_usage = token_info.cumulative_token_usage
 
         large_message_count = 0
         cleanable_count = 0
@@ -184,6 +187,7 @@ class AgentSession:
             current_token_usage=current_token_usage,
             cumulative_token_usage=cumulative_token_usage,
             system_prompt_tokens=system_prompt_tokens,
+            is_token_dirty=is_token_dirty,
         )
         self._data["context"] = stats
 

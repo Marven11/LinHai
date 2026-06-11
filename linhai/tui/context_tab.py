@@ -357,7 +357,13 @@ class ContextTabWidget(Static):
             f"{t({'zh_CN': '累计Token用量', 'en': 'Cumulative token usage'})}: {stats['cumulative_total_tokens']}\n"
             f"{t({'zh_CN': '累计输入Token用量', 'en': 'Cumulative input tokens'})}: {stats['cumulative_input_tokens']}\n"
             f"{t({'zh_CN': '累计输出Token用量', 'en': 'Cumulative output tokens'})}: {stats['cumulative_output_tokens']}\n"
-            f"{t({'zh_CN': '缓存失效次数', 'en': 'Cache miss count'})}: {stats['cumulative_cache_miss_count']}"
+            f"{t({'zh_CN': '缓存失效次数', 'en': 'Cache miss count'})}: {stats['cumulative_cache_miss_count']}\n"
+            f"{t({'zh_CN': 'Token用量状态', 'en': 'Token usage status'})}: "
+            + (
+                t({"zh_CN": "已失效", "en": "Stale"})
+                if stats["is_token_dirty"]
+                else t({"zh_CN": "有效", "en": "Valid"})
+            )
         )
 
     def _update_recent_cache_status(self, stats: ContextStatistics) -> None:
@@ -432,14 +438,17 @@ class ContextTabWidget(Static):
         current_token_usage: AnswerTokenUsage | None = None
         generation_count: int | None = None
         cumulative_token_usage: CumulativeTokenUsage | None = None
+        is_token_dirty: bool = False
 
         if self.registry.has_member("token_manager"):
             token_manager = self.registry.get_member_typechecked(
                 "token_manager", TokenManager
             )
-            current_token_usage = token_manager.current_token_usage
+            token_info = token_manager.get_token_info()
+            current_token_usage = token_info.current_token_usage
+            is_token_dirty = token_info.is_dirty
             generation_count = token_manager.generation_count
-            cumulative_token_usage = token_manager.cumulative_token_usage
+            cumulative_token_usage = token_info.cumulative_token_usage
             recent_generations = token_manager.recent_generations
         else:
             recent_generations = None
@@ -479,6 +488,7 @@ class ContextTabWidget(Static):
             cumulative_token_usage=cumulative_token_usage,
             system_prompt_tokens=system_prompt_tokens,
             recent_generations=recent_generations,
+            is_token_dirty=is_token_dirty,
         )
 
         self._update_cumulative_token_usage(stats)

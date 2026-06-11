@@ -34,6 +34,7 @@ def _build_context_statistics(
     notification_stats=None,
     notification_details=None,
     recent_cache_rows=None,
+    is_token_dirty=False,
 ):
     from linhai.context_statistics import (
         MessageGroupStatistics,
@@ -78,6 +79,7 @@ def _build_context_statistics(
         cumulative_cache_miss_count=cumulative_cache_miss_count,
         system_prompt_tokens=system_prompt_tokens,
         recent_cache_rows=recent_cache_rows,
+        is_token_dirty=is_token_dirty,
     )
 
 
@@ -172,6 +174,17 @@ class TestContextTab(unittest.TestCase):
         mock_token_manager.cumulative_token_usage = None
         mock_token_manager.generation_count = 0
         mock_token_manager.recent_generations = []
+        mock_token_manager.get_token_info = Mock(
+            return_value=type(
+                "TokenInfo",
+                (),
+                {
+                    "is_dirty": False,
+                    "current_token_usage": mock_token_usage,
+                    "cumulative_token_usage": None,
+                },
+            )()
+        )
 
         registry.register_member("agent", mock_agent)
         registry.register_member("agent_message", mock_agent_message)
@@ -251,6 +264,17 @@ class TestContextTab(unittest.TestCase):
         mock_token_manager.cumulative_token_usage = None
         mock_token_manager.generation_count = 0
         mock_token_manager.recent_generations = []
+        mock_token_manager.get_token_info = Mock(
+            return_value=type(
+                "TokenInfo",
+                (),
+                {
+                    "is_dirty": False,
+                    "current_token_usage": mock_token_usage,
+                    "cumulative_token_usage": None,
+                },
+            )()
+        )
 
         registry.register_member("agent_message", mock_agent_message)
         registry.register_member("agent_context_orchestration", mock_orchestration)
@@ -611,6 +635,17 @@ class TestPinnedAndNotificationStats(unittest.TestCase):
         mock_token_manager.cumulative_token_usage = None
         mock_token_manager.generation_count = 0
         mock_token_manager.recent_generations = []
+        mock_token_manager.get_token_info = Mock(
+            return_value=type(
+                "TokenInfo",
+                (),
+                {
+                    "is_dirty": False,
+                    "current_token_usage": mock_token_usage,
+                    "cumulative_token_usage": None,
+                },
+            )()
+        )
 
         registry.register_member("agent_message", mock_agent_message)
         registry.register_member("agent_context_orchestration", mock_orchestration)
