@@ -53,7 +53,7 @@ class TestSecretExceptionLeak(unittest.TestCase):
         @self.test_toolset.register_tool(
             name="failing_tool_with_secret",
             desc="A tool that fails and potentially leaks secrets",
-            args={"param": {"desc": "Parameter", "type": "str"}},
+            args={"param": {"desc": "Parameter", "schema": {"type": "string"}}},
             required_args=["param"],
         )
         def failing_tool_with_secret(param: str):
@@ -64,7 +64,7 @@ class TestSecretExceptionLeak(unittest.TestCase):
         @self.test_toolset.register_tool(
             name="failing_tool_without_secret",
             desc="A tool that fails without leaking secrets",
-            args={"param": {"desc": "Parameter", "type": "str"}},
+            args={"param": {"desc": "Parameter", "schema": {"type": "string"}}},
             required_args=["param"],
         )
         def failing_tool_without_secret(param: str):

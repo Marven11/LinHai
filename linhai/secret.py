@@ -225,15 +225,15 @@ def _create_call_with_secret_toolset(
         args={
             "tool_name": ToolArgInfo(
                 desc="要调用的目标工具名称",
-                type="str",
+                schema={"type": "string"},
             ),
             "tool_arguments": ToolArgInfo(
                 desc="目标工具的参数字典，其中可以包含占位符引用secret值",
-                type="dict",
+                schema={"type": "object"},
             ),
             "with_secret": ToolArgInfo(
                 desc="secret配置字典，包含in_arguments(参数替换)和in_result(结果掩码)两个列表",
-                type="dict",
+                schema={"type": "object"},
             ),
         },
         required_args=["tool_name", "tool_arguments", "with_secret"],

@@ -97,7 +97,7 @@ class PlainProblemManager:
                             "en": "Problem content",
                         }
                     ),
-                    type="str",
+                    schema={"type": "string"},
                 ),
                 "options": ToolArgInfo(
                     desc=t(
@@ -106,7 +106,7 @@ class PlainProblemManager:
                             "en": 'List of options, e.g. ["yes - allow...", "no - disallow...", "other - ..."]',
                         }
                     ),
-                    type="list[str]",
+                    schema={"type": "array", "items": {"type": "string"}},
                 ),
             },
             required_args=["content", "options"],
@@ -131,7 +131,7 @@ class PlainProblemManager:
                             "en": "Problem ID",
                         }
                     ),
-                    type="str",
+                    schema={"type": "string"},
                 ),
                 "timeout": ToolArgInfo(
                     desc=t(
@@ -140,7 +140,7 @@ class PlainProblemManager:
                             "en": "Timeout in seconds, default 60",
                         }
                     ),
-                    type="float",
+                    schema={"type": "number"},
                 ),
             },
             required_args=["problem_id"],

@@ -22,19 +22,23 @@ class TestHttpRequestTool(unittest.TestCase):
             name="http_request",
             desc="使用httpx库发送HTTP请求并获取响应内容",
             args={
-                "method": ToolArgInfo(desc="HTTP方法，如GET、POST", type="str"),
-                "url": ToolArgInfo(desc="请求的URL", type="str"),
+                "method": ToolArgInfo(
+                    desc="HTTP方法，如GET、POST", schema={"type": "string"}
+                ),
+                "url": ToolArgInfo(desc="请求的URL", schema={"type": "string"}),
                 "params": ToolArgInfo(
-                    desc="查询参数（字典形式）", type="Optional[dict]"
+                    desc="查询参数（字典形式）", schema={"type": "object"}
                 ),
                 "headers": ToolArgInfo(
-                    desc="请求头（字典形式）", type="Optional[dict]"
+                    desc="请求头（字典形式）", schema={"type": "object"}
                 ),
-                "data": ToolArgInfo(desc="请求体数据", type="Optional[str]"),
+                "data": ToolArgInfo(desc="请求体数据", schema={"type": "string"}),
                 "follow_redirects": ToolArgInfo(
-                    desc="是否跟随重定向，默认True", type="bool"
+                    desc="是否跟随重定向，默认True", schema={"type": "boolean"}
                 ),
-                "timeout": ToolArgInfo(desc="超时时间（秒），默认60秒", type="int"),
+                "timeout": ToolArgInfo(
+                    desc="超时时间（秒），默认60秒", schema={"type": "integer"}
+                ),
             },
             required_args=["method", "url"],
         )(http_request)

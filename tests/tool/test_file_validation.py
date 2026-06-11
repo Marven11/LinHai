@@ -24,7 +24,7 @@ class TestFileValidation(unittest.TestCase):
         self.toolset.register_tool(
             name="read_file",
             desc="读取文件",
-            args={"filepath": ToolArgInfo(desc="文件路径", type="str")},
+            args={"filepath": ToolArgInfo(desc="文件路径", schema={"type": "string"})},
             required_args=["filepath"],
         )(read_file)
 
@@ -32,8 +32,8 @@ class TestFileValidation(unittest.TestCase):
             name="write_file",
             desc="写入文件",
             args={
-                "filepath": ToolArgInfo(desc="文件路径", type="str"),
-                "content": ToolArgInfo(desc="要写入的内容", type="str"),
+                "filepath": ToolArgInfo(desc="文件路径", schema={"type": "string"}),
+                "content": ToolArgInfo(desc="要写入的内容", schema={"type": "string"}),
             },
             required_args=["filepath", "content"],
         )(write_file)
@@ -42,9 +42,9 @@ class TestFileValidation(unittest.TestCase):
             name="replace_file_content",
             desc="替换文件内容中的指定字符串",
             args={
-                "filepath": ToolArgInfo(desc="文件路径", type="str"),
-                "old": ToolArgInfo(desc="要替换的字符串", type="str"),
-                "new": ToolArgInfo(desc="新的字符串", type="str"),
+                "filepath": ToolArgInfo(desc="文件路径", schema={"type": "string"}),
+                "old": ToolArgInfo(desc="要替换的字符串", schema={"type": "string"}),
+                "new": ToolArgInfo(desc="新的字符串", schema={"type": "string"}),
             },
             required_args=["filepath", "old", "new"],
         )(replace_file_content)
@@ -53,8 +53,8 @@ class TestFileValidation(unittest.TestCase):
             name="read_file_with_sed",
             desc="执行sed表达式并返回输出",
             args={
-                "filepath": ToolArgInfo(desc="文件路径", type="str"),
-                "expression": ToolArgInfo(desc="sed表达式", type="str"),
+                "filepath": ToolArgInfo(desc="文件路径", schema={"type": "string"}),
+                "expression": ToolArgInfo(desc="sed表达式", schema={"type": "string"}),
             },
             required_args=["filepath", "expression"],
         )(

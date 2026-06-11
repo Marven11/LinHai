@@ -91,9 +91,10 @@ class TestMultimodalToolsetManager(unittest.IsolatedAsyncioTestCase):
             name="load_image",
             desc="加载图片文件并返回图片数据，用于多模态LLM查看图片内容",
             args={
-                "image_filepath": MagicMock(
-                    desc="图片文件在master_host的路径", type="str"
-                ),
+                "image_filepath": {
+                    "desc": "图片文件在master_host的路径",
+                    "schema": {"type": "string"},
+                },
             },
             required_args=["image_filepath"],
         )(load_image)

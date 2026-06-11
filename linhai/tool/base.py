@@ -5,10 +5,9 @@ from typing import (
     Awaitable,
     Protocol,
     runtime_checkable,
-    Union,
-    get_origin,
-    get_args,
 )
+
+import jsonschema
 
 import json
 import tempfile
@@ -29,7 +28,7 @@ import linhai
 
 class ToolArgInfo(TypedDict):
     desc: str
-    type: str | dict[str, Any]
+    schema: dict[str, Any]
 
 
 class Tool(TypedDict):
@@ -38,79 +37,6 @@ class Tool(TypedDict):
     args: dict[str, ToolArgInfo]
     required: list[str]
     func: Callable[..., "ToolResult | Awaitable[ToolResult]"]
-
-
-_TYPE_EVAL_GLOBALS = {
-    "str": str,
-    "int": int,
-    "float": float,
-    "bool": bool,
-    "list": list,
-    "dict": dict,
-    "Dict": dict,
-    "Optional": Union,
-    "Union": Union,
-    "tuple": tuple,
-    "Tuple": tuple,
-    "Any": Any,
-    "string": str,
-    "integer": int,
-    "number": float,
-    "boolean": bool,
-    "array": list,
-    "object": dict,
-}
-
-_PYTHON_TYPE_TO_JSON: dict[type, str] = {
-    str: "string",
-    int: "integer",
-    bool: "boolean",
-    float: "number",
-}
-
-
-def _python_type_to_json_schema(python_type: str | dict[str, Any]) -> dict[str, Any]:
-    if isinstance(python_type, dict):
-        return python_type
-
-    type_obj = eval(python_type, _TYPE_EVAL_GLOBALS, {})
-    return _type_obj_to_schema(type_obj)
-
-
-def _type_obj_to_schema(type_obj: type) -> dict[str, Any]:
-    if type_obj is list:
-        return {"type": "array"}
-    if type_obj is dict:
-        return {"type": "object"}
-    if type_obj is tuple:
-        return {"type": "array"}
-
-    origin = get_origin(type_obj)
-
-    if origin is Union:
-        args = get_args(type_obj)
-        non_none = [a for a in args if a is not type(None)]
-        if non_none:
-            return _type_obj_to_schema(non_none[0])
-        return {"type": "string"}
-
-    if origin is list:
-        args = get_args(type_obj)
-        if args:
-            return {"type": "array", "items": _type_obj_to_schema(args[0])}
-        return {"type": "array"}
-
-    if origin is dict:
-        return {"type": "object"}
-
-    if origin is tuple:
-        return {"type": "array"}
-
-    mapped = _PYTHON_TYPE_TO_JSON.get(type_obj)
-    if mapped:
-        return {"type": mapped}
-
-    return {"type": "string"}
 
 
 def to_tools_info(tools: dict[str, Tool]) -> list[dict]:
@@ -124,7 +50,7 @@ def to_tools_info(tools: dict[str, Tool]) -> list[dict]:
         }
 
         for arg_name, arg_info in tool["args"].items():
-            schema = _python_type_to_json_schema(arg_info["type"])
+            schema = dict(arg_info["schema"])
             schema["description"] = arg_info["desc"]
             properties[arg_name] = schema
 
@@ -152,6 +78,8 @@ class ToolSet:
         args: dict[str, ToolArgInfo],
         required_args: list[str],
     ):
+        for arg_info in args.values():
+            jsonschema.Draft7Validator.check_schema(arg_info["schema"])
 
         def _wraps(
             f: Callable[..., "ToolResult | Awaitable[ToolResult]"],

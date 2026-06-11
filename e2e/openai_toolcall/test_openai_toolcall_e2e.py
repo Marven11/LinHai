@@ -70,8 +70,8 @@ def _make_toolset():
         name="add",
         desc="add two numbers",
         args={
-            "a": ToolArgInfo(desc="first", type="int"),
-            "b": ToolArgInfo(desc="second", type="int"),
+            "a": ToolArgInfo(desc="first", schema={"type": "integer"}),
+            "b": ToolArgInfo(desc="second", schema={"type": "integer"}),
         },
         required_args=["a", "b"],
     )
@@ -81,7 +81,7 @@ def _make_toolset():
     @toolset.register_tool(
         name="echo",
         desc="echo input",
-        args={"text": ToolArgInfo(desc="text", type="str")},
+        args={"text": ToolArgInfo(desc="text", schema={"type": "string"})},
         required_args=["text"],
     )
     def echo(text: str):

@@ -85,7 +85,7 @@ def _create_test_toolset() -> ToolSet:
     @toolset.register_tool(
         name="get_weather",
         desc="Get the current weather for a given city",
-        args={"city": ToolArgInfo(desc="The city name", type="string")},
+        args={"city": ToolArgInfo(desc="The city name", schema={"type": "string"})},
         required_args=["city"],
     )
     def get_weather(city: str):

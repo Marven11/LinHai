@@ -80,7 +80,7 @@ class AgentToolcall:
                     desc=t(
                         {"zh_CN": "要切换到的LLM名称", "en": "LLM name to switch to"}
                     ),
-                    type="str",
+                    schema={"type": "string"},
                 ),
             },
             required_args=["llm_name"],

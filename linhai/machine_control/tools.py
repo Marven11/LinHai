@@ -94,7 +94,7 @@ def register_machine_control_tools(machine_control: "MachineControl") -> ToolSet
                         "en": "Machine ID, e.g. 'master_host'",
                     }
                 ),
-                type="str",
+                schema={"type": "string"},
             )
         },
         required_args=["machine_id"],
@@ -120,7 +120,7 @@ def register_machine_control_tools(machine_control: "MachineControl") -> ToolSet
                         "en": "Machine ID to disconnect",
                     }
                 ),
-                type="str",
+                schema={"type": "string"},
             )
         },
         required_args=["machine_id"],
@@ -141,7 +141,7 @@ def register_machine_control_tools(machine_control: "MachineControl") -> ToolSet
         args={
             "machine_id": ToolArgInfo(
                 desc=t({"zh_CN": "新机器的ID", "en": "ID for the new machine"}),
-                type="str",
+                schema={"type": "string"},
             ),
             "pid": ToolArgInfo(
                 desc=t(
@@ -150,7 +150,7 @@ def register_machine_control_tools(machine_control: "MachineControl") -> ToolSet
                         "en": "PID of the posix shell process to connect",
                     }
                 ),
-                type="str",
+                schema={"type": "string"},
             ),
             "source_machine": ToolArgInfo(
                 desc=t(
@@ -159,7 +159,7 @@ def register_machine_control_tools(machine_control: "MachineControl") -> ToolSet
                         "en": "Machine ID where process resides, defaults to current machine",
                     }
                 ),
-                type="str",
+                schema={"type": "string"},
             ),
         },
         required_args=["machine_id", "pid"],
@@ -183,7 +183,8 @@ def register_machine_control_tools(machine_control: "MachineControl") -> ToolSet
         ),
         args={
             "machine_id": ToolArgInfo(
-                desc=t({"zh_CN": "机器ID", "en": "Machine ID"}), type="str"
+                desc=t({"zh_CN": "机器ID", "en": "Machine ID"}),
+                schema={"type": "string"},
             ),
             "session_type": ToolArgInfo(
                 desc=t(
@@ -192,7 +193,7 @@ def register_machine_control_tools(machine_control: "MachineControl") -> ToolSet
                         "en": "Webshell type, e.g. 'php_oneliner'",
                     }
                 ),
-                type="str",
+                schema={"type": "string"},
             ),
             "connection_args": ToolArgInfo(
                 desc=t(
@@ -201,7 +202,7 @@ def register_machine_control_tools(machine_control: "MachineControl") -> ToolSet
                         "en": "Connection arguments dict, varies by session type",
                     }
                 ),
-                type="Dict[str, Any]",
+                schema={"type": "object"},
             ),
         },
         required_args=["machine_id", "session_type", "connection_args"],
@@ -262,10 +263,11 @@ def register_machine_control_tools(machine_control: "MachineControl") -> ToolSet
                         "en": "HTTP method, e.g. GET, POST",
                     }
                 ),
-                type="str",
+                schema={"type": "string"},
             ),
             "url": ToolArgInfo(
-                desc=t({"zh_CN": "请求的URL", "en": "Request URL"}), type="str"
+                desc=t({"zh_CN": "请求的URL", "en": "Request URL"}),
+                schema={"type": "string"},
             ),
             "params": ToolArgInfo(
                 desc=t(
@@ -274,17 +276,17 @@ def register_machine_control_tools(machine_control: "MachineControl") -> ToolSet
                         "en": "Query parameters (as dict)",
                     }
                 ),
-                type="Optional[Dict[str, Union[str, int, float, bool]]]",
+                schema={"type": "object"},
             ),
             "headers": ToolArgInfo(
                 desc=t(
                     {"zh_CN": "请求头（字典形式）", "en": "Request headers (as dict)"}
                 ),
-                type="Optional[Dict[str, str]]",
+                schema={"type": "object"},
             ),
             "data": ToolArgInfo(
                 desc=t({"zh_CN": "请求体数据", "en": "Request body data"}),
-                type="Optional[str]",
+                schema={"type": "string"},
             ),
             "follow_redirects": ToolArgInfo(
                 desc=t(
@@ -293,7 +295,7 @@ def register_machine_control_tools(machine_control: "MachineControl") -> ToolSet
                         "en": "Whether to follow redirects, default False",
                     }
                 ),
-                type="bool",
+                schema={"type": "boolean"},
             ),
             "timeout": ToolArgInfo(
                 desc=t(
@@ -302,7 +304,7 @@ def register_machine_control_tools(machine_control: "MachineControl") -> ToolSet
                         "en": "Timeout in seconds, default 60",
                     }
                 ),
-                type="int",
+                schema={"type": "integer"},
             ),
             "auth": ToolArgInfo(
                 desc=t(
@@ -311,11 +313,11 @@ def register_machine_control_tools(machine_control: "MachineControl") -> ToolSet
                         "en": "Auth params, e.g. ['username', 'password']",
                     }
                 ),
-                type="Optional[tuple[str, str]]",
+                schema={"type": "array", "items": {"type": "string"}},
             ),
             "cookies": ToolArgInfo(
                 desc=t({"zh_CN": "Cookie字典", "en": "Cookie dict"}),
-                type="Optional[Dict[str, str]]",
+                schema={"type": "object"},
             ),
             "json_data": ToolArgInfo(
                 desc=t(
@@ -324,10 +326,11 @@ def register_machine_control_tools(machine_control: "MachineControl") -> ToolSet
                         "en": "JSON data (mutually exclusive with data)",
                     }
                 ),
-                type="Optional[Dict[str, Any]]",
+                schema={"type": "object"},
             ),
             "proxy": ToolArgInfo(
-                desc=t({"zh_CN": "代理URL", "en": "Proxy URL"}), type="Optional[str]"
+                desc=t({"zh_CN": "代理URL", "en": "Proxy URL"}),
+                schema={"type": "string"},
             ),
             "verify": ToolArgInfo(
                 desc=t(
@@ -336,7 +339,7 @@ def register_machine_control_tools(machine_control: "MachineControl") -> ToolSet
                         "en": "SSL verification, True/False/ssl.SSLContext",
                     }
                 ),
-                type="Optional[bool]",
+                schema={"type": "boolean"},
             ),
         },
         required_args=["method", "url"],
@@ -381,7 +384,7 @@ def register_machine_control_tools(machine_control: "MachineControl") -> ToolSet
         args={
             "directory": ToolArgInfo(
                 desc=t({"zh_CN": "目标目录的路径", "en": "Target directory path"}),
-                type="str",
+                schema={"type": "string"},
             )
         },
         required_args=["directory"],
@@ -408,7 +411,7 @@ def register_machine_control_tools(machine_control: "MachineControl") -> ToolSet
                         "en": 'Process argument list, e.g. ["ls", "-l", "-a"]',
                     }
                 ),
-                type="list[str]",
+                schema={"type": "array", "items": {"type": "string"}},
             ),
             "wait_second": ToolArgInfo(
                 desc=t(
@@ -417,7 +420,7 @@ def register_machine_control_tools(machine_control: "MachineControl") -> ToolSet
                         "en": "Seconds to wait after creation, None for platform default (1 second)",
                     }
                 ),
-                type="Optional[float]",
+                schema={"type": "number"},
             ),
             "override_env": ToolArgInfo(
                 desc=t(
@@ -426,7 +429,7 @@ def register_machine_control_tools(machine_control: "MachineControl") -> ToolSet
                         "en": "Environment variables dict, default None to inherit current environment. If specified, only overrides the given keys, keeping other environment variables unchanged",
                     }
                 ),
-                type="Optional[Dict[str, str]]",
+                schema={"type": "object"},
             ),
             "with_stdin": ToolArgInfo(
                 desc=t(
@@ -435,7 +438,7 @@ def register_machine_control_tools(machine_control: "MachineControl") -> ToolSet
                         "en": "Content to write to stdin immediately after creation, default None",
                     }
                 ),
-                type="Optional[str]",
+                schema={"type": "string"},
             ),
         },
         required_args=["argv"],
@@ -503,16 +506,18 @@ def register_machine_control_tools(machine_control: "MachineControl") -> ToolSet
         ),
         args={
             "pid": ToolArgInfo(
-                desc=t({"zh_CN": "进程ID", "en": "Process ID"}), type="str"
+                desc=t({"zh_CN": "进程ID", "en": "Process ID"}),
+                schema={"type": "string"},
             ),
             "content": ToolArgInfo(
-                desc=t({"zh_CN": "要写入的内容", "en": "Content to write"}), type="str"
+                desc=t({"zh_CN": "要写入的内容", "en": "Content to write"}),
+                schema={"type": "string"},
             ),
             "with_enter": ToolArgInfo(
                 desc=t(
                     {"zh_CN": "是否在末尾添加回车", "en": "Whether to append newline"}
                 ),
-                type="bool",
+                schema={"type": "boolean"},
             ),
         },
         required_args=["pid", "content", "with_enter"],
@@ -541,7 +546,8 @@ def register_machine_control_tools(machine_control: "MachineControl") -> ToolSet
         ),
         args={
             "pid": ToolArgInfo(
-                desc=t({"zh_CN": "进程ID", "en": "Process ID"}), type="str"
+                desc=t({"zh_CN": "进程ID", "en": "Process ID"}),
+                schema={"type": "string"},
             ),
             "timeout": ToolArgInfo(
                 desc=t(
@@ -550,7 +556,7 @@ def register_machine_control_tools(machine_control: "MachineControl") -> ToolSet
                         "en": "Timeout in seconds, default 60",
                     }
                 ),
-                type="float",
+                schema={"type": "number"},
             ),
         },
         required_args=["pid"],
@@ -584,11 +590,12 @@ def register_machine_control_tools(machine_control: "MachineControl") -> ToolSet
         ),
         args={
             "pid": ToolArgInfo(
-                desc=t({"zh_CN": "进程ID", "en": "Process ID"}), type="str"
+                desc=t({"zh_CN": "进程ID", "en": "Process ID"}),
+                schema={"type": "string"},
             ),
             "timeout": ToolArgInfo(
                 desc=t({"zh_CN": "超时时间（秒）", "en": "Timeout in seconds"}),
-                type="float",
+                schema={"type": "number"},
             ),
         },
         required_args=["pid", "timeout"],
@@ -623,7 +630,8 @@ def register_machine_control_tools(machine_control: "MachineControl") -> ToolSet
         ),
         args={
             "pid": ToolArgInfo(
-                desc=t({"zh_CN": "进程ID", "en": "Process ID"}), type="str"
+                desc=t({"zh_CN": "进程ID", "en": "Process ID"}),
+                schema={"type": "string"},
             ),
             "graceful": ToolArgInfo(
                 desc=t(
@@ -632,7 +640,7 @@ def register_machine_control_tools(machine_control: "MachineControl") -> ToolSet
                         "en": "Whether to gracefully terminate, default True",
                     }
                 ),
-                type="bool",
+                schema={"type": "boolean"},
             ),
         },
         required_args=["pid"],
@@ -664,13 +672,13 @@ def register_machine_control_tools(machine_control: "MachineControl") -> ToolSet
                 desc=t(
                     {"zh_CN": "终端列数，默认80", "en": "Terminal columns, default 80"}
                 ),
-                type="int",
+                schema={"type": "integer"},
             ),
             "lines": ToolArgInfo(
                 desc=t(
                     {"zh_CN": "终端行数，默认24", "en": "Terminal lines, default 24"}
                 ),
-                type="int",
+                schema={"type": "integer"},
             ),
         },
         required_args=[],
@@ -691,7 +699,8 @@ def register_machine_control_tools(machine_control: "MachineControl") -> ToolSet
         ),
         args={
             "terminal_id": ToolArgInfo(
-                desc=t({"zh_CN": "终端ID", "en": "Terminal ID"}), type="str"
+                desc=t({"zh_CN": "终端ID", "en": "Terminal ID"}),
+                schema={"type": "string"},
             ),
             "keys": ToolArgInfo(
                 desc=t(
@@ -700,7 +709,7 @@ def register_machine_control_tools(machine_control: "MachineControl") -> ToolSet
                         "en": 'Key name list, e.g. ["esc", ":", "q", "enter"]',
                     }
                 ),
-                type="list",
+                schema={"type": "array"},
             ),
         },
         required_args=["terminal_id", "keys"],
@@ -721,14 +730,16 @@ def register_machine_control_tools(machine_control: "MachineControl") -> ToolSet
         ),
         args={
             "terminal_id": ToolArgInfo(
-                desc=t({"zh_CN": "终端ID", "en": "Terminal ID"}), type="str"
+                desc=t({"zh_CN": "终端ID", "en": "Terminal ID"}),
+                schema={"type": "string"},
             ),
             "string": ToolArgInfo(
-                desc=t({"zh_CN": "要发送的字符串", "en": "String to send"}), type="str"
+                desc=t({"zh_CN": "要发送的字符串", "en": "String to send"}),
+                schema={"type": "string"},
             ),
             "with_enter": ToolArgInfo(
                 desc=t({"zh_CN": "是否发送enter", "en": "Whether to send enter"}),
-                type="bool",
+                schema={"type": "boolean"},
             ),
             "wait_seconds": ToolArgInfo(
                 desc=t(
@@ -737,7 +748,7 @@ def register_machine_control_tools(machine_control: "MachineControl") -> ToolSet
                         "en": "Wait before reading screen, default 0.3s",
                     }
                 ),
-                type="float",
+                schema={"type": "number"},
             ),
         },
         required_args=["terminal_id", "string", "with_enter"],
@@ -760,7 +771,8 @@ def register_machine_control_tools(machine_control: "MachineControl") -> ToolSet
         ),
         args={
             "terminal_id": ToolArgInfo(
-                desc=t({"zh_CN": "终端ID", "en": "Terminal ID"}), type="str"
+                desc=t({"zh_CN": "终端ID", "en": "Terminal ID"}),
+                schema={"type": "string"},
             )
         },
         required_args=["terminal_id"],
@@ -776,7 +788,8 @@ def register_machine_control_tools(machine_control: "MachineControl") -> ToolSet
         desc=t({"zh_CN": "关闭终端", "en": "Close a terminal"}),
         args={
             "terminal_id": ToolArgInfo(
-                desc=t({"zh_CN": "终端ID", "en": "Terminal ID"}), type="str"
+                desc=t({"zh_CN": "终端ID", "en": "Terminal ID"}),
+                schema={"type": "string"},
             )
         },
         required_args=["terminal_id"],
@@ -797,11 +810,12 @@ def register_machine_control_tools(machine_control: "MachineControl") -> ToolSet
         ),
         args={
             "filepath": ToolArgInfo(
-                desc=t({"zh_CN": "文件路径", "en": "File path"}), type="str"
+                desc=t({"zh_CN": "文件路径", "en": "File path"}),
+                schema={"type": "string"},
             ),
             "show_line_numbers": ToolArgInfo(
                 desc=t({"zh_CN": "是否显示行号", "en": "Whether to show line numbers"}),
-                type="bool",
+                schema={"type": "boolean"},
             ),
         },
         required_args=["filepath"],
@@ -822,10 +836,12 @@ def register_machine_control_tools(machine_control: "MachineControl") -> ToolSet
         ),
         args={
             "filepath": ToolArgInfo(
-                desc=t({"zh_CN": "文件路径", "en": "File path"}), type="str"
+                desc=t({"zh_CN": "文件路径", "en": "File path"}),
+                schema={"type": "string"},
             ),
             "content": ToolArgInfo(
-                desc=t({"zh_CN": "要写入的内容", "en": "Content to write"}), type="str"
+                desc=t({"zh_CN": "要写入的内容", "en": "Content to write"}),
+                schema={"type": "string"},
             ),
             "override": ToolArgInfo(
                 desc=t(
@@ -834,7 +850,7 @@ def register_machine_control_tools(machine_control: "MachineControl") -> ToolSet
                         "en": "Whether to override existing file",
                     }
                 ),
-                type="bool",
+                schema={"type": "boolean"},
             ),
         },
         required_args=["filepath", "content"],
@@ -855,14 +871,16 @@ def register_machine_control_tools(machine_control: "MachineControl") -> ToolSet
         ),
         args={
             "filepath": ToolArgInfo(
-                desc=t({"zh_CN": "文件路径", "en": "File path"}), type="str"
+                desc=t({"zh_CN": "文件路径", "en": "File path"}),
+                schema={"type": "string"},
             ),
             "old": ToolArgInfo(
                 desc=t({"zh_CN": "要替换的字符串", "en": "String to replace"}),
-                type="str",
+                schema={"type": "string"},
             ),
             "new": ToolArgInfo(
-                desc=t({"zh_CN": "新的字符串", "en": "New string"}), type="str"
+                desc=t({"zh_CN": "新的字符串", "en": "New string"}),
+                schema={"type": "string"},
             ),
             "replace_times": ToolArgInfo(
                 desc=t(
@@ -871,7 +889,7 @@ def register_machine_control_tools(machine_control: "MachineControl") -> ToolSet
                         "en": "Replace count, positive for count, -1 for all, default verifies old appears only once",
                     }
                 ),
-                type="int",
+                schema={"type": "integer"},
             ),
         },
         required_args=["filepath", "old", "new"],
@@ -900,7 +918,7 @@ def register_machine_control_tools(machine_control: "MachineControl") -> ToolSet
                         "en": "Directory path, use ./ for current directory",
                     }
                 ),
-                type="str",
+                schema={"type": "string"},
             ),
         },
         required_args=["dirpath"],
@@ -927,7 +945,7 @@ def register_machine_control_tools(machine_control: "MachineControl") -> ToolSet
                         "en": "Glob pattern, e.g. **/*.py, src/**/*.txt. Absolute paths not allowed",
                     }
                 ),
-                type="str",
+                schema={"type": "string"},
             ),
         },
         required_args=["pattern"],
@@ -946,7 +964,7 @@ def register_machine_control_tools(machine_control: "MachineControl") -> ToolSet
         args={
             "path": ToolArgInfo(
                 desc=t({"zh_CN": "相对或绝对路径", "en": "Relative or absolute path"}),
-                type="str",
+                schema={"type": "string"},
             )
         },
         required_args=["path"],
@@ -973,10 +991,11 @@ def register_machine_control_tools(machine_control: "MachineControl") -> ToolSet
                         "en": "sed expression, e.g. 1,1000p",
                     }
                 ),
-                type="str",
+                schema={"type": "string"},
             ),
             "filepath": ToolArgInfo(
-                desc=t({"zh_CN": "文件路径", "en": "File path"}), type="str"
+                desc=t({"zh_CN": "文件路径", "en": "File path"}),
+                schema={"type": "string"},
             ),
         },
         required_args=["expression", "filepath"],
@@ -997,18 +1016,20 @@ def register_machine_control_tools(machine_control: "MachineControl") -> ToolSet
         ),
         args={
             "from_filepath": ToolArgInfo(
-                desc=t({"zh_CN": "源文件路径", "en": "Source file path"}), type="str"
+                desc=t({"zh_CN": "源文件路径", "en": "Source file path"}),
+                schema={"type": "string"},
             ),
             "from_machine": ToolArgInfo(
-                desc=t({"zh_CN": "源机器ID", "en": "Source machine ID"}), type="str"
+                desc=t({"zh_CN": "源机器ID", "en": "Source machine ID"}),
+                schema={"type": "string"},
             ),
             "to_filepath": ToolArgInfo(
                 desc=t({"zh_CN": "目标文件路径", "en": "Destination file path"}),
-                type="str",
+                schema={"type": "string"},
             ),
             "to_machine": ToolArgInfo(
                 desc=t({"zh_CN": "目标机器ID", "en": "Destination machine ID"}),
-                type="str",
+                schema={"type": "string"},
             ),
         },
         required_args=[

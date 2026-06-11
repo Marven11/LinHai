@@ -86,7 +86,7 @@ class AgentStateMachine:
             args={
                 "seconds": ToolArgInfo(
                     desc=t({"zh_CN": "睡眠的秒数", "en": "Seconds to sleep"}),
-                    type="float",
+                    schema={"type": "number"},
                 )
             },
             required_args=["seconds"],

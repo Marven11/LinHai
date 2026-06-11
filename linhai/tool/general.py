@@ -107,7 +107,8 @@ def _download_with_httpx(url: str) -> str:
     ),
     args={
         "url": ToolArgInfo(
-            desc=t({"zh_CN": "目标网页URL", "en": "Target webpage URL"}), type="str"
+            desc=t({"zh_CN": "目标网页URL", "en": "Target webpage URL"}),
+            schema={"type": "string"},
         ),
         "http_downloader": ToolArgInfo(
             desc=t(
@@ -116,7 +117,7 @@ def _download_with_httpx(url: str) -> str:
                     "en": "HTML downloader, must be 'chromium' or 'httpx'",
                 }
             ),
-            type="str",
+            schema={"type": "string"},
         ),
     },
     required_args=["url", "http_downloader"],
@@ -206,7 +207,7 @@ def fetch_webpage(url: str, http_downloader: str):
                     "en": "Math expression, e.g. '2 + 3 * 4' or '10 % 3'",
                 }
             ),
-            type="str",
+            schema={"type": "string"},
         ),
     },
     required_args=["expression"],

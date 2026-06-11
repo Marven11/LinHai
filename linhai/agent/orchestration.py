@@ -461,7 +461,7 @@ class AgentContextOrchestration:
                             "en": "range_clean_id from step 1",
                         }
                     ),
-                    type="str",
+                    schema={"type": "string"},
                 ),
                 "start_id": ToolArgInfo(
                     desc=t(
@@ -470,13 +470,13 @@ class AgentContextOrchestration:
                             "en": "Start message ID to delete",
                         }
                     ),
-                    type="int",
+                    schema={"type": "integer"},
                 ),
                 "end_id": ToolArgInfo(
                     desc=t(
                         {"zh_CN": "结束删除的消息ID", "en": "End message ID to delete"}
                     ),
-                    type="int",
+                    schema={"type": "integer"},
                 ),
                 "description": ToolArgInfo(
                     desc=t(
@@ -485,7 +485,7 @@ class AgentContextOrchestration:
                             "en": "Description of deletion, suggest including TODO tasks",
                         }
                     ),
-                    type="str",
+                    schema={"type": "string"},
                 ),
             },
             required_args=["range_clean_id", "start_id", "end_id", "description"],

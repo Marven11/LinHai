@@ -18,10 +18,10 @@ class TestFetchWebpageTool(unittest.TestCase):
             name="fetch_webpage",
             desc="抓取网页并转换为Markdown格式",
             args={
-                "url": ToolArgInfo(desc="目标网页URL", type="str"),
+                "url": ToolArgInfo(desc="目标网页URL", schema={"type": "string"}),
                 "http_downloader": ToolArgInfo(
                     desc="HTML下载器，必须指定'chromium'或'httpx'",
-                    type="str",
+                    schema={"type": "string"},
                 ),
             },
             required_args=["url", "http_downloader"],

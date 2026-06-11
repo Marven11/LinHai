@@ -150,7 +150,7 @@ def create_web_search_toolset(config: Optional["WebSearchConfig"]) -> ToolSet:
         args={
             "query": ToolArgInfo(
                 desc=t({"zh_CN": "搜索查询", "en": "Search query"}),
-                type="str",
+                schema={"type": "string"},
             ),
             "max_results": ToolArgInfo(
                 desc=t(
@@ -159,7 +159,7 @@ def create_web_search_toolset(config: Optional["WebSearchConfig"]) -> ToolSet:
                         "en": "Maximum number of results (default 5)",
                     }
                 ),
-                type="int",
+                schema={"type": "integer"},
             ),
         },
         required_args=["query"],

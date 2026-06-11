@@ -283,7 +283,7 @@ class MultimodalToolsetManager:
                                 "en": "Image file path on current machine",
                             }
                         ),
-                        type="str",
+                        schema={"type": "string"},
                     ),
                     "quality": ToolArgInfo(
                         desc=t(
@@ -292,7 +292,7 @@ class MultimodalToolsetManager:
                                 "en": "Image quality, compressed for compressed image, raw for original",
                             }
                         ),
-                        type="str",
+                        schema={"type": "string"},
                     ),
                 },
                 required_args=["image_filepath"],

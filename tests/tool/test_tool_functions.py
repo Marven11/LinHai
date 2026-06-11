@@ -20,8 +20,8 @@ class TestToolFunctions(unittest.TestCase):
             name="add_numbers",
             desc="Add two numbers",
             args={
-                "a": ToolArgInfo(desc="First number", type="int"),
-                "b": ToolArgInfo(desc="Second number", type="int"),
+                "a": ToolArgInfo(desc="First number", schema={"type": "integer"}),
+                "b": ToolArgInfo(desc="Second number", schema={"type": "integer"}),
             },
             required_args=["a", "b"],
         )
@@ -38,8 +38,8 @@ class TestToolFunctions(unittest.TestCase):
             name="multiply_numbers",
             desc="Multiply two numbers",
             args={
-                "x": ToolArgInfo(desc="First number", type="int"),
-                "y": ToolArgInfo(desc="Second number", type="int"),
+                "x": ToolArgInfo(desc="First number", schema={"type": "integer"}),
+                "y": ToolArgInfo(desc="Second number", schema={"type": "integer"}),
             },
             required_args=["x", "y"],
         )

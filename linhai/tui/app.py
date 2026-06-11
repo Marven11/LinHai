@@ -263,7 +263,7 @@ class TUIApp(App):
                             "en": "Exit code, 0 for success, non-zero for error",
                         }
                     ),
-                    type="int",
+                    schema={"type": "integer"},
                 ),
             },
             required_args=["return_code"],

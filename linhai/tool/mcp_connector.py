@@ -79,7 +79,7 @@ class MCPServerConnection:
                                         "en": "Arguments for this MCP tool, an object with parameters as described in the JSON schema",
                                     }
                                 ),
-                                type=mcp_tool.inputSchema,
+                                schema=mcp_tool.inputSchema,
                             ),
                         },
                         required_args=["args"],
@@ -162,7 +162,7 @@ class MCPConnector:
                             "en": "Name for the MCP server",
                         }
                     ),
-                    type="str",
+                    schema={"type": "string"},
                 ),
                 "command": ToolArgInfo(
                     desc=t(
@@ -171,7 +171,7 @@ class MCPConnector:
                             "en": "Connection command for the MCP server, e.g. python xxx",
                         }
                     ),
-                    type="str",
+                    schema={"type": "string"},
                 ),
             },
             required_args=["name", "command"],
@@ -215,7 +215,7 @@ class MCPConnector:
                             "en": "Name of the MCP server to disconnect",
                         }
                     ),
-                    type="str",
+                    schema={"type": "string"},
                 ),
             },
             required_args=["name"],

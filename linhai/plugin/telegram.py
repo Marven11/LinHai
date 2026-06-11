@@ -276,7 +276,7 @@ class TelegramPlugin(Plugin):
                             "en": "The emoji to send, only telegram-supported emojis are accepted",
                         }
                     ),
-                    type="str",
+                    schema={"type": "string"},
                 ),
                 "chat_id": ToolArgInfo(
                     desc=t(
@@ -285,7 +285,7 @@ class TelegramPlugin(Plugin):
                             "en": "Target chat_id, defaults to latest received message's chat_id",
                         }
                     ),
-                    type="int",
+                    schema={"type": "integer"},
                 ),
                 "message_id": ToolArgInfo(
                     desc=t(
@@ -294,7 +294,7 @@ class TelegramPlugin(Plugin):
                             "en": "Target message_id, defaults to latest received message's message_id",
                         }
                     ),
-                    type="int",
+                    schema={"type": "integer"},
                 ),
             },
             required_args=["emoji"],

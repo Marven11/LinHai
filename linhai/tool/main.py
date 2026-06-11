@@ -6,8 +6,9 @@
 import asyncio
 import inspect
 import json
+import jsonschema
 from pathlib import Path
-from typing import Awaitable, Optional
+from typing import Any, Awaitable, Optional
 
 from linhai.config import ToolConfig, MCPConfig
 from linhai.registry import Registry
@@ -20,6 +21,7 @@ from linhai.tool.base import (
     FailedToolResult,
     ToolResult,
     FileContentToolResult,
+    Tool,
 )
 from linhai.tool.mcp_connector import MCPConnector
 from linhai.utils.common import UiNotice
@@ -87,6 +89,24 @@ class ToolManager:
             for info in to_tools_info(toolset.get_tools())
         ]
 
+    def _validate_tool_arguments(
+        self, tool_def: Tool, kwargs: dict[str, Any]
+    ) -> list[str]:
+        properties = {
+            arg_name: arg_info["schema"]
+            for arg_name, arg_info in tool_def["args"].items()
+        }
+        schema = {
+            "type": "object",
+            "properties": properties,
+            "required": tool_def["required"],
+        }
+        validator = jsonschema.Draft7Validator(schema)
+        errors = sorted(validator.iter_errors(kwargs), key=lambda e: e.path)
+        return [
+            f"{'.'.join(str(p) for p in e.absolute_path)}: {e.message}" for e in errors
+        ]
+
     async def process_tool_call(
         self, tool_call: ToolCallMessage, tool_index: int
     ) -> Message:
@@ -124,6 +144,24 @@ class ToolManager:
         try:
 
             func = target_toolset.get_tool(tool_call.function_name)
+
+            tool_def = target_toolset.get_tools()[tool_call.function_name]
+            validation_errors = self._validate_tool_arguments(tool_def, kwargs)
+            if validation_errors:
+                error_msg = "参数验证失败: " + "; ".join(validation_errors)
+                await self.registry.send_if_exists(
+                    "ui_log",
+                    UiNotice(
+                        level="ERROR",
+                        content=f"工具参数验证失败: {tool_call.function_name} - {error_msg}",
+                    ),
+                )
+                return ToolCallResultMessage(
+                    tool_name=tool_call.function_name,
+                    tool_index=tool_index,
+                    result=FailedToolResult(content=error_msg),
+                    toolcall_arguments=kwargs,
+                )
 
             if inspect.iscoroutinefunction(func):
                 result = await func(**kwargs)

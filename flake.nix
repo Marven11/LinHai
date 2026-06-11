@@ -92,6 +92,7 @@
             pathspec
             websockets
             pyyaml
+            jsonschema
             python-telegram-bot'
             quickjs-ng'
           ];
