@@ -846,10 +846,13 @@ class TestAgentContextOrchestration(unittest.IsolatedAsyncioTestCase):
         large_msg = OpenAiToolResultMessage(
             tool_call_id=tool_call_id,
             content="x" * 20000,
+            tool_name="test_tool",
         )
         for _ in range(4):
             extra = OpenAiToolResultMessage(
-                tool_call_id=f"call_{_}", content="y" * 20000
+                tool_call_id=f"call_{_}",
+                content="y" * 20000,
+                tool_name="test_tool",
             )
             self.message_processor.messages.append(extra)
             self.orchestration.large_messages.add(extra)

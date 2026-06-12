@@ -172,7 +172,9 @@ class AgentContextOrchestration:
             placeholder_text = f"当前消息已经被遗忘，转储到{saved_path}"
             if isinstance(message, OpenAiToolResultMessage):
                 placeholder = OpenAiToolResultMessage(
-                    tool_call_id=message.tool_call_id, content=placeholder_text
+                    tool_call_id=message.tool_call_id,
+                    content=placeholder_text,
+                    tool_name=message.tool_name,
                 )
             else:
                 placeholder = RuntimeMessage(placeholder_text)

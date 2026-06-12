@@ -104,6 +104,7 @@ async def test_openai_native_tool_call_multi_turn():
     tool_result_msg = OpenAiToolResultMessage(
         tool_call_id=call["id"],
         content=str(result),
+        tool_name="add",
     )
 
     assert isinstance(assistant_msg, AssistantMessage)

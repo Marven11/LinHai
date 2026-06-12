@@ -339,9 +339,10 @@ class AssistantMessage:
 class OpenAiToolResultMessage:
     """OpenAI原生工具调用结果消息，用于在多轮对话中传递工具执行结果。"""
 
-    def __init__(self, tool_call_id: str, content: str):
+    def __init__(self, tool_call_id: str, content: str, tool_name: str):
         self.tool_call_id = tool_call_id
         self.content = content
+        self.tool_name = tool_name
 
     def to_llm_message(self) -> LanguageModelMessage:
         return ToolResultMsg(
@@ -362,6 +363,7 @@ class OpenAiToolResultMessage:
                 "role": "tool",
                 "tool_call_id": self.tool_call_id,
                 "content": self.content,
+                "tool_name": self.tool_name,
             },
             ensure_ascii=False,
         )
@@ -369,7 +371,11 @@ class OpenAiToolResultMessage:
     @classmethod
     def from_json(cls, json_str: str, registry: "linhai.registry.Registry"):
         data = json.loads(json_str)
-        return cls(tool_call_id=data["tool_call_id"], content=data["content"])
+        return cls(
+            tool_call_id=data["tool_call_id"],
+            content=data["content"],
+            tool_name=data["tool_name"],
+        )
 
 
 class ToolCallMessage:

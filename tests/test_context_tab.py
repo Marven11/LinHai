@@ -816,5 +816,72 @@ class TestPinnedAndNotificationStats(unittest.TestCase):
         self.assertNotIn(long_content, text_arg)
 
 
+class TestFindLongestMessageWithOpenAiToolResult(unittest.TestCase):
+    """测试 _find_longest_message 正确处理 OpenAiToolResultMessage"""
+
+    def test_openai_tool_result_tool_name_displayed(self):
+        from linhai.context_statistics import compute_message_group_stats
+        from linhai.base import OpenAiToolResultMessage, UserMessage
+
+        msgs = [
+            UserMessage(message="短消息"),
+            OpenAiToolResultMessage(
+                tool_call_id="call_123",
+                content="这是" + "工具" * 50 + "结果",
+                tool_name="test_tool",
+            ),
+        ]
+        stats = compute_message_group_stats(msgs)
+        longest = stats["longest"]
+        self.assertIsNotNone(longest)
+        self.assertEqual(longest["type_name"], "OpenAiToolResultMessage")
+        self.assertEqual(longest["tool_name"], "test_tool")
+
+    def test_openai_tool_result_tool_name_none(self):
+        from linhai.context_statistics import compute_message_group_stats
+        from linhai.base import OpenAiToolResultMessage, UserMessage
+
+        msgs = [
+            UserMessage(message="短消息"),
+            OpenAiToolResultMessage(
+                tool_call_id="call_456",
+                content="这是" + "工具" * 50 + "结果",
+                tool_name="test_tool",
+            ),
+        ]
+        stats = compute_message_group_stats(msgs)
+        longest = stats["longest"]
+        self.assertIsNotNone(longest)
+        self.assertEqual(longest["type_name"], "OpenAiToolResultMessage")
+        self.assertEqual(longest["tool_name"], "test_tool")
+
+    def test_format_longest_message_with_tool_name(self):
+        from linhai.context_statistics import LongestMessageInfo
+        from linhai.tui.context_tab import _format_longest_message
+
+        info = LongestMessageInfo(
+            type_name="OpenAiToolResultMessage",
+            tool_name="test_tool",
+            tokens=5000,
+        )
+        result = _format_longest_message(info)
+        self.assertIn("OpenAiToolResultMessage", result)
+        self.assertIn("test_tool", result)
+        self.assertIn("5000", result)
+
+    def test_format_longest_message_without_tool_name(self):
+        from linhai.context_statistics import LongestMessageInfo
+        from linhai.tui.context_tab import _format_longest_message
+
+        info = LongestMessageInfo(
+            type_name="OpenAiToolResultMessage",
+            tool_name="",
+            tokens=5000,
+        )
+        result = _format_longest_message(info)
+        self.assertIn("OpenAiToolResultMessage", result)
+        self.assertIn("5000", result)
+
+
 if __name__ == "__main__":
     unittest.main()

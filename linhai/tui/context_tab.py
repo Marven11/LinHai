@@ -44,7 +44,7 @@ def _format_longest_message(longest: LongestMessageInfo | None) -> str:
             }
         )
     type_display = longest["type_name"]
-    if longest["tool_name"] is not None:
+    if longest["tool_name"]:
         type_display += f", {t({'zh_CN': '来自', 'en': 'from'})}{longest['tool_name']}"
     return f"{t({'zh_CN': '最长消息', 'en': 'Longest message'})}: {type_display}, {longest['tokens']} token"
 

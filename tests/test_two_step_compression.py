@@ -599,8 +599,12 @@ class TestStep2OpenAiToolResultPlaceholder(unittest.IsolatedAsyncioTestCase):
         messages_list = [
             SystemMessage(registry=mock_registry),
             assistant,
-            OpenAiToolResultMessage(tool_call_id="tc_1", content="file content here"),
-            OpenAiToolResultMessage(tool_call_id="tc_2", content="file written"),
+            OpenAiToolResultMessage(
+                tool_call_id="tc_1", content="file content here", tool_name="test_tool"
+            ),
+            OpenAiToolResultMessage(
+                tool_call_id="tc_2", content="file written", tool_name="test_tool"
+            ),
             RuntimeMessage("msg 1"),
             RuntimeMessage("msg 2"),
             RuntimeMessage("msg 3"),
@@ -740,7 +744,9 @@ class TestStep2OpenAiToolResultPlaceholder(unittest.IsolatedAsyncioTestCase):
         messages_list = [
             RuntimeMessage("msg 0"),
             assistant,
-            OpenAiToolResultMessage(tool_call_id="tc_1", content="result"),
+            OpenAiToolResultMessage(
+                tool_call_id="tc_1", content="result", tool_name="test_tool"
+            ),
             RuntimeMessage("msg 3"),
             RuntimeMessage("msg 4"),
             RuntimeMessage("msg 5"),
@@ -814,8 +820,12 @@ class TestFixupToolResultChains(unittest.TestCase):
         messages = [
             RuntimeMessage("before"),
             assistant,
-            OpenAiToolResultMessage(tool_call_id="tc_1", content="ok"),
-            OpenAiToolResultMessage(tool_call_id="orphan_tc", content="orphan"),
+            OpenAiToolResultMessage(
+                tool_call_id="tc_1", content="ok", tool_name="test_tool"
+            ),
+            OpenAiToolResultMessage(
+                tool_call_id="orphan_tc", content="orphan", tool_name="test_tool"
+            ),
             RuntimeMessage("after"),
         ]
         result = _fixup_tool_result_chains(messages)
@@ -842,9 +852,13 @@ class TestFixupToolResultChains(unittest.TestCase):
         intruder = RuntimeMessage("intruder")
         messages = [
             assistant,
-            OpenAiToolResultMessage(tool_call_id="tc_1", content="ok"),
+            OpenAiToolResultMessage(
+                tool_call_id="tc_1", content="ok", tool_name="test_tool"
+            ),
             intruder,
-            OpenAiToolResultMessage(tool_call_id="tc_2", content="ok2"),
+            OpenAiToolResultMessage(
+                tool_call_id="tc_2", content="ok2", tool_name="test_tool"
+            ),
         ]
         result = _fixup_tool_result_chains(messages)
         self.assertEqual(len(result), 4)
@@ -874,11 +888,19 @@ class TestFixupToolResultChains(unittest.TestCase):
         ]
         messages = [
             assistant,
-            OpenAiToolResultMessage(tool_call_id="tc_a", content="a"),
-            OpenAiToolResultMessage(tool_call_id="orphan", content="orphan"),
-            OpenAiToolResultMessage(tool_call_id="tc_b", content="b"),
+            OpenAiToolResultMessage(
+                tool_call_id="tc_a", content="a", tool_name="test_tool"
+            ),
+            OpenAiToolResultMessage(
+                tool_call_id="orphan", content="orphan", tool_name="test_tool"
+            ),
+            OpenAiToolResultMessage(
+                tool_call_id="tc_b", content="b", tool_name="test_tool"
+            ),
             RuntimeMessage("intruder"),
-            OpenAiToolResultMessage(tool_call_id="tc_c", content="c"),
+            OpenAiToolResultMessage(
+                tool_call_id="tc_c", content="c", tool_name="test_tool"
+            ),
         ]
         result = _fixup_tool_result_chains(messages)
         self.assertEqual(len(result), 5)
@@ -900,7 +922,9 @@ class TestFixupToolResultChains(unittest.TestCase):
         messages = [
             RuntimeMessage("before"),
             assistant,
-            OpenAiToolResultMessage(tool_call_id="tc_1", content="ok"),
+            OpenAiToolResultMessage(
+                tool_call_id="tc_1", content="ok", tool_name="test_tool"
+            ),
             RuntimeMessage("after"),
         ]
         result = _fixup_tool_result_chains(messages)

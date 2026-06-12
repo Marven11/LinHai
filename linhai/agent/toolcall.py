@@ -438,6 +438,7 @@ class AgentToolcall:
                 result_msg = OpenAiToolResultMessage(
                     tool_call_id=tc["id"],
                     content=EARLY_RETURN_SKIP_MESSAGE,
+                    tool_name=tc["name"],
                 )
                 message_processor = self.registry.get_member_typechecked(
                     "agent_message", AgentMessage
@@ -452,6 +453,7 @@ class AgentToolcall:
                 result_msg = OpenAiToolResultMessage(
                     tool_call_id=tc["id"],
                     content=f"工具调用参数JSON解析失败: {tc['error']}",
+                    tool_name=tc["name"],
                 )
                 await message_processor.add_new_message(result_msg)
                 self.early_return = True
@@ -504,6 +506,7 @@ class AgentToolcall:
             result_msg = OpenAiToolResultMessage(
                 tool_call_id=tool_call_id,
                 content=beforecbs_result.content,
+                tool_name=tool_call.function_name,
             )
             message_processor = self.registry.get_member_typechecked(
                 "agent_message", AgentMessage
@@ -568,6 +571,7 @@ class AgentToolcall:
         result_msg = OpenAiToolResultMessage(
             tool_call_id=tool_call_id,
             content=result_content,
+            tool_name=tool_call.function_name,
         )
         await message_processor.add_openai_tool_result(result_msg, tool_call_id)
 

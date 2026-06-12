@@ -8,6 +8,7 @@ from linhai.base import (
     AnswerTokenUsage,
     EstimateToken,
     Message as Message,
+    OpenAiToolResultMessage,
     UserMessage,
     AssistantMessage,
     SystemMessage,
@@ -29,7 +30,7 @@ class MessageTypeCounts(TypedDict):
 
 class LongestMessageInfo(TypedDict):
     type_name: str
-    tool_name: str | None
+    tool_name: str
     tokens: int
 
 
@@ -143,8 +144,10 @@ def _find_longest_message(
     if longest_msg is None:
         return 0, None
     type_name = type(longest_msg).__name__
-    tool_name: str | None = None
+    tool_name: str = ""
     if isinstance(longest_msg, ToolCallResultMessage):
+        tool_name = longest_msg.tool_name
+    elif isinstance(longest_msg, OpenAiToolResultMessage):
         tool_name = longest_msg.tool_name
     return longest_tokens, LongestMessageInfo(
         type_name=type_name,

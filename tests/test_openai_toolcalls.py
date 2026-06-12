@@ -205,26 +205,34 @@ class TestMinimaxAnswerGetToolCalls(unittest.IsolatedAsyncioTestCase):
 
 class TestOpenAiToolResultMessage(unittest.TestCase):
     def test_basic_construction(self):
-        msg = OpenAiToolResultMessage(tool_call_id="call_abc", content="42")
+        msg = OpenAiToolResultMessage(
+            tool_call_id="call_abc", content="42", tool_name="test_tool"
+        )
         self.assertEqual(msg.tool_call_id, "call_abc")
         self.assertEqual(msg.content, "42")
         self.assertEqual(msg.get_content(), "42")
 
     def test_to_llm_message(self):
-        msg = OpenAiToolResultMessage(tool_call_id="call_xyz", content="result text")
+        msg = OpenAiToolResultMessage(
+            tool_call_id="call_xyz", content="result text", tool_name="test_tool"
+        )
         llm_msg = msg.to_llm_message()
         self.assertEqual(llm_msg["role"], "tool")
         self.assertEqual(llm_msg["tool_call_id"], "call_xyz")
         self.assertEqual(llm_msg["content"], "result text")
 
     def test_repr(self):
-        msg = OpenAiToolResultMessage(tool_call_id="call_1", content="ok")
+        msg = OpenAiToolResultMessage(
+            tool_call_id="call_1", content="ok", tool_name="test_tool"
+        )
         r = repr(msg)
         self.assertIn("call_1", r)
         self.assertIn("ok", r)
 
     def test_to_json_from_json_roundtrip(self):
-        msg = OpenAiToolResultMessage(tool_call_id="call_99", content="success")
+        msg = OpenAiToolResultMessage(
+            tool_call_id="call_99", content="success", tool_name="test_tool"
+        )
         json_str = msg.to_json()
         data = json.loads(json_str)
         self.assertEqual(data["role"], "tool")

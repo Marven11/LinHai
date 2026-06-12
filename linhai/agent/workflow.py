@@ -332,6 +332,7 @@ async def context_forget_range_step2(
                     OpenAiToolResultMessage(
                         tool_call_id=tool_call_id,
                         content=f"此条工具结果已经被遗忘，和其他消息被临时保存在{filepath}中",
+                        tool_name="unknown",
                     ),
                     tool_call_id,
                 )
