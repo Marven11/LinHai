@@ -3,7 +3,7 @@ from typing import Any, Optional
 
 import httpx
 
-from linhai.machine_control.http_message import HttpMessage, build_http_message
+from linhai.machine_control.http_message import HttpToolResult, build_http_message
 from linhai.tool.base import FailedToolResult
 
 
@@ -20,7 +20,7 @@ async def http_request(
     json_data: Optional[dict] = None,
     proxy: Optional[str] = None,
     verify: Optional[bool] = None,
-) -> HttpMessage | FailedToolResult:
+) -> HttpToolResult | FailedToolResult:
     headers = headers or {}
     headers.setdefault(
         "User-Agent", "Mozilla/5.0 (compatible; LinHai/1.0; Chrome-like)"

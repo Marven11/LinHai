@@ -6,7 +6,7 @@ import shlex
 from typing import TYPE_CHECKING, Any, Optional, Union
 from urllib.parse import urlencode
 
-from linhai.machine_control.http_message import HttpMessage, build_http_message
+from linhai.machine_control.http_message import HttpToolResult, build_http_message
 from linhai.tool.base import FailedToolResult
 
 if TYPE_CHECKING:
@@ -29,7 +29,7 @@ async def http_request(
     json_data: Optional[dict[str, Any]] = None,
     proxy: Optional[str] = None,
     verify: Optional[bool] = None,
-) -> HttpMessage | FailedToolResult:
+) -> HttpToolResult | FailedToolResult:
     header_file = host.make_temp_path("http_hdr")
     body_file = host.make_temp_path("http_body")
 

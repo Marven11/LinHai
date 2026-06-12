@@ -9,7 +9,7 @@ from linhai.machine_control.bash_host.http import (
     _WRITEOUT_PREFIX,
     http_request,
 )
-from linhai.machine_control.http_message import HttpMessage
+from linhai.machine_control.http_message import HttpToolResult
 from linhai.registry import Registry
 from linhai.tool.base import FailedToolResult
 
@@ -91,7 +91,7 @@ class TestHttpRequestBasic(unittest.TestCase):
                 (0, "", ""),
             ]
             result = await http_request(host, "GET", "http://example.com")
-            self.assertIsInstance(result, HttpMessage)
+            self.assertIsInstance(result, HttpToolResult)
             self.assertEqual(result.status_code, 200)
             self.assertIn("text/plain", result.headers.get("content-type", ""))
 
@@ -126,7 +126,7 @@ class TestHttpRequestBasic(unittest.TestCase):
             result = await http_request(
                 host, "POST", "http://example.com", data="hello"
             )
-            self.assertIsInstance(result, HttpMessage)
+            self.assertIsInstance(result, HttpToolResult)
             self.assertEqual(result.status_code, 201)
 
         self.loop.run_until_complete(test())
@@ -148,7 +148,7 @@ class TestHttpRequestBasic(unittest.TestCase):
             result = await http_request(
                 host, "POST", "http://example.com", json_data={"key": "val"}
             )
-            self.assertIsInstance(result, HttpMessage)
+            self.assertIsInstance(result, HttpToolResult)
             self.assertEqual(result.status_code, 200)
 
         self.loop.run_until_complete(test())
@@ -165,7 +165,7 @@ class TestHttpRequestBasic(unittest.TestCase):
                 (0, "", ""),
             ]
             result = await http_request(host, "DELETE", "http://example.com/resource")
-            self.assertIsInstance(result, HttpMessage)
+            self.assertIsInstance(result, HttpToolResult)
             self.assertEqual(result.status_code, 204)
 
         self.loop.run_until_complete(test())

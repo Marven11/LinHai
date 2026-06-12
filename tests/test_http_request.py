@@ -11,7 +11,8 @@ import httpx
 from linhai.machine_control.master_host.master_host import MasterHostControl
 from linhai.registry import Registry
 from linhai.sandbox import NoSandbox
-from linhai.tool.base import SuccessfulToolResult, FailedToolResult
+from linhai.tool.base import FailedToolResult
+from linhai.machine_control.http_message import HttpToolResult
 
 
 class TestHttpRequest(unittest.IsolatedAsyncioTestCase):
@@ -56,7 +57,7 @@ class TestHttpRequest(unittest.IsolatedAsyncioTestCase):
 
             result = await self.host_control.http_request("GET", "http://example.com")
 
-            self.assertIsInstance(result, SuccessfulToolResult)
+            self.assertIsInstance(result, HttpToolResult)
             parts = self.extract_content_parts(result.content)
 
             self.assertEqual(parts.get("status_code"), "200")
@@ -92,7 +93,7 @@ class TestHttpRequest(unittest.IsolatedAsyncioTestCase):
 
             result = await self.host_control.http_request("GET", "http://example.com")
 
-            self.assertIsInstance(result, SuccessfulToolResult)
+            self.assertIsInstance(result, HttpToolResult)
             parts = self.extract_content_parts(result.content)
 
             self.assertEqual(parts.get("status_code"), "200")
@@ -133,7 +134,7 @@ class TestHttpRequest(unittest.IsolatedAsyncioTestCase):
                 "GET", "http://example.com/image.png"
             )
 
-            self.assertIsInstance(result, SuccessfulToolResult)
+            self.assertIsInstance(result, HttpToolResult)
             parts = self.extract_content_parts(result.content)
 
             self.assertEqual(parts.get("status_code"), "200")
@@ -176,7 +177,7 @@ class TestHttpRequest(unittest.IsolatedAsyncioTestCase):
                 "GET", "http://example.com/notfound"
             )
 
-            self.assertIsInstance(result, SuccessfulToolResult)  # HTTP错误也是成功响应
+            self.assertIsInstance(result, HttpToolResult)  # HTTP错误也是成功响应
             parts = self.extract_content_parts(result.content)
 
             self.assertEqual(parts.get("status_code"), "404")
@@ -233,7 +234,7 @@ class TestHttpRequest(unittest.IsolatedAsyncioTestCase):
                 timeout=30,
             )
 
-            self.assertIsInstance(result, SuccessfulToolResult)
+            self.assertIsInstance(result, HttpToolResult)
             # 验证mock被正确调用
             mock_client.request.assert_called_once()
             call_args = mock_client.request.call_args
@@ -269,7 +270,7 @@ class TestHttpRequest(unittest.IsolatedAsyncioTestCase):
 
             result = await self.host_control.http_request("GET", "http://example.com")
 
-            self.assertIsInstance(result, SuccessfulToolResult)
+            self.assertIsInstance(result, HttpToolResult)
             parts = self.extract_content_parts(result.content)
             self.assertEqual(parts.get("status_code"), "200")
             self.assertIn("headers", parts)
@@ -298,7 +299,7 @@ class TestHttpRequest(unittest.IsolatedAsyncioTestCase):
                 "GET", "http://example.com/protected", auth=auth
             )
 
-            self.assertIsInstance(result, SuccessfulToolResult)
+            self.assertIsInstance(result, HttpToolResult)
             mock_client.request.assert_called_once()
             call_args = mock_client.request.call_args
             kwargs = call_args[1]
@@ -326,7 +327,7 @@ class TestHttpRequest(unittest.IsolatedAsyncioTestCase):
                 "GET", "http://example.com/", cookies=cookies
             )
 
-            self.assertIsInstance(result, SuccessfulToolResult)
+            self.assertIsInstance(result, HttpToolResult)
             mock_client.request.assert_called_once()
             call_args = mock_client.request.call_args
             kwargs = call_args[1]
@@ -354,7 +355,7 @@ class TestHttpRequest(unittest.IsolatedAsyncioTestCase):
                 "POST", "http://example.com/api", json_data=json_data
             )
 
-            self.assertIsInstance(result, SuccessfulToolResult)
+            self.assertIsInstance(result, HttpToolResult)
             mock_client.request.assert_called_once()
             call_args = mock_client.request.call_args
             kwargs = call_args[1]
@@ -382,7 +383,7 @@ class TestHttpRequest(unittest.IsolatedAsyncioTestCase):
                 "GET", "http://example.com/", proxy=proxy
             )
 
-            self.assertIsInstance(result, SuccessfulToolResult)
+            self.assertIsInstance(result, HttpToolResult)
             mock_client_class.assert_called_once()
             call_args = mock_client_class.call_args
             kwargs = call_args[1]
@@ -410,7 +411,7 @@ class TestHttpRequest(unittest.IsolatedAsyncioTestCase):
                 "GET", "http://example.com/", verify=verify
             )
 
-            self.assertIsInstance(result, SuccessfulToolResult)
+            self.assertIsInstance(result, HttpToolResult)
             mock_client_class.assert_called_once()
             call_args = mock_client_class.call_args
             kwargs = call_args[1]
@@ -438,7 +439,7 @@ class TestHttpRequest(unittest.IsolatedAsyncioTestCase):
                 "GET", "http://example.com/protected", auth=tuple(auth_list)
             )
 
-            self.assertIsInstance(result, SuccessfulToolResult)
+            self.assertIsInstance(result, HttpToolResult)
             mock_client.request.assert_called_once()
             call_args = mock_client.request.call_args
             kwargs = call_args[1]

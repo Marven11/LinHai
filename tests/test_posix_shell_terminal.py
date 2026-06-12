@@ -7,6 +7,7 @@ from unittest.mock import AsyncMock, Mock, patch
 from linhai.machine_control.posix_shell.posix_shell_control import PosixShellControl
 from linhai.registry import Registry
 from linhai.tool.base import SuccessfulToolResult, FailedToolResult
+from linhai.machine_control.http_message import HttpToolResult
 
 
 class TestSshTerminal(unittest.TestCase):
@@ -312,7 +313,7 @@ class TestSshTerminal(unittest.TestCase):
             result = await self.ssh_control.http_request(
                 method="GET", url="http://example.com"
             )
-            self.assertIsInstance(result, SuccessfulToolResult)
+            self.assertIsInstance(result, HttpToolResult)
             self.mock_call_tool.assert_called_once_with(
                 "http_request",
                 {

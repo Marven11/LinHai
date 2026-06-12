@@ -3,7 +3,7 @@ import json
 from typing import Dict, Optional, Any
 
 from linhai.registry import Registry
-from linhai.machine_control.http_message import HttpMessage, build_http_message
+from linhai.machine_control.http_message import HttpToolResult, build_http_message
 from linhai.tool.base import SuccessfulToolResult, FailedToolResult
 from ..trojan.transport import TrojanTransport
 from ..trojan.shell_transport import setup_trojan_in_shell
@@ -76,7 +76,7 @@ class PosixShellControl:
         json_data: Optional[Dict[str, Any]] = None,
         proxy: Optional[str] = None,
         verify: Optional[bool] = None,
-    ) -> HttpMessage | FailedToolResult:
+    ) -> HttpToolResult | FailedToolResult:
         import base64 as _base64
 
         args: Dict[str, Any] = {

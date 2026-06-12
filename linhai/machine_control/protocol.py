@@ -1,5 +1,5 @@
 from typing import Dict, Optional, Protocol, Union, Any
-from linhai.machine_control.http_message import HttpMessage
+from linhai.machine_control.http_message import HttpToolResult
 from linhai.tool.base import (
     SuccessfulToolResult,
     FailedToolResult,
@@ -25,7 +25,7 @@ class HostControl(Protocol):
         json_data: Optional[Dict[str, Any]] = None,
         proxy: Optional[str] = None,
         verify: Optional[bool] = None,
-    ) -> HttpMessage | FailedToolResult: ...
+    ) -> HttpToolResult | FailedToolResult: ...
 
     async def change_directory(
         self, directory: str

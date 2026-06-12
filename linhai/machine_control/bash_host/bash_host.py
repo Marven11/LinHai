@@ -16,7 +16,7 @@ from linhai.tool.base import (
     FailedToolResult,
     FileContentToolResult,
 )
-from linhai.machine_control.http_message import HttpMessage
+from linhai.machine_control.http_message import HttpToolResult
 from linhai.machine_control.process import (
     ProcessIOError,
     Process,
@@ -256,7 +256,7 @@ class BashHostControl:
         json_data: Optional[Dict[str, Any]] = None,
         proxy: Optional[str] = None,
         verify: Optional[bool] = None,
-    ) -> HttpMessage | FailedToolResult:
+    ) -> HttpToolResult | FailedToolResult:
         if not self._has_curl:
             return FailedToolResult(content="远程机器没有安装curl")
         return await _http_request(

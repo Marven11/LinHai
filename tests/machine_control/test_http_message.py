@@ -4,7 +4,7 @@ import unittest
 from unittest.mock import patch
 
 from linhai.machine_control.http_message import (
-    HttpMessage,
+    HttpToolResult,
     _is_binary,
     build_http_message,
 )
@@ -65,9 +65,9 @@ class TestIsBinary(unittest.TestCase):
         self.assertIsNone(encoding)
 
 
-class TestHttpMessage(unittest.TestCase):
+class TestHttpToolResult(unittest.TestCase):
     def test_content_with_body(self):
-        msg = HttpMessage(
+        msg = HttpToolResult(
             status_code=200,
             headers={"content-type": "text/plain"},
             is_binary=False,
@@ -81,7 +81,7 @@ class TestHttpMessage(unittest.TestCase):
         self.assertNotIn("<<body_file>>", msg.content)
 
     def test_content_with_body_file(self):
-        msg = HttpMessage(
+        msg = HttpToolResult(
             status_code=200,
             headers={"content-type": "image/png"},
             is_binary=True,
@@ -93,23 +93,52 @@ class TestHttpMessage(unittest.TestCase):
         self.assertIn("<<body_file>>/tmp/test.bin<<body_file>>", msg.content)
         self.assertNotIn("<<body>>", msg.content)
 
-    def test_isinstance_tool_result_success(self):
-        from linhai.tool.base import SuccessfulToolResult
-
-        msg = HttpMessage(
+    def test_to_json_and_from_json(self):
+        msg = HttpToolResult(
             status_code=200,
-            headers={},
+            headers={"x-custom": "value"},
             is_binary=False,
-            size=0,
-            body="",
+            size=13,
+            body="hello world",
         )
-        self.assertIsInstance(msg, SuccessfulToolResult)
+        json_str = msg.to_json()
+        restored = HttpToolResult.from_json(json_str)
+        self.assertEqual(restored.status_code, 200)
+        self.assertEqual(restored.headers, {"x-custom": "value"})
+        self.assertEqual(restored.is_binary, False)
+        self.assertEqual(restored.size, 13)
+        self.assertEqual(restored.body, "hello world")
+        self.assertEqual(restored.body_file, None)
+
+    def test_save_to_file_and_from_file(self):
+        import tempfile
+
+        msg = HttpToolResult(
+            status_code=200,
+            headers={"x-custom": "value"},
+            is_binary=False,
+            size=13,
+            body="hello world",
+        )
+        with tempfile.NamedTemporaryFile(
+            delete=False, suffix=".json", mode="w", encoding="utf-8"
+        ) as f:
+            filepath = f.name
+        try:
+            msg.save_to_file(filepath)
+            restored = HttpToolResult.from_file(filepath)
+            self.assertEqual(restored.status_code, 200)
+            self.assertEqual(restored.headers, {"x-custom": "value"})
+            self.assertEqual(restored.is_binary, False)
+            self.assertEqual(restored.body, "hello world")
+        finally:
+            os.unlink(filepath)
 
     def test_headers_serialized_as_json(self):
         import json
 
         headers = {"content-type": "text/html", "x-custom": "value"}
-        msg = HttpMessage(
+        msg = HttpToolResult(
             status_code=200,
             headers=headers,
             is_binary=False,
@@ -123,7 +152,7 @@ class TestHttpMessage(unittest.TestCase):
         self.assertEqual(parsed, headers)
 
 
-class TestBuildHttpMessage(unittest.IsolatedAsyncioTestCase):
+class TestBuildHttpToolResult(unittest.IsolatedAsyncioTestCase):
     async def test_small_text_body_inline(self):
         content = b"Hello, World!"
         result = await build_http_message(
@@ -132,7 +161,7 @@ class TestBuildHttpMessage(unittest.IsolatedAsyncioTestCase):
             content=content,
             content_type="text/plain; charset=utf-8",
         )
-        self.assertIsInstance(result, HttpMessage)
+        self.assertIsInstance(result, HttpToolResult)
         self.assertEqual(result.status_code, 200)
         self.assertFalse(result.is_binary)
         self.assertEqual(result.body, "Hello, World!")
@@ -148,7 +177,7 @@ class TestBuildHttpMessage(unittest.IsolatedAsyncioTestCase):
             content=content,
             content_type="text/plain",
         )
-        self.assertIsInstance(result, HttpMessage)
+        self.assertIsInstance(result, HttpToolResult)
         self.assertEqual(result.status_code, 200)
         self.assertFalse(result.is_binary)
         self.assertIsNone(result.body)
@@ -166,7 +195,7 @@ class TestBuildHttpMessage(unittest.IsolatedAsyncioTestCase):
             content=binary_data,
             content_type="image/png",
         )
-        self.assertIsInstance(result, HttpMessage)
+        self.assertIsInstance(result, HttpToolResult)
         self.assertTrue(result.is_binary)
         self.assertIsNone(result.body)
         self.assertIsNotNone(result.body_file)
@@ -184,7 +213,7 @@ class TestBuildHttpMessage(unittest.IsolatedAsyncioTestCase):
             content=content,
             content_type="text/html; charset=gbk",
         )
-        self.assertIsInstance(result, HttpMessage)
+        self.assertIsInstance(result, HttpToolResult)
         self.assertEqual(result.body, text)
 
     async def test_empty_content(self):
@@ -194,7 +223,7 @@ class TestBuildHttpMessage(unittest.IsolatedAsyncioTestCase):
             content=b"",
             content_type="text/plain",
         )
-        self.assertIsInstance(result, HttpMessage)
+        self.assertIsInstance(result, HttpToolResult)
         self.assertEqual(result.status_code, 204)
         self.assertEqual(result.body, "")
 
@@ -216,7 +245,7 @@ class TestBuildHttpMessage(unittest.IsolatedAsyncioTestCase):
             content=b"Not Found",
             content_type="text/html",
         )
-        self.assertIsInstance(result, HttpMessage)
+        self.assertIsInstance(result, HttpToolResult)
         self.assertEqual(result.status_code, 404)
         self.assertEqual(result.body, "Not Found")
 
@@ -229,7 +258,7 @@ class TestBuildHttpMessage(unittest.IsolatedAsyncioTestCase):
             content=content,
             content_type="text/plain",
         )
-        self.assertIsInstance(result, HttpMessage)
+        self.assertIsInstance(result, HttpToolResult)
         self.assertIsNotNone(result.body_file)
         self.assertTrue(result.body_file.endswith(".txt"))
         os.unlink(result.body_file)
@@ -241,7 +270,7 @@ class TestBuildHttpMessage(unittest.IsolatedAsyncioTestCase):
             content=b"%PDF-1.4",
             content_type="application/pdf",
         )
-        self.assertIsInstance(result, HttpMessage)
+        self.assertIsInstance(result, HttpToolResult)
         self.assertIsNotNone(result.body_file)
         self.assertTrue(result.body_file.endswith(".bin"))
         os.unlink(result.body_file)

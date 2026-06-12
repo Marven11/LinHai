@@ -5,7 +5,7 @@ import uuid
 from pathlib import Path
 from typing import Dict, Optional, Any, Union
 
-from linhai.machine_control.http_message import HttpMessage, build_http_message
+from linhai.machine_control.http_message import HttpToolResult, build_http_message
 from linhai.tool.base import (
     SuccessfulToolResult,
     FailedToolResult,
@@ -64,7 +64,7 @@ class EtherGhostMachineControl(HostControl):
         json_data: Optional[Dict[str, Any]] = None,
         proxy: Optional[str] = None,
         verify: Optional[bool] = None,
-    ) -> HttpMessage | FailedToolResult:
+    ) -> HttpToolResult | FailedToolResult:
         if self.session is None:
             return FailedToolResult(content="Session未初始化")
 
