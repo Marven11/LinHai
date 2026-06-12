@@ -411,7 +411,7 @@ class TestLlmManager(unittest.IsolatedAsyncioTestCase):
         mock_registry = MagicMock(spec=Registry)
         mock_registry.register_member = MagicMock()
 
-        with patch("linhai.llm.AsyncOpenAI") as mock_async_openai_cls:
+        with patch("linhai.llm.openai_compatible.AsyncOpenAI") as mock_async_openai_cls:
             mock_client = AsyncMock()
             mock_client.close = AsyncMock()
             mock_async_openai_cls.return_value = mock_client

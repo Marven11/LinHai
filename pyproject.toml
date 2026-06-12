@@ -14,6 +14,7 @@ authors = [
 ]
 dependencies = [
     "openai",
+    "anthropic",
     "httpx",
     "beautifulsoup4",
     "mistune",

@@ -77,6 +77,7 @@
           [
             etherGhost.packages.${system}.default
             openai
+            anthropic
             httpx
             beautifulsoup4
             mistune

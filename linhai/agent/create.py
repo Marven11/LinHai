@@ -23,6 +23,7 @@ from linhai.config import (
 from linhai.registry import Registry
 from linhai.base import Message, SystemMessage, UserMessage
 from linhai.llm import OpenAi
+from linhai.llm.anthropic_compatible import AnthropicLanguageModel
 from linhai.llm_manager import LlmManager
 
 from linhai.tool.base import utils_tools
@@ -485,21 +486,38 @@ async def _create_llm_instances(context: "AgentBuildContext") -> LlmManager:
 
     llms = []
     for llm_config in context["llms"]:
-        llm = OpenAi(
-            registry=context["registry"],
-            api_key=llm_config.api_key,
-            base_url=llm_config.base_url,
-            model=llm_config.model,
-            openai_config=llm_config.client_options,
-            chat_completion_kwargs=llm_config.completion_options,
-            token_limit=llm_config.token_limit,
-            compress_threshold=llm_config.compress_threshold,
-            compatibility=llm_config.compatibility,
-            name=llm_config.name,
-            support_image=llm_config.support_image,
-            explicit_cache_info=_build_explicit_cache_info(llm_config),
-            custom_toolcall_format=llm_config.custom_toolcall_format,
-        )
+        if llm_config.type == "anthropic":
+            llm = AnthropicLanguageModel(
+                registry=context["registry"],
+                api_key=llm_config.api_key,
+                base_url=llm_config.base_url,
+                model=llm_config.model,
+                client_options=llm_config.client_options,
+                completion_options=llm_config.completion_options,
+                token_limit=llm_config.token_limit,
+                compress_threshold=llm_config.compress_threshold,
+                compatibility=llm_config.compatibility,
+                name=llm_config.name,
+                support_image=llm_config.support_image,
+                explicit_cache_info=_build_explicit_cache_info(llm_config),
+                custom_toolcall_format=llm_config.custom_toolcall_format,
+            )
+        else:
+            llm = OpenAi(
+                registry=context["registry"],
+                api_key=llm_config.api_key,
+                base_url=llm_config.base_url,
+                model=llm_config.model,
+                openai_config=llm_config.client_options,
+                chat_completion_kwargs=llm_config.completion_options,
+                token_limit=llm_config.token_limit,
+                compress_threshold=llm_config.compress_threshold,
+                compatibility=llm_config.compatibility,
+                name=llm_config.name,
+                support_image=llm_config.support_image,
+                explicit_cache_info=_build_explicit_cache_info(llm_config),
+                custom_toolcall_format=llm_config.custom_toolcall_format,
+            )
         llms.append(llm)
 
     llm_fallback_map = {}

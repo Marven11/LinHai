@@ -5,7 +5,7 @@ from linhai.llm import OpenAi
 
 class TestOpenAiTimeoutConfig(unittest.IsolatedAsyncioTestCase):
     def test_timeout_max_retries_removed_from_config(self):
-        with patch("linhai.llm.AsyncOpenAI") as mock_cls:
+        with patch("linhai.llm.openai_compatible.AsyncOpenAI") as mock_cls:
             mock_cls.return_value = MagicMock()
             openai = OpenAi(
                 registry=MagicMock(),
@@ -26,7 +26,7 @@ class TestOpenAiTimeoutConfig(unittest.IsolatedAsyncioTestCase):
             self.assertNotIn("max_retries", openai._openai_config)
 
     def test_empty_config_uses_defaults(self):
-        with patch("linhai.llm.AsyncOpenAI") as mock_cls:
+        with patch("linhai.llm.openai_compatible.AsyncOpenAI") as mock_cls:
             mock_cls.return_value = MagicMock()
             OpenAi(
                 registry=MagicMock(),
@@ -44,7 +44,7 @@ class TestOpenAiTimeoutConfig(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(call_kwargs["max_retries"], 0)
 
     async def test_reconnect_no_duplicate_keys(self):
-        with patch("linhai.llm.AsyncOpenAI") as mock_cls:
+        with patch("linhai.llm.openai_compatible.AsyncOpenAI") as mock_cls:
             mock_client = MagicMock()
             mock_client.close = AsyncMock()
             mock_cls.return_value = mock_client

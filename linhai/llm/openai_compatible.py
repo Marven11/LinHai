@@ -275,7 +275,7 @@ class MinimaxAnswer:
 
     def __init__(
         self,
-        response,  # ChatCompletion对象
+        response,
         registry: linhai.registry.Registry,
         cached_input_tokens: int = 0,
         llm_instance=None,
@@ -284,7 +284,6 @@ class MinimaxAnswer:
 
         注意：使用__dict__读取字段是因为各个API提供商返回的字段不一致，
         这样可以及时发现配置问题而不是静默返回None。"""
-        # 解析响应
         message = response.choices[0].message
         message_dict = message.__dict__
         response_dict = response.__dict__
@@ -336,12 +335,9 @@ class MinimaxAnswer:
                     )
                 )
 
-        # 如果llm_instance存在，更新previous_input_tokens
         if self.llm_instance is not None and self.input_tokens > 0:
             self.llm_instance.previous_input_tokens = self.input_tokens
 
-        # 注意：token_usage现在在OpenAi类中发送，不在这里发送
-        # 确保toyield只包含AnswerToken
         if self.reasoning_content:
             self.toyield.append(
                 AnswerToken(
@@ -656,10 +652,8 @@ class OpenAi:
         }
 
         if self.compatibility == "minimax":
-            # minimax在使用stream=True时不返回usage信息，导致兼容问题，已关闭stream
             params["extra_body"] = {"reasoning_split": True}
             params["stream"] = False
-            # 提示用户，但只提示一次
             if not self._minimax_warning_sent:
                 await self.registry.send(
                     "ui_log",
