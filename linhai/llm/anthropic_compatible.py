@@ -68,13 +68,15 @@ class AnthropicAnswer:
             usage = event.message.usage
             self.input_tokens = usage.input_tokens
             self.output_tokens = usage.output_tokens
+            if usage.cache_read_input_tokens:
+                self.cached_input_tokens = usage.cache_read_input_tokens
+                self.input_tokens += usage.cache_read_input_tokens
+            if usage.cache_creation_input_tokens:
+                self.cache_creation_input_tokens = usage.cache_creation_input_tokens
+                self.input_tokens += usage.cache_creation_input_tokens
             self.total_tokens = self.input_tokens + self.output_tokens
             if self.llm_instance is not None and self.input_tokens > 0:
                 self.llm_instance.previous_input_tokens = self.input_tokens
-            if usage.cache_read_input_tokens:
-                self.cached_input_tokens = usage.cache_read_input_tokens
-            if usage.cache_creation_input_tokens:
-                self.cache_creation_input_tokens = usage.cache_creation_input_tokens
             return
 
         if event_type == "content_block_delta":
