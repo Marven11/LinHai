@@ -168,7 +168,10 @@ def _convert_content_to_anthropic(content) -> str | list[dict]:
             if part_type == "text":
                 text = part.get("text", "")
                 if text:
-                    blocks.append({"type": "text", "text": text})
+                    block: dict = {"type": "text", "text": text}
+                    if "cache_control" in part:
+                        block["cache_control"] = part["cache_control"]
+                    blocks.append(block)
             elif part_type == "image_url":
                 url = part.get("image_url", {}).get("url", "")
                 if url.startswith("data:"):
