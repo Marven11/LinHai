@@ -9,6 +9,7 @@ import chardet
 from pydantic import BaseModel, model_validator
 
 from linhai.tool.base import FailedToolResult, register_tool_result
+from linhai.utils.http_diff import http_diff
 from linhai.utils.tokenizer import count_tokens
 
 
@@ -162,3 +163,55 @@ async def build_http_message(
         size=size,
         body=text_content,
     )
+
+
+@register_tool_result
+class HttpTextDiffToolResult(BaseModel):
+    http_result: HttpToolResult
+    fromfile: str
+    tofile: str
+    content_diff: str
+
+    @model_validator(mode="after")
+    def _validate(self) -> "HttpTextDiffToolResult":
+        if self.http_result.is_binary:
+            raise ValueError("HttpToolResult.is_binary must be False")
+        if not Path(self.fromfile).is_absolute():
+            raise ValueError(f"fromfile must be absolute: {self.fromfile}")
+        if not Path(self.tofile).is_absolute():
+            raise ValueError(f"tofile must be absolute: {self.tofile}")
+        if len(self.content_diff) >= 10000:
+            raise ValueError(
+                f"content_diff must be less than 10000 characters, got {len(self.content_diff)}"
+            )
+        return self
+
+    def to_llm_content(self) -> str:
+        body_diff = (
+            f"<<body_diff>>\n"
+            f"<<fromfile>>{self.fromfile}<<fromfile>>\n"
+            f"<<tofile>>{self.tofile}<<tofile>>\n"
+            f"<<content_diff>>{self.content_diff}<<content_diff>>\n"
+            f"<</body_diff>>"
+        )
+        return self.http_result.content + "\n" + body_diff
+
+    def to_json(self) -> str:
+        data = {
+            "type": "HttpTextDiffToolResult",
+            "http_result": self.http_result.to_json(),
+            "fromfile": self.fromfile,
+            "tofile": self.tofile,
+            "content_diff": self.content_diff,
+        }
+        return json.dumps(data, ensure_ascii=False)
+
+    @classmethod
+    def from_json(cls, json_str: str) -> "HttpTextDiffToolResult":
+        data = json.loads(json_str)
+        return cls(
+            http_result=HttpToolResult.from_json(data["http_result"]),
+            fromfile=data["fromfile"],
+            tofile=data["tofile"],
+            content_diff=data["content_diff"],
+        )
