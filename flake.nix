@@ -116,7 +116,7 @@
             dependencies = pythonDeps;
 
             src = ./.;
-            version = "0.3.0-dev-${self.shortRev or self.dirtyShortRev or "dirty"}";
+            version = "0.4.0-dev-${self.shortRev or self.dirtyShortRev or "dirty"}";
           };
 
         devShells.default = pkgs.mkShell {
