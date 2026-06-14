@@ -6,7 +6,7 @@ import time
 from pathlib import Path
 from typing import Optional
 
-from linhai.machine_control.http_message import HttpToolResult
+from linhai.machine_control.http_message import HttpToolResult, HttpTextDiffToolResult
 from linhai.tool.base import (
     SuccessfulToolResult,
     FailedToolResult,
@@ -76,7 +76,7 @@ class MasterHostControl:
         json_data: Optional[dict] = None,
         proxy: Optional[str] = None,
         verify: Optional[bool] = None,
-    ) -> HttpToolResult | FailedToolResult:
+    ) -> HttpToolResult | HttpTextDiffToolResult | FailedToolResult:
         """发送HTTP请求并返回响应内容或文件路径"""
         return await http_request(
             method,

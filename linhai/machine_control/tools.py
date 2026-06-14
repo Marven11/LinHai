@@ -15,7 +15,7 @@ from linhai.tool.base import (
 from linhai.utils.i18n import t
 
 if TYPE_CHECKING:
-    from .http_message import HttpToolResult
+    from .http_message import HttpToolResult, HttpTextDiffToolResult
     from .main import MachineControl
 
 
@@ -358,7 +358,7 @@ def register_machine_control_tools(machine_control: "MachineControl") -> ToolSet
         json_data: Optional[Dict[str, Any]] = None,
         proxy: Optional[str] = None,
         verify: Optional[bool] = None,
-    ) -> HttpToolResult | FailedToolResult:
+    ) -> HttpToolResult | HttpTextDiffToolResult | FailedToolResult:
         host_control = machine_control.machines[machine_control.target_machine]
         if auth is not None:
             auth = (auth[0], auth[1])
