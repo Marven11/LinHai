@@ -451,6 +451,8 @@ class TestTelegramPlugin(unittest.TestCase):
         plugin._application = Mock()
         plugin._application.stop = AsyncMock()
         plugin._application.shutdown = AsyncMock()
+        plugin._application.updater = Mock()
+        plugin._application.updater.stop = AsyncMock()
         plugin._running = True
 
         asyncio.run(plugin.shutdown())
@@ -461,6 +463,7 @@ class TestTelegramPlugin(unittest.TestCase):
         self.assertEqual(cancel_calls[0][0][0], "telegram_send_loop")
         self.assertEqual(cancel_calls[1][0][0], "telegram_polling")
         plugin._application.stop.assert_called_once()
+        plugin._application.updater.stop.assert_called_once()
         plugin._application.shutdown.assert_called_once()
 
     def test_shutdown_not_running(self):
@@ -472,6 +475,8 @@ class TestTelegramPlugin(unittest.TestCase):
         plugin._application = Mock()
         plugin._application.stop = AsyncMock()
         plugin._application.shutdown = AsyncMock()
+        plugin._application.updater = Mock()
+        plugin._application.updater.stop = AsyncMock()
         plugin._running = False
 
         asyncio.run(plugin.shutdown())

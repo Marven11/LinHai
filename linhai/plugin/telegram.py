@@ -397,6 +397,8 @@ class TelegramPlugin(Plugin):
             task_supervisor.cancel("telegram_send_loop")
             task_supervisor.cancel("telegram_polling")
             await self._application.stop()
+            if self._application.updater is not None:
+                await self._application.updater.stop()
             await self._application.shutdown()
 
     async def _on_exit(self):
