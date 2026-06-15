@@ -27,7 +27,7 @@ def _create_llm(api_key: str) -> tuple[OpenAi, Registry]:
             }
         },
         chat_completion_kwargs={
-            "max_tokens": 100,
+            "max_tokens": 4096,
             "stream_options": {"include_usage": True},
         },
         support_image=False,
