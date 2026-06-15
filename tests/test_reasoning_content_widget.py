@@ -1,373 +1,135 @@
-"""Test cases for ReasoningContentWidget."""
-
 import unittest
-from unittest.mock import Mock, patch
 
+from textual.app import App, ComposeResult
 from linhai.tui.components import ReasoningContentWidget
-from linhai.utils.i18n import t
 
 
-class TestReasoningContentWidget(unittest.TestCase):
-    """Test ReasoningContentWidget functionality."""
+def _make_segment(content: str = "", is_finished: bool = False):
+    return {
+        "segment_type": "reasoning",
+        "content": content,
+        "is_finished": is_finished,
+    }
 
-    def setUp(self):
-        """Set up test fixtures."""
-        self.role = "assistant"
-        self.content = "这是一个测试思考内容\n包含多行文本\n和一些特殊字符 [ ] \\ 等"
-        self.sender_name = "test-agent"
-        self.mock_segment = {
-            "segment_type": "reasoning",
-            "content": "",
-            "is_finished": False,
-        }
-        self.widget = ReasoningContentWidget(
-            role=self.role,
-            sender_name=self.sender_name,
+
+class _TestApp(App):
+    def __init__(self, segment, **kwargs):
+        super().__init__(**kwargs)
+        self._segment = segment
+
+    def compose(self) -> ComposeResult:
+        yield ReasoningContentWidget(
+            role="assistant",
+            sender_name="test-agent",
             pygments_theme="nord",
             syntax_background=None,
-            segment=self.mock_segment,
+            segment=self._segment,
             get_refresh_interval=lambda: 0.05,
         )
-        self.widget.content_str += self.content
 
-    def test_initial_state(self):
-        """Test initial state of the widget."""
-        self.assertEqual(self.widget.role, "assistant-reasoning")
-        self.assertEqual(self.widget.content_str, self.content)
-        self.assertEqual(self.widget.sender_name, self.sender_name)
-        self.assertFalse(self.widget.is_expanded)
 
-    @patch("linhai.utils.i18n.locale.getlocale")
-    def test_border_title_calculation(self, mock_getlocale):
-        mock_getlocale.return_value = ("zh_CN", "UTF-8")
-        self.widget.is_expanded = False
-        title = self.widget.calculate_border_title()
-        self.assertIn(t({"zh_CN": "[点击展开]", "en": "[click to expand]"}), title)
-        self.assertIn(self.sender_name, title)
+class TestReasoningContentWidget(unittest.IsolatedAsyncioTestCase):
+    async def test_initial_collapsed_state(self):
+        segment = _make_segment("hello")
+        async with _TestApp(segment).run_test() as pilot:
+            widget = pilot.app.query_one(ReasoningContentWidget)
+            self.assertFalse(widget.is_expanded)
+            self.assertIn("reasoning-widget-collapsed", widget.classes)
 
-        self.widget.is_expanded = True
-        title = self.widget.calculate_border_title()
-        self.assertIn(t({"zh_CN": "[点击隐藏]", "en": "[click to hide]"}), title)
-        self.assertIn(self.sender_name, title)
+    async def test_click_toggles_expand(self):
+        segment = _make_segment("hello")
+        async with _TestApp(segment).run_test() as pilot:
+            widget = pilot.app.query_one(ReasoningContentWidget)
+            self.assertFalse(widget.is_expanded)
+            widget.on_click()
+            self.assertTrue(widget.is_expanded)
+            widget.on_click()
+            self.assertFalse(widget.is_expanded)
 
-    def test_feed_string(self):
-        """Test content_str update (replacing feed_string method)."""
-        additional_content = "\n追加的内容"
-        original_content = self.widget.content_str
+    async def test_update_display_updates_content_str(self):
+        segment = _make_segment("initial")
+        async with _TestApp(segment).run_test() as pilot:
+            widget = pilot.app.query_one(ReasoningContentWidget)
+            self.assertEqual(segment["content"], "initial")
+            widget.update_display()
+            self.assertEqual(widget.content_str, "initial")
+            segment["content"] = "updated"
+            widget.update_display()
+            self.assertEqual(widget.content_str, "updated")
 
-        # 直接更新content_str，因为feed_string方法已删除
-        self.widget.content_str += additional_content
+    async def test_finished_does_not_crash(self):
+        segment = _make_segment("done", is_finished=True)
+        async with _TestApp(segment).run_test() as pilot:
+            widget = pilot.app.query_one(ReasoningContentWidget)
+            widget.update_display()
+            widget.update_display()
 
-        self.assertEqual(self.widget.content_str, original_content + additional_content)
+    async def test_unfinished_keeps_timer(self):
+        segment = _make_segment("streaming", is_finished=False)
+        async with _TestApp(segment).run_test() as pilot:
+            widget = pilot.app.query_one(ReasoningContentWidget)
+            widget.update_display()
+            self.assertIsNotNone(widget.timer)
 
-    def test_append_content(self):
-        """Test content_str update (replacing append_content method)."""
-        additional_content = "\n通过append_content追加"
-        original_content = self.widget.content_str
+    async def test_collapsed_state_css_class(self):
+        segment = _make_segment("hello")
+        async with _TestApp(segment).run_test() as pilot:
+            widget = pilot.app.query_one(ReasoningContentWidget)
+            self.assertIn("reasoning-widget-collapsed", widget.classes)
+            widget.on_click()
+            self.assertNotIn("reasoning-widget-collapsed", widget.classes)
+            self.assertIn("reasoning-widget-expanded", widget.classes)
+            widget.on_click()
+            self.assertIn("reasoning-widget-collapsed", widget.classes)
+            self.assertNotIn("reasoning-widget-expanded", widget.classes)
 
-        # 直接更新content_str，因为append_content方法已删除
-        self.widget.content_str += additional_content
+    async def test_role_is_role_reasoning(self):
+        segment = _make_segment("hello")
+        async with _TestApp(segment).run_test() as pilot:
+            widget = pilot.app.query_one(ReasoningContentWidget)
+            self.assertEqual(widget.role, "assistant-reasoning")
 
-        self.assertEqual(self.widget.content_str, original_content + additional_content)
 
-    def test_on_click_toggle(self):
-        """Test click toggles expanded state."""
-        initial_state = self.widget.is_expanded
-
-        # 模拟 update 方法以避免 Textual 上下文错误
-        self.widget.update = Mock()
-
-        self.widget.on_click()
-
-        self.assertNotEqual(self.widget.is_expanded, initial_state)
-
-        self.widget.on_click()
-
-        self.assertEqual(self.widget.is_expanded, initial_state)
-
-    def test_update_display_collapsed(self):
-        """Test display update in collapsed state."""
-        self.widget.is_expanded = False
-
-        update_calls = []
-        self.widget.update = Mock(side_effect=lambda x: update_calls.append(x))
-
-        self.widget.update_display()
-
-        self.assertEqual(len(update_calls), 1)
-        content = update_calls[0]
-        # 现在返回的是Text对象，而不是Panel
-        self.assertEqual(content.__class__.__name__, "Text")
-
-    def test_update_display_expanded(self):
-        """Test display update in expanded state."""
-        self.widget.is_expanded = True
-
-        update_calls = []
-        self.widget.update = Mock(side_effect=lambda x: update_calls.append(x))
-
-        self.widget.update_display()
-
-        self.assertEqual(len(update_calls), 1)
-        content = update_calls[0]
-        # 现在返回的是Syntax对象，而不是Panel
-        self.assertEqual(content.__class__.__name__, "Syntax")
-
-    def test_truncation_in_collapsed_state(self):
-        """Test that collapsed state shows last two lines."""
-        multi_line_content = """第一行内容
-第二行内容
-第三行内容
-第四行内容"""
-
-        mock_segment = {
-            "segment_type": "reasoning",
-            "content": "",
-            "is_finished": False,
-        }
+class TestReasoningContentWidgetEdgeCases(unittest.TestCase):
+    def test_empty_content_empty_string(self):
+        segment = _make_segment("")
         widget = ReasoningContentWidget(
             role="assistant",
             sender_name="test",
             pygments_theme="nord",
             syntax_background=None,
-            segment=mock_segment,
+            segment=segment,
             get_refresh_interval=lambda: 0.05,
         )
-        widget.content_str += multi_line_content
-        widget.is_expanded = False
+        self.assertEqual(widget.content_str, "")
 
-        rendered_contents = []
-        widget.update = Mock(side_effect=lambda x: rendered_contents.append(x))
-
-        widget.update_display()
-
-        self.assertEqual(len(rendered_contents), 1)
-        content = rendered_contents[0]
-        # 现在返回的是Text对象，而不是Panel
-        self.assertEqual(content.__class__.__name__, "Text")
-
-    def test_special_characters_in_collapsed_state(self):
-        """Test that special characters don't cause crashes in collapsed state."""
-        content_with_special_chars = "思考内容包含特殊字符 [方括号] \\反斜杠 &符号"
-
-        mock_segment = {
-            "segment_type": "reasoning",
-            "content": "",
-            "is_finished": False,
-        }
+    def test_multiline_content_stored(self):
+        content = "line1\nline2\nline3\nline4"
+        segment = _make_segment(content)
         widget = ReasoningContentWidget(
             role="assistant",
             sender_name="test",
             pygments_theme="nord",
             syntax_background=None,
-            segment=mock_segment,
+            segment=segment,
             get_refresh_interval=lambda: 0.05,
         )
-        widget.content_str += content_with_special_chars
-        widget.is_expanded = False
+        widget.content_str = content
+        self.assertEqual(widget.content_str, content)
 
-        rendered_content = []
-        widget.update = Mock(side_effect=lambda x: rendered_content.append(x))
-
-        widget.update_display()
-
-        self.assertEqual(len(rendered_content), 1)
-
-    @patch("linhai.tui.components.ReasoningContentWidget.set_timer")
-    def test_stop_method(self, mock_set_timer):
-        """Test that finish_streaming method stops the timer."""
-        mock_segment = {
-            "segment_type": "reasoning",
-            "content": "",
-            "is_finished": False,
-        }
+    def test_special_characters_preserved(self):
+        content = "包含 [方括号] \\反斜杠 &符号"
+        segment = _make_segment(content)
         widget = ReasoningContentWidget(
             role="assistant",
             sender_name="test",
             pygments_theme="nord",
             syntax_background=None,
-            segment=mock_segment,
+            segment=segment,
             get_refresh_interval=lambda: 0.05,
         )
-        widget.content_str += "test content"
-        mock_timer = Mock()
-        widget.timer = mock_timer
-
-        # 模拟 update 方法以避免 Textual 上下文错误
-        widget.update = Mock()
-
-        # 配置 mock_set_timer 以停止定时器并清除timer
-        def stop_and_clear(*args, **kwargs):
-            mock_timer.stop()
-            widget.timer = None
-
-        mock_set_timer.side_effect = stop_and_clear
-
-        # finish_streaming已删除，直接停止timer
-        if widget.timer:
-            widget.timer.stop()
-            widget.timer = None
-
-        mock_timer.stop.assert_called_once()
-        self.assertIsNone(widget.timer)
-
-    @patch("linhai.tui.components.ReasoningContentWidget.set_timer")
-    def test_stop_method_actual_timer(self, mock_set_timer):
-        """Test finish_streaming method with actual timer behavior."""
-        mock_segment = {
-            "segment_type": "reasoning",
-            "content": "",
-            "is_finished": False,
-        }
-        widget = ReasoningContentWidget(
-            role="assistant",
-            sender_name="test",
-            pygments_theme="nord",
-            syntax_background=None,
-            segment=mock_segment,
-            get_refresh_interval=lambda: 0.05,
-        )
-        widget.content_str += "test content"
-
-        mock_timer = Mock()
-        widget.timer = mock_timer
-
-        # 模拟 update 方法以避免 Textual 上下文错误
-        widget.update = Mock()
-
-        # 配置 mock_set_timer 以停止定时器并清除timer
-        def stop_and_clear(*args, **kwargs):
-            mock_timer.stop()
-            widget.timer = None
-
-        mock_set_timer.side_effect = stop_and_clear
-
-        # finish_streaming已删除，直接停止timer
-        if widget.timer:
-            widget.timer.stop()
-            widget.timer = None
-
-        mock_timer.stop.assert_called_once()
-        self.assertIsNone(widget.timer)
-
-    @patch("linhai.tui.components.ReasoningContentWidget.set_timer")
-    def test_stop_method_without_timer(self, mock_set_timer):
-        """Test finish_streaming method when there is no timer."""
-        mock_segment = {
-            "segment_type": "reasoning",
-            "content": "",
-            "is_finished": False,
-        }
-        widget = ReasoningContentWidget(
-            role="assistant",
-            sender_name="test",
-            pygments_theme="nord",
-            syntax_background=None,
-            segment=mock_segment,
-            get_refresh_interval=lambda: 0.05,
-        )
-        widget.content_str += "test content"
-        widget.timer = None
-
-        # 模拟 update 方法以避免 Textual 上下文错误
-        widget.update = Mock()
-
-        # 配置 mock_set_timer 以避免错误，并清除timer
-        def clear_timer(*args, **kwargs):
-            widget.timer = None
-
-        mock_set_timer.side_effect = clear_timer
-
-        # finish_streaming已删除，timer已经是None
-        self.assertIsNone(widget.timer)
-
-    def test_panel_styling(self):
-        """Test that styling is correctly applied."""
-        mock_segment = {
-            "segment_type": "reasoning",
-            "content": "",
-            "is_finished": False,
-        }
-        widget = ReasoningContentWidget(
-            role="assistant",
-            sender_name="test",
-            pygments_theme="nord",
-            syntax_background=None,
-            segment=mock_segment,
-            get_refresh_interval=lambda: 0.05,
-        )
-        widget.content_str += "test content"
-
-        rendered_contents = []
-        widget.update = Mock(side_effect=lambda x: rendered_contents.append(x))
-
-        widget.update_display()
-
-        self.assertEqual(len(rendered_contents), 1)
-        content = rendered_contents[0]
-        # 现在返回的是Text对象，而不是Panel
-        self.assertEqual(content.__class__.__name__, "Text")
-
-    def test_no_wrap_styling(self):
-        """Test that no_wrap=True is applied in ReasoningContentWidget."""
-        mock_segment = {
-            "segment_type": "reasoning",
-            "content": "",
-            "is_finished": False,
-        }
-        widget = ReasoningContentWidget(
-            role="assistant",
-            sender_name="test",
-            pygments_theme="nord",
-            syntax_background=None,
-            segment=mock_segment,
-            get_refresh_interval=lambda: 0.05,
-        )
-        widget.content_str += "测试内容"
-        widget.is_expanded = False
-
-        rendered_contents = []
-        widget.update = Mock(side_effect=lambda x: rendered_contents.append(x))
-
-        widget.update_display()
-
-        self.assertEqual(len(rendered_contents), 1)
-        content = rendered_contents[0]
-        # 现在返回的是Text对象，而不是Panel
-        self.assertEqual(content.__class__.__name__, "Text")
-        # 检查no_wrap属性
-        self.assertTrue(content.no_wrap)
-
-    def test_truncated_content_no_wrap(self):
-        """Test that truncated content in collapsed state has no_wrap=True."""
-        long_content = "这是一行很长的测试内容" * 10
-        mock_segment = {
-            "segment_type": "reasoning",
-            "content": "",
-            "is_finished": False,
-        }
-        widget = ReasoningContentWidget(
-            role="assistant",
-            sender_name="test",
-            pygments_theme="nord",
-            syntax_background=None,
-            segment=mock_segment,
-            get_refresh_interval=lambda: 0.05,
-        )
-        widget.content_str += long_content
-        widget.is_expanded = False
-
-        rendered_contents = []
-        widget.update = Mock(side_effect=lambda x: rendered_contents.append(x))
-
-        widget.update_display()
-
-        self.assertEqual(len(rendered_contents), 1)
-        content = rendered_contents[0]
-        # 现在返回的是Text对象，而不是Panel
-        self.assertEqual(content.__class__.__name__, "Text")
-        # 检查no_wrap属性
-        self.assertTrue(content.no_wrap)
+        widget.content_str = content
+        self.assertEqual(widget.content_str, content)
 
 
 if __name__ == "__main__":

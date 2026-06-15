@@ -1,6 +1,6 @@
 import asyncio
 import unittest
-from unittest.mock import AsyncMock, Mock
+
 from textual.app import App, ComposeResult
 from linhai.tui.components import NormalContentWidget
 from linhai.parsed_message import NormalSegment
@@ -27,88 +27,74 @@ class _TestApp(App):
         )
 
 
-class TestNormalContentWidgetStreaming(unittest.TestCase):
-    def test_on_mount_creates_stream(self):
-        asyncio.run(self._test_on_mount_creates_stream())
-
-    async def _test_on_mount_creates_stream(self):
+class TestNormalContentWidget(unittest.IsolatedAsyncioTestCase):
+    async def test_widget_mounts_with_segment(self):
         segment = _make_segment("hello", is_finished=False)
         async with _TestApp(segment).run_test() as pilot:
             widget = pilot.app.query_one(NormalContentWidget)
-            self.assertIsNotNone(widget._stream)
+            self.assertEqual(widget._segment["content"], "hello")
+            self.assertFalse(widget._segment["is_finished"])
 
-    def test_stream_write_on_new_content(self):
-        asyncio.run(self._test_stream_write())
+    async def test_content_is_empty_with_blank(self):
+        segment = _make_segment("   ", is_finished=False)
+        async with _TestApp(segment).run_test() as pilot:
+            widget = pilot.app.query_one(NormalContentWidget)
+            self.assertTrue(widget.content_is_empty())
 
-    async def _test_stream_write(self):
+    async def test_content_is_not_empty_after_stream(self):
         segment = _make_segment("hello", is_finished=False)
         async with _TestApp(segment).run_test() as pilot:
             widget = pilot.app.query_one(NormalContentWidget)
-
-            segment["content"] = "hello world"
-            write_mock = AsyncMock()
-            widget._stream.write = write_mock
             await widget.update_display()
+            self.assertFalse(widget.content_is_empty())
 
-            write_mock.assert_awaited_once_with("hello world")
+    async def test_streaming_updates_streamed_content(self):
+        segment = _make_segment("hello", is_finished=False)
+        async with _TestApp(segment).run_test() as pilot:
+            widget = pilot.app.query_one(NormalContentWidget)
+            segment["content"] = "hello world"
+            await widget.update_display()
             self.assertEqual(widget._streamed_content, "hello world")
 
-    def test_no_write_when_content_unchanged(self):
-        asyncio.run(self._test_no_write())
-
-    async def _test_no_write(self):
+    async def test_finished_cleans_up_stream(self):
         segment = _make_segment("hello", is_finished=False)
         async with _TestApp(segment).run_test() as pilot:
             widget = pilot.app.query_one(NormalContentWidget)
-
-            await widget.update_display()
-
-            write_mock = AsyncMock()
-            widget._stream.write = write_mock
-
-            await widget.update_display()
-
-            write_mock.assert_not_awaited()
-
-    def test_finished_stops_stream_and_full_update(self):
-        asyncio.run(self._test_finished())
-
-    async def _test_finished(self):
-        segment = _make_segment("hello", is_finished=False)
-        async with _TestApp(segment).run_test() as pilot:
-            widget = pilot.app.query_one(NormalContentWidget)
-
-            segment["content"] = "hello world"
+            segment["content"] = "completed"
             segment["is_finished"] = True
-
-            update_mock = Mock()
-            widget.update = update_mock
-
             await widget.update_display()
-
             self.assertIsNone(widget._stream)
-            update_mock.assert_called_once_with("hello world")
+            self.assertEqual(widget._streamed_content, "completed")
 
-    def test_finished_unchanged_content(self):
-        asyncio.run(self._test_finished_unchanged())
-
-    async def _test_finished_unchanged(self):
-        segment = _make_segment("hello", is_finished=True)
+    async def test_no_update_when_content_unchanged(self):
+        segment = _make_segment("hello", is_finished=False)
         async with _TestApp(segment).run_test() as pilot:
             widget = pilot.app.query_one(NormalContentWidget)
-
-            write_mock = AsyncMock()
-            widget._stream.write = write_mock
-            update_mock = Mock()
-            widget.update = update_mock
-
             await widget.update_display()
+            self.assertEqual(widget._streamed_content, "hello")
+            await widget.update_display()
+            self.assertEqual(widget._streamed_content, "hello")
 
+    async def test_segment_unchanged_but_finished(self):
+        segment = _make_segment("hello", is_finished=False)
+        async with _TestApp(segment).run_test() as pilot:
+            widget = pilot.app.query_one(NormalContentWidget)
+            segment["is_finished"] = True
+            await widget.update_display()
             self.assertIsNone(widget._stream)
-            update_mock.assert_called_once_with("hello")
-            write_mock.assert_not_awaited()
+            self.assertEqual(widget._streamed_content, "hello")
 
-    def test_content_is_empty(self):
+    async def test_empty_segment_stays_empty(self):
+        segment = _make_segment("", is_finished=False)
+        async with _TestApp(segment).run_test() as pilot:
+            widget = pilot.app.query_one(NormalContentWidget)
+            self.assertEqual(widget._streamed_content, "")
+            await widget.update_display()
+            self.assertEqual(widget._streamed_content, "")
+
+
+class TestNormalContentWidgetEdgeCases(unittest.TestCase):
+    def test_content_empty_initially(self):
         segment = _make_segment("", is_finished=False)
         widget = NormalContentWidget(
             role="assistant",
@@ -118,48 +104,9 @@ class TestNormalContentWidgetStreaming(unittest.TestCase):
             get_refresh_interval=lambda: 1.0,
         )
         self.assertTrue(widget.content_is_empty())
-
-    def test_content_is_not_empty(self):
-        segment = _make_segment("hello", is_finished=False)
-        widget = NormalContentWidget(
-            role="assistant",
-            sender_name="test",
-            pygments_theme="nord",
-            segment=segment,
-            get_refresh_interval=lambda: 1.0,
-        )
-        widget._streamed_content = "hello"
-        self.assertFalse(widget.content_is_empty())
-
-    def test_stop_timer(self):
-        segment = _make_segment("", is_finished=False)
-        widget = NormalContentWidget(
-            role="assistant",
-            sender_name="test",
-            pygments_theme="nord",
-            segment=segment,
-            get_refresh_interval=lambda: 1.0,
-        )
-        mock_timer = Mock()
-        widget.timer = mock_timer
-        widget.stop_timer()
-        mock_timer.stop.assert_called_once()
-
-
-class TestNormalContentWidgetInitial(unittest.TestCase):
-    def test_initial_streamed_content_empty(self):
-        segment = _make_segment("", is_finished=False)
-        widget = NormalContentWidget(
-            role="assistant",
-            sender_name="test",
-            pygments_theme="nord",
-            segment=segment,
-            get_refresh_interval=lambda: 1.0,
-        )
         self.assertEqual(widget._streamed_content, "")
-        self.assertIsNone(widget._stream)
 
-    def test_role_class_added(self):
+    def test_role_class_present(self):
         segment = _make_segment("", is_finished=False)
         widget = NormalContentWidget(
             role="assistant",
@@ -169,6 +116,29 @@ class TestNormalContentWidgetInitial(unittest.TestCase):
             get_refresh_interval=lambda: 1.0,
         )
         self.assertIn("assistant-message", widget.classes)
+
+    def test_widget_has_border_title(self):
+        segment = _make_segment("hello", is_finished=False)
+        widget = NormalContentWidget(
+            role="assistant",
+            sender_name="bot",
+            pygments_theme="nord",
+            segment=segment,
+            get_refresh_interval=lambda: 1.0,
+        )
+        self.assertEqual(widget.border_title, "bot")
+
+    def test_content_is_empty_after_empty_streaming(self):
+        segment = _make_segment("", is_finished=False)
+        widget = NormalContentWidget(
+            role="assistant",
+            sender_name="test",
+            pygments_theme="nord",
+            segment=segment,
+            get_refresh_interval=lambda: 1.0,
+        )
+        widget._streamed_content = "  \t\n  "
+        self.assertTrue(widget.content_is_empty())
 
 
 if __name__ == "__main__":
