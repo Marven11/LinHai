@@ -99,7 +99,7 @@ class TestAnthropicAnswerToolUse(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(tool_tokens[0].id, "tool_123")
         self.assertEqual(tool_tokens[0].name, "read_file")
 
-        result = await answer.get_anthropic_toolcalls()
+        result = await answer.get_native_toolcalls()
         self.assertIsNotNone(result)
         self.assertEqual(len(result), 1)
         self.assertEqual(result[0]["type"], "success")
@@ -107,10 +107,10 @@ class TestAnthropicAnswerToolUse(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(result[0]["name"], "read_file")
         self.assertEqual(result[0]["arguments"], {"filepath": "/tmp/test.txt"})
 
-    async def test_get_openai_toolcalls_returns_none(self):
+    async def test_get_native_toolcalls_returns_none(self):
         answer = AnthropicAnswer.__new__(AnthropicAnswer)
         answer._anthropic_toolcall_parts = {}
-        result = await answer.get_openai_toolcalls()
+        result = await answer.get_native_toolcalls()
         self.assertIsNone(result)
 
     async def test_failed_json_parse(self):
@@ -135,7 +135,7 @@ class TestAnthropicAnswerToolUse(unittest.IsolatedAsyncioTestCase):
         async for _ in answer:
             pass
 
-        result = await answer.get_anthropic_toolcalls()
+        result = await answer.get_native_toolcalls()
         self.assertIsNotNone(result)
         self.assertEqual(len(result), 1)
         self.assertEqual(result[0]["type"], "error")

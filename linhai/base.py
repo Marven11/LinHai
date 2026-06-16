@@ -521,12 +521,11 @@ class Answer(Protocol):
         """获取token使用情况"""
         raise NotImplementedError
 
-    async def get_openai_toolcalls(self) -> list[NativeToolCallResult] | None:
-        """获取解析后的OpenAI工具调用列表，参数已解析为dict"""
-        raise NotImplementedError
+    async def get_native_toolcalls(self) -> list[NativeToolCallResult] | None:
+        """获取解析后的原生工具调用列表，参数已解析为dict。
 
-    async def get_anthropic_toolcalls(self) -> list[NativeToolCallResult] | None:
-        """获取解析后的Anthropic工具调用列表，参数已解析为dict"""
+        适用于OpenAI native tool calling和Anthropic native tool calling。
+        """
         raise NotImplementedError
 
 

@@ -235,7 +235,7 @@ class OpenAiAnswer:
             )
         return result or None
 
-    async def get_openai_toolcalls(self) -> list[NativeToolCallResult] | None:
+    async def get_native_toolcalls(self) -> list[NativeToolCallResult] | None:
         toolcalls = self._get_raw_toolcalls()
         if not toolcalls:
             return None
@@ -268,9 +268,6 @@ class OpenAiAnswer:
                     )
                 )
         return parsed or None
-
-    async def get_anthropic_toolcalls(self) -> list[NativeToolCallResult] | None:
-        return None
 
 
 class MinimaxAnswer:
@@ -413,7 +410,7 @@ class MinimaxAnswer:
     def _get_raw_toolcalls(self) -> list[OpenAiToolCall] | None:
         return self._openai_toolcalls
 
-    async def get_openai_toolcalls(self) -> list[NativeToolCallResult] | None:
+    async def get_native_toolcalls(self) -> list[NativeToolCallResult] | None:
         toolcalls = self._get_raw_toolcalls()
         if not toolcalls:
             return None
@@ -446,9 +443,6 @@ class MinimaxAnswer:
                     )
                 )
         return parsed or None
-
-    async def get_anthropic_toolcalls(self) -> list[NativeToolCallResult] | None:
-        return None
 
 
 class OpenAi:

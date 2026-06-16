@@ -26,6 +26,7 @@ def _create_test_config(config_path: Path) -> None:
         f'base_url = "{BASE_URL}"\n'
         f'api_key = "{API_KEY}"\n'
         f'model = "{MODEL}"\n'
+        f"native_toolcall_format = true\n"
         f"\n"
         f"[[agent]]\n"
         f"compress_threshold = 0.8\n"
@@ -101,6 +102,7 @@ def test_anthropic_e2e():
 
         start = time.time()
         last_output = ""
+        found_read_file = False
         while time.time() - start < TIMEOUT:
             if _tmux_pane_dead(session_name):
                 break
@@ -110,16 +112,27 @@ def test_anthropic_e2e():
 
             last_output = _capture_tmux_output(session_name)
 
-            if test_uuid in last_output:
+            if "read_file" in last_output:
+                found_read_file = True
+
+            if found_read_file and test_uuid in last_output:
                 return
 
             time.sleep(POLL_INTERVAL)
 
         last_output = _capture_tmux_output(session_name)
+        missing = []
+        if "read_file" not in last_output:
+            missing.append(
+                "read_file tool name not displayed in TUI "
+                "(anthropic tool calls should be visible)"
+            )
+        if test_uuid not in last_output:
+            missing.append(f"UUID {test_uuid} not found in output")
         pytest.fail(
             f"Anthropic e2e test failed.\n"
-            f"UUID: {test_uuid}\n"
-            f"Output tail:\n{last_output[-2000:]}"
+            + "\n".join(missing)
+            + f"\nOutput tail:\n{last_output[-2000:]}"
         )
     finally:
         subprocess.run(["tmux", "kill-session", "-t", session_name], check=False)

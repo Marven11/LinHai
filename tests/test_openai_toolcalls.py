@@ -90,7 +90,7 @@ class TestOpenAiAnswerGetToolCalls(unittest.IsolatedAsyncioTestCase):
             stream=self.mock_stream,
             registry=self.registry,
         )
-        self.assertIsNone(await answer.get_openai_toolcalls())
+        self.assertIsNone(await answer.get_native_toolcalls())
 
     async def test_tool_calls_assembled_from_parts(self):
         answer = OpenAiAnswer(
@@ -101,7 +101,7 @@ class TestOpenAiAnswerGetToolCalls(unittest.IsolatedAsyncioTestCase):
             0: {"id": "call_a", "name": "func_a", "args": '{"x": 1}'},
             1: {"id": "call_b", "name": "func_b", "args": "{}"},
         }
-        result = await answer.get_openai_toolcalls()
+        result = await answer.get_native_toolcalls()
         self.assertIsNotNone(result)
         self.assertEqual(len(result), 2)
         self.assertEqual(result[0]["id"], "call_a")
@@ -118,7 +118,7 @@ class TestOpenAiAnswerGetToolCalls(unittest.IsolatedAsyncioTestCase):
         answer._openai_toolcall_parts = {
             0: {"id": None, "name": None, "args": ""},
         }
-        self.assertIsNone(await answer.get_openai_toolcalls())
+        self.assertIsNone(await answer.get_native_toolcalls())
 
     async def test_get_message_includes_tool_calls(self):
         answer = OpenAiAnswer(
@@ -165,7 +165,7 @@ class TestMinimaxAnswerGetToolCalls(unittest.IsolatedAsyncioTestCase):
             response=response,
             registry=Registry(),
         )
-        self.assertIsNone(await answer.get_openai_toolcalls())
+        self.assertIsNone(await answer.get_native_toolcalls())
 
     async def test_tool_calls_extracted_from_response(self):
         response = self._make_minimax_response(
@@ -178,7 +178,7 @@ class TestMinimaxAnswerGetToolCalls(unittest.IsolatedAsyncioTestCase):
             response=response,
             registry=Registry(),
         )
-        result = await answer.get_openai_toolcalls()
+        result = await answer.get_native_toolcalls()
         self.assertIsNotNone(result)
         self.assertEqual(len(result), 2)
         self.assertEqual(result[0]["id"], "tc_1")

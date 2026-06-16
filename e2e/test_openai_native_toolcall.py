@@ -77,7 +77,7 @@ async def test_openai_native_tool_call_generation():
     registry = Registry()
     answer, _ = await _stream_toolcall_answer(registry)
 
-    tool_calls = await answer.get_openai_toolcalls()
+    tool_calls = await answer.get_native_toolcalls()
     assert tool_calls is not None
     assert len(tool_calls) >= 1
     call = tool_calls[0]
@@ -93,7 +93,7 @@ async def test_openai_native_tool_call_multi_turn():
     registry = Registry()
     answer, _ = await _stream_toolcall_answer(registry)
 
-    tool_calls = await answer.get_openai_toolcalls()
+    tool_calls = await answer.get_native_toolcalls()
     assert tool_calls is not None
     call = tool_calls[0]
     assert call["name"] == "add"

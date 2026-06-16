@@ -543,10 +543,6 @@ class ParsedAnswer:
         tool_calls, errors = extract_tool_calls_with_errors(full_response)
         return tool_calls, errors
 
-    async def get_openai_toolcalls(self) -> list[NativeToolCallResult] | None:
-        """获取解析后的OpenAI工具调用列表，参数已解析为dict。"""
-        return await self._answer.get_openai_toolcalls()
-
-    async def get_anthropic_toolcalls(self) -> list[NativeToolCallResult] | None:
-        """获取解析后的Anthropic工具调用列表，参数已解析为dict。"""
-        return await self._answer.get_anthropic_toolcalls()
+    async def get_native_toolcalls(self) -> list[NativeToolCallResult] | None:
+        """获取解析后的原生工具调用列表，参数已解析为dict。"""
+        return await self._answer.get_native_toolcalls()

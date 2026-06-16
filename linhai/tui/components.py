@@ -20,6 +20,7 @@ from linhai.utils.i18n import t
 from linhai.parsed_message import (
     ToolCallSegment,
     OpenAiToolCallSegment,
+    AnthropicToolCallSegment,
     NormalSegment,
     ReasoningSegment,
     ParsedAnswer,
@@ -344,7 +345,7 @@ class ToolCallWidget(Static):
         self,
         pygments_theme: str,
         syntax_background: str | None,
-        segment: ToolCallSegment | OpenAiToolCallSegment,
+        segment: ToolCallSegment | OpenAiToolCallSegment | AnthropicToolCallSegment,
         get_refresh_interval: Callable[[], float],
     ):
         super().__init__()
@@ -423,7 +424,10 @@ class ToolCallWidget(Static):
         )
         simplified = BAD_TOOLCALL
         if not self._segment["is_corrupted"]:
-            if self._segment["segment_type"] == "openai_toolcall":
+            if self._segment["segment_type"] in (
+                "openai_toolcall",
+                "anthropic_toolcall",
+            ):
                 tool_name = self._segment["tool_name"] or "unknown"
                 simplified = _simplify_openai_toolcall(tool_name, self._segment["raw"])
             else:
@@ -778,7 +782,7 @@ class MessageWidget(Static):
             if i > 0:
                 self._content.mount(SpaceWidget())
             segment_type = segment_data["segment_type"]
-            if segment_type in ("toolcall", "openai_toolcall"):
+            if segment_type in ("toolcall", "openai_toolcall", "anthropic_toolcall"):
                 if segment_type == "toolcall":
                     seg = ToolCallSegment(
                         segment_type="toolcall",
@@ -788,9 +792,20 @@ class MessageWidget(Static):
                         markdown_representation=segment_data["markdown_representation"],
                         tool_name=segment_data["tool_name"],
                     )
-                else:
+                elif segment_type == "openai_toolcall":
                     seg = OpenAiToolCallSegment(
                         segment_type="openai_toolcall",
+                        idx=segment_data["idx"],
+                        id=segment_data["id"],
+                        raw=segment_data["raw"],
+                        is_finished=segment_data["is_finished"],
+                        is_corrupted=segment_data["is_corrupted"],
+                        markdown_representation=segment_data["markdown_representation"],
+                        tool_name=segment_data["tool_name"],
+                    )
+                else:
+                    seg = AnthropicToolCallSegment(
+                        segment_type="anthropic_toolcall",
                         idx=segment_data["idx"],
                         id=segment_data["id"],
                         raw=segment_data["raw"],
@@ -862,6 +877,7 @@ class MessageWidget(Static):
             if (
                 segment["segment_type"] == "toolcall"
                 or segment["segment_type"] == "openai_toolcall"
+                or segment["segment_type"] == "anthropic_toolcall"
             ):
                 widget = ToolCallWidget(
                     pygments_theme=self.pygments_theme,

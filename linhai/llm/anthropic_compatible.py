@@ -225,7 +225,7 @@ class AnthropicAnswer:
             estimated_cached_input_tokens=self.estimated_cached_input_tokens,
         )
 
-    async def get_anthropic_toolcalls(self) -> list[NativeToolCallResult] | None:
+    async def get_native_toolcalls(self) -> list[NativeToolCallResult] | None:
         if not self._anthropic_toolcall_parts:
             return None
 
@@ -261,9 +261,6 @@ class AnthropicAnswer:
                     )
                 )
         return parsed or None
-
-    async def get_openai_toolcalls(self) -> list[NativeToolCallResult] | None:
-        return None
 
 
 def _convert_content_to_anthropic(content) -> str | list[dict]:
