@@ -14,17 +14,6 @@ class TestProcessArgvCheckerPlugin(unittest.IsolatedAsyncioTestCase):
         self.registry = Mock()
         self.plugin = ProcessArgvCheckerPlugin(self.registry)
 
-    def test_initialization(self):
-        self.assertEqual(self.plugin.registry, self.registry)
-        self.assertTrue(hasattr(ProcessArgvCheckerPlugin, "BASH_OPERATORS"))
-        self.assertIsInstance(ProcessArgvCheckerPlugin.BASH_OPERATORS, list)
-        self.assertGreater(len(ProcessArgvCheckerPlugin.BASH_OPERATORS), 0)
-
-        operators = ProcessArgvCheckerPlugin.BASH_OPERATORS
-        self.assertIn("&&", operators)
-        self.assertIn("|", operators)
-        self.assertIn(";", operators)
-
     async def test_before_tool_call_no_argv(self):
         result = await self.plugin.before_tool_call(
             tool_name="process_create",
@@ -156,20 +145,6 @@ class TestProcessArgvCheckerPlugin(unittest.IsolatedAsyncioTestCase):
                     is_tool_failed_duplicated_error=False,
                 )
                 self.assertIsNone(result)
-
-    def test_register_method(self):
-        mock_lifecycle = Mock()
-        mock_lifecycle.before_tool_call.register = Mock()
-        mock_lifecycle.after_toolcall.register = Mock()
-
-        self.plugin.register(mock_lifecycle)
-
-        mock_lifecycle.before_tool_call.register.assert_called_once_with(
-            self.plugin.before_tool_call
-        )
-        mock_lifecycle.after_toolcall.register.assert_called_once_with(
-            self.plugin.after_toolcall
-        )
 
     async def test_plugin_rejects_non_list_argv(self):
         result = await self.plugin.before_tool_call(

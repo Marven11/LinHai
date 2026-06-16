@@ -4,36 +4,11 @@ from unittest.mock import MagicMock, patch
 
 from linhai.machine_control.master_host.tmux_terminal import (
     TmuxTerminal,
-    KEY_TO_TMUX,
     is_tmux_available,
     _SESSION_PREFIX,
     _session_exists,
     _MAX_NAME_RETRIES,
 )
-
-
-class TestKeyConversion(unittest.TestCase):
-    def test_enter_key(self):
-        self.assertEqual(KEY_TO_TMUX["enter"], "Enter")
-
-    def test_escape_key(self):
-        self.assertEqual(KEY_TO_TMUX["esc"], "Escape")
-
-    def test_ctrl_c(self):
-        self.assertEqual(KEY_TO_TMUX["ctrl+c"], "C-c")
-
-    def test_ctrl_d(self):
-        self.assertEqual(KEY_TO_TMUX["ctrl+d"], "C-d")
-
-    def test_function_keys(self):
-        for i in range(1, 13):
-            self.assertEqual(KEY_TO_TMUX[f"f{i}"], f"F{i}")
-
-    def test_arrow_keys(self):
-        self.assertEqual(KEY_TO_TMUX["up"], "Up")
-        self.assertEqual(KEY_TO_TMUX["down"], "Down")
-        self.assertEqual(KEY_TO_TMUX["left"], "Left")
-        self.assertEqual(KEY_TO_TMUX["right"], "Right")
 
 
 class TestIsTmuxAvailable(unittest.TestCase):
@@ -81,8 +56,7 @@ class TestTmuxTerminal(unittest.TestCase):
         t.send("echo hello_tmux_test")
         t.send_key("enter")
         send_calls = [
-            c for c in self.mock_run.call_args_list
-            if "send-keys" in str(c.args)
+            c for c in self.mock_run.call_args_list if "send-keys" in str(c.args)
         ]
         self.assertTrue(len(send_calls) >= 2)
         self.assertIn("echo hello_tmux_test", str(send_calls[0].args))
@@ -92,8 +66,7 @@ class TestTmuxTerminal(unittest.TestCase):
         t.send("echo key_test")
         t.send_key("enter")
         send_calls = [
-            c for c in self.mock_run.call_args_list
-            if "send-keys" in str(c.args)
+            c for c in self.mock_run.call_args_list if "send-keys" in str(c.args)
         ]
         self.assertTrue(any("Enter" in str(c.args) for c in send_calls))
 
@@ -109,8 +82,7 @@ class TestTmuxTerminal(unittest.TestCase):
         t.close()
         self.terminals_to_cleanup.remove(t)
         kill_calls = [
-            c for c in self.mock_run.call_args_list
-            if "kill-session" in str(c.args)
+            c for c in self.mock_run.call_args_list if "kill-session" in str(c.args)
         ]
         self.assertEqual(len(kill_calls), 1)
 

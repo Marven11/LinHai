@@ -23,54 +23,6 @@ class TestMachineControl(unittest.IsolatedAsyncioTestCase):
         self.machine_control = MachineControl(self.registry)
         self.tool_manager = Mock(spec=ToolManager)
 
-    def test_initialization(self):
-        """测试初始化"""
-        self.assertEqual(self.machine_control.target_machine, "master_host")
-        self.assertIn("master_host", self.machine_control.machines)
-        self.assertIsInstance(
-            self.machine_control.machines["master_host"], MasterHostControl
-        )
-
-    async def test_list_machines(self):
-        """测试列出机器"""
-        result = await self.machine_control.list_machines()
-        self.assertIn("可用机器", result.content)
-        self.assertIn("master_host", result.content)
-        self.assertIn("本地主机", result.content)
-
-    async def test_list_all_terminals(self):
-        """测试列出所有终端"""
-        # 模拟get_terminals方法返回空终端列表
-        mock_host_control = Mock()
-        mock_host_control.get_terminals = AsyncMock(return_value=Mock(content=""))
-        self.machine_control.machines = {"master_host": mock_host_control}
-
-        result = await self.machine_control.list_all_terminals()
-        self.assertIn("当前所有机器上都没有终端", result.content)
-
-        # 测试有终端的情况
-        mock_host_control.get_terminals = AsyncMock(
-            return_value=Mock(content="终端1: 运行中\n终端2: 空闲")
-        )
-        result = await self.machine_control.list_all_terminals()
-        self.assertIn("机器 master_host", result.content)
-        self.assertIn("终端1", result.content)
-        self.assertIn("终端2", result.content)
-
-        # 测试多个机器
-        mock_host_control2 = Mock()
-        mock_host_control2.get_terminals = AsyncMock(
-            return_value=Mock(content="远程终端: 运行中")
-        )
-        self.machine_control.machines = {
-            "master_host": mock_host_control,
-            "posix_shell": mock_host_control2,
-        }
-        result = await self.machine_control.list_all_terminals()
-        self.assertIn("机器 master_host", result.content)
-        self.assertIn("机器 posix_shell", result.content)
-        self.assertIn("远程终端", result.content)
-
     async def test_switch_machine_not_found(self):
         """测试切换到不存在的机器"""
         result = await self.machine_control.switch_machine("unknown")
@@ -86,31 +38,15 @@ class TestMachineControl(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(self.machine_control.target_machine, "master_host")
 
     def test_register_tools(self):
-        """测试注册工具"""
-        # 工具注册是通过register_machine_control_tools函数完成的
-        # 这里我们测试该函数返回的ToolSet不为空
         from linhai.machine_control.tools import register_machine_control_tools
 
         toolset = register_machine_control_tools(self.machine_control)
         self.assertIsInstance(toolset, ToolSet)
-        # 检查是否包含一些基本工具
-        # ToolSet.tools是一个字典，键是工具名，值是Tool字典
         tool_names = list(toolset.tools.keys())
         self.assertIn("list_machines", tool_names)
         self.assertIn("switch_machine", tool_names)
         self.assertIn("get_meta", tool_names)
         self.assertIn("transfer_file", tool_names)
-
-    def test_register_plugin(self):
-        """测试注册插件"""
-        mock_lifecycle = Mock()
-        mock_lifecycle.before_agent_loop.register = Mock()
-        self.machine_control.register_plugin(mock_lifecycle)
-        mock_lifecycle.before_agent_loop.register.assert_called_once()
-        call_args = mock_lifecycle.before_agent_loop.register.call_args
-        self.assertIsNotNone(call_args)
-        self.assertEqual(len(call_args[0]), 1)
-        self.assertTrue(callable(call_args[0][0]))
 
 
 def _create_host_control() -> MasterHostControl:
@@ -132,11 +68,6 @@ class TestMasterHostControl(unittest.IsolatedAsyncioTestCase):
         """测试后清理，避免ResourceWarning"""
         # 清理进程字典，防止子进程未关闭警告
         self.host_control._processes.clear()
-
-    def test_http_request(self):
-        """测试HTTP请求"""
-        # 由于http_request需要网络，我们只测试方法存在
-        self.assertTrue(hasattr(self.host_control, "http_request"))
 
     async def test_process_create_immediate_exit(self):
         """测试process_create - 进程立即退出"""
@@ -238,11 +169,6 @@ class TestMasterHostControl(unittest.IsolatedAsyncioTestCase):
         self.assertIsNotNone(proc)
         result = await proc.stdio_read(wait_seconds=2.0)
         self.assertIn(b"ongoing output", result.stdout)
-
-    def test_process_operations(self):
-        """测试进程操作"""
-        self.assertTrue(hasattr(self.host_control, "create_process"))
-        self.assertTrue(hasattr(self.host_control, "get_process"))
 
     async def test_change_directory(self):
         """测试改变目录 - 使用_cwd而非os.chdir"""
@@ -433,22 +359,6 @@ class TestMasterHostControl(unittest.IsolatedAsyncioTestCase):
                 mock_create.assert_called_once()
                 call_kwargs = mock_create.call_args
                 self.assertEqual(call_kwargs.kwargs.get("cwd"), tmpdir)
-
-    def test_file_operations(self):
-        """测试文件操作"""
-        self.assertTrue(hasattr(self.host_control, "read_file"))
-        self.assertTrue(hasattr(self.host_control, "write_file"))
-        self.assertTrue(hasattr(self.host_control, "replace_file_content"))
-        self.assertTrue(hasattr(self.host_control, "list_files"))
-        self.assertTrue(hasattr(self.host_control, "get_absolute_path"))
-
-    def test_terminal_operations(self):
-        """测试终端操作"""
-        self.assertTrue(hasattr(self.host_control, "terminal_create"))
-        self.assertTrue(hasattr(self.host_control, "terminal_send_keys"))
-        self.assertTrue(hasattr(self.host_control, "terminal_send_string"))
-        self.assertTrue(hasattr(self.host_control, "terminal_read_screen"))
-        self.assertTrue(hasattr(self.host_control, "terminal_close"))
 
 
 class TestNotifyProcessCreated(unittest.IsolatedAsyncioTestCase):

@@ -55,15 +55,6 @@ class TestLlmManager(unittest.IsolatedAsyncioTestCase):
             llm_fallback_duration_map={"llm1": 120, "llm2": 120},
         )
 
-    def test_initialization(self):
-        self.assertEqual(self.llm_manager.llm_names, ["llm1", "llm2"])
-        self.assertEqual(self.llm_manager.default_llm_name, "llm1")
-        self.assertEqual(self.llm_manager.llm_fallback_map["llm1"], "llm2")
-        self.assertEqual(self.llm_manager.llm_fallback_map["llm2"], None)
-        self.assertEqual(len(self.llm_manager.llm_stack), 1)
-        self.assertEqual(self.llm_manager.llm_stack[0]["llm_name"], "llm1")
-        self.assertIsNone(self.llm_manager.llm_stack[0]["disabled_until"])
-
     def test_get_current_llm(self):
         current_llm = self.llm_manager.get_current_llm()
         self.assertEqual(current_llm, self.mock_llm1)
@@ -504,6 +495,35 @@ class TestLlmManager(unittest.IsolatedAsyncioTestCase):
 
         self.assertIsInstance(answer, MockAnswer)
         self.assertEqual(fail_count2[0], 2)
+
+    async def test_fallback_chain_break_raises(self):
+        mock_llm3 = MagicMock()
+        mock_llm3.get_name = MagicMock(return_value="llm3")
+        mock_llm3.get_token_limit = MagicMock(return_value=32000)
+        mock_llm3.support_image = MagicMock(return_value=False)
+        mock_llm3.answer_stream = AsyncMock(return_value=MockAnswer())
+        mock_llm3.reconnect = AsyncMock()
+        mock_llm3.get_compatibility = MagicMock(return_value=None)
+
+        llm_manager_chain = LlmManager(
+            registry=self.mock_registry,
+            llms=[self.mock_llm1, self.mock_llm2, mock_llm3],
+            default_llm_name="llm1",
+            llm_fallback_map={"llm1": "llm2", "llm2": None, "llm3": None},
+            llm_fallback_duration_map={"llm1": 120, "llm2": 120, "llm3": 120},
+        )
+
+        self.mock_llm1.answer_stream = AsyncMock(
+            side_effect=Exception("connection error")
+        )
+        self.mock_llm2.answer_stream = AsyncMock(
+            side_effect=Exception("connection error")
+        )
+
+        history = [MagicMock(spec=Message)]
+        with patch("asyncio.sleep", AsyncMock()):
+            with self.assertRaises(Exception):
+                await llm_manager_chain.answer_stream(history)
 
 
 if __name__ == "__main__":

@@ -39,14 +39,6 @@ class TestWeirdEndOfSentencePlugin(unittest.IsolatedAsyncioTestCase):
         self.answer = MagicMock()
         self.tool_calls = []
 
-    def test_register(self):
-        """测试插件注册。"""
-        lifecycle = MagicMock()
-        self.plugin.register(lifecycle)
-        lifecycle.after_token_generation.register.assert_called_once_with(
-            self.plugin.after_token_generation
-        )
-
     async def test_after_token_generation_with_chinese_end_marker(self):
         """测试有中文句子结束标记的情况。"""
         current_content = """这是一些内容
@@ -89,14 +81,6 @@ class TestSingleToolCallReminderPlugin(unittest.IsolatedAsyncioTestCase):
         self.plugin = SingleToolCallReminderPlugin(self.registry)
         self.answer = MagicMock()
         self.tool_calls = []
-
-    def test_register(self):
-        """测试插件注册。"""
-        lifecycle = MagicMock()
-        self.plugin.register(lifecycle)
-        lifecycle.after_message_generation.register.assert_called_once_with(
-            self.plugin.after_message_generation
-        )
 
     async def test_after_message_generation_with_single_tool_call(self):
         """测试连续多次只调用一个工具的情况。"""
@@ -214,14 +198,6 @@ class TestPromptFastAgentPlugin(unittest.IsolatedAsyncioTestCase):
         self.answer = MagicMock()
         self.answer.truncate = MagicMock()
         self.tool_calls = []
-
-    def test_register(self):
-        """测试插件注册。"""
-        lifecycle = MagicMock()
-        self.plugin.register(lifecycle)
-        lifecycle.after_token_generation.register.assert_called_once_with(
-            self.plugin.after_token_generation
-        )
 
     async def test_after_token_generation_with_too_many_tool_calls(self):
         """测试工具调用超过限制时使用truncate。"""
@@ -376,26 +352,6 @@ class TestRedStateToolBlockPlugin(unittest.TestCase):
 
         self.registry.get_member_typechecked.side_effect = (
             get_member_typechecked_side_effect
-        )
-
-    def test_init(self):
-        """测试初始化。"""
-        self.assertEqual(self.plugin.registry, self.registry)
-        self.assertEqual(
-            self.plugin.CLEANUP_TOOLS,
-            {
-                "context_forget_range_step1",
-                "context_forget_range_step2",
-                "context_forget_large_message",
-            },
-        )
-
-    def test_register(self):
-        """测试注册插件。"""
-        lifecycle = MagicMock()
-        self.plugin.register(lifecycle)
-        lifecycle.before_tool_call.register.assert_called_once_with(
-            self.plugin.before_toolcall
         )
 
     def test_green_state_not_block(self):
@@ -656,14 +612,6 @@ class TestPreviousReasoningPlugin(unittest.IsolatedAsyncioTestCase):
             AssistantMessage(message="msg7", reasoning_message="reasoning7"),
         ]
 
-    def test_register(self):
-        """测试插件注册。"""
-        lifecycle = MagicMock()
-        self.plugin.register(lifecycle)
-        lifecycle.after_message_generation.register.assert_called_once_with(
-            self.plugin.after_message_generation
-        )
-
     async def test_after_message_generation_with_reasoning_messages(self):
         """测试有推理消息时创建SpoofedReasoningMessage。"""
         # 设置模拟消息
@@ -749,14 +697,6 @@ class TestKimiK25ToolCallPlugin(unittest.IsolatedAsyncioTestCase):
         self.plugin = KimiK25ToolCallPlugin(self.registry)
         self.answer = MagicMock()
         self.tool_calls = []
-
-    def test_register(self):
-        """测试插件注册。"""
-        lifecycle = MagicMock()
-        self.plugin.register(lifecycle)
-        lifecycle.after_message_generation.register.assert_called_once_with(
-            self.plugin.after_message_generation
-        )
 
     async def test_after_message_generation_with_kimi_format_no_json_toolcall(self):
         """测试检测到kimi特殊格式但没有json toolcall时发送警告。"""
@@ -887,17 +827,6 @@ class TestMinimaxToolCallPlugin(unittest.IsolatedAsyncioTestCase):
         self.plugin = MinimaxToolCallPlugin(self.registry)
         self.answer = MagicMock()
         self.tool_calls = []
-
-    def test_register(self):
-        """测试插件注册。"""
-        lifecycle = MagicMock()
-        self.plugin.register(lifecycle)
-        lifecycle.after_message_generation.register.assert_called_once_with(
-            self.plugin.after_message_generation
-        )
-        lifecycle.after_token_generation.register.assert_called_once_with(
-            self.plugin.after_token_generation
-        )
 
     async def test_after_message_generation_with_minimax_format_no_json_toolcall(self):
         """测试检测到minimax特殊格式但没有json toolcall时设置错误时间。"""

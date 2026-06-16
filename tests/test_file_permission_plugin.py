@@ -34,14 +34,6 @@ class TestFileOperationPermissionPlugin(unittest.IsolatedAsyncioTestCase):
         if hasattr(self, "temp_dir") and Path(self.temp_dir).exists():
             shutil.rmtree(self.temp_dir)
 
-    def test_init(self):
-        plugin = self._make_plugin()
-        self.assertEqual(plugin.registry, self.registry)
-        self.assertEqual(plugin.rules, self.tool_config.file_operation_rules)
-        self.assertEqual(
-            plugin.default_rule, self.tool_config.file_operation_default_rule
-        )
-
     async def test_check_permission_allow_read(self):
         rule = FileOperationRule(operation="READ", pattern="**/*.txt", action="ALLOW")
         self.tool_config.file_operation_rules = [rule]

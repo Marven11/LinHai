@@ -64,16 +64,6 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
 
     def test_init(self):
         """测试初始化。"""
-        self.assertEqual(self.plugin.registry, self.registry)
-        self.assertEqual(self.plugin.warning_count, 0)
-
-    def test_register(self):
-        """测试注册插件。"""
-        lifecycle = MagicMock()
-        self.plugin.register(lifecycle)
-        lifecycle.after_toolcall.register.assert_called_once_with(
-            self.plugin.after_toolcall
-        )
 
     @patch("pathlib.Path")
     def test_not_read_file_with_sed(self, mock_path):

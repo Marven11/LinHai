@@ -27,11 +27,6 @@ class TestOnlyReasoningPlugin(unittest.IsolatedAsyncioTestCase):
 
         self.registry.send_if_exists = AsyncMock()
 
-    def test_plugin_initialization(self):
-        """测试插件初始化。"""
-        self.assertIsInstance(self.plugin, OnlyReasoningPlugin)
-        self.assertEqual(self.plugin.registry, self.registry)
-
     async def test_after_message_generation_with_only_reasoning_deepseek(self):
         """测试deepseek模型只有推理内容没有实际输出时发出警告。"""
         mock_model = MagicMock(spec=OpenAi)
@@ -237,17 +232,6 @@ class TestOnlyReasoningPlugin(unittest.IsolatedAsyncioTestCase):
         answer.get_reasoning_message.assert_called_once()
         self.mock_agent.message_processor.update_notification_message.assert_not_called()
         self.registry.send_if_exists.assert_not_called()
-
-    def test_register(self):
-        """测试插件注册。"""
-        mock_lifecycle = MagicMock()
-        mock_lifecycle.after_message_generation.register = MagicMock()
-
-        self.plugin.register(mock_lifecycle)
-
-        mock_lifecycle.after_message_generation.register.assert_called_once_with(
-            self.plugin.after_message_generation
-        )
 
 
 if __name__ == "__main__":

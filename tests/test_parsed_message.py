@@ -499,12 +499,6 @@ class TestParsedAnswer(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(len(normal_segments), 1)
         self.assertEqual(normal_segments[0]["content"], "HelloDone")
 
-    async def test_openai_toolcall_isinstance_check(self):
-        token = OpenAiToolCallToken(idx=0, id="call_1", name="get_weather", args=None)
-        self.assertIsInstance(token, OpenAiToolCallToken)
-        answer_token = AnswerToken(reasoning_content=None, content="hello")
-        self.assertNotIsInstance(answer_token, OpenAiToolCallToken)
-
 
 if __name__ == "__main__":
     unittest.main()

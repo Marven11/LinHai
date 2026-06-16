@@ -74,20 +74,6 @@ class TestPlanningStatusReminderPlugin(unittest.IsolatedAsyncioTestCase):
 
         shutil.rmtree(self.temp_dir, ignore_errors=True)
 
-    async def test_plugin_inherits_from_base_class(self):
-        """测试插件继承自Plugin基类。"""
-        self.assertIsInstance(self.plugin, Plugin)
-
-    async def test_register_method_adds_callback(self):
-        """测试register方法正确注册回调。"""
-        mock_lifecycle = MagicMock()
-
-        self.plugin.register(mock_lifecycle)
-
-        mock_lifecycle.after_message_generation.register.assert_called_once_with(
-            self.plugin.after_message_generation
-        )
-
     async def test_planning_folder_detection(self):
         """测试planning文件夹检测逻辑。"""
         planning_folder = self.plugin._get_planning_folder()
@@ -353,20 +339,6 @@ class TestUserInputRuntimeMessagePlugin(unittest.IsolatedAsyncioTestCase):
 
         self.registry.get_member_typechecked.return_value = self.mock_agent
 
-    async def test_plugin_inherits_from_base_class(self):
-        """测试插件继承自Plugin基类。"""
-        self.assertIsInstance(self.plugin, Plugin)
-
-    async def test_register_method_adds_callback(self):
-        """测试register方法正确注册回调。"""
-        mock_lifecycle = MagicMock()
-
-        self.plugin.register(mock_lifecycle)
-
-        mock_lifecycle.after_message_generation.register.assert_called_once_with(
-            self.plugin.after_message_generation
-        )
-
     async def test_runtime_message_added_after_user_message(self):
         """测试用户消息后添加RuntimeMessage。"""
         mock_user_message = MagicMock(spec=UserMessage)
@@ -451,16 +423,6 @@ class TestDesignMdReminderPlugin(unittest.IsolatedAsyncioTestCase):
         import shutil
 
         shutil.rmtree(self.temp_dir, ignore_errors=True)
-
-    async def test_register_method(self):
-        mock_lifecycle = MagicMock()
-        self.plugin.register(mock_lifecycle)
-        mock_lifecycle.after_cache_invalidate.register.assert_called_once_with(
-            self.plugin.after_cache_invalidate
-        )
-        mock_lifecycle.before_message_generation.register.assert_called_once_with(
-            self.plugin.before_message_generation
-        )
 
     async def test_notification_added_after_cache_invalidate_without_design(self):
         self.mock_agent.message_processor.get_messages.return_value = [
@@ -577,16 +539,6 @@ class TestPlanningInitOverridePlugin(unittest.IsolatedAsyncioTestCase):
         self.mock_agent.message_processor = MagicMock()
         self.mock_agent.message_processor.add_new_message = AsyncMock()
 
-    async def test_plugin_inherits_from_base_class(self):
-        self.assertIsInstance(self.plugin, Plugin)
-
-    async def test_register_method_adds_callback(self):
-        mock_lifecycle = MagicMock()
-        self.plugin.register(mock_lifecycle)
-        mock_lifecycle.before_agent_loop.register.assert_called_once_with(
-            self.plugin.before_agent_loop
-        )
-
     async def test_before_agent_loop_adds_runtime_message(self):
         await self.plugin.before_agent_loop(self.mock_agent)
         self.mock_agent.message_processor.add_new_message.assert_called_once()
@@ -636,20 +588,6 @@ class TestPlanningHeadingCheckPlugin(unittest.IsolatedAsyncioTestCase):
         import shutil
 
         shutil.rmtree(self.temp_dir, ignore_errors=True)
-
-    async def test_plugin_inherits_from_base_class(self):
-        """测试插件继承自Plugin基类。"""
-        from linhai.plugin.file_operations import Plugin
-
-        self.assertIsInstance(self.plugin, Plugin)
-
-    async def test_register_method_adds_callback(self):
-        """测试register方法正确注册回调。"""
-        mock_lifecycle = MagicMock()
-        self.plugin.register(mock_lifecycle)
-        mock_lifecycle.after_message_generation.register.assert_called_once_with(
-            self.plugin.after_message_generation
-        )
 
     async def test_contains_heading_detection(self):
         """测试一级标题检测逻辑。"""

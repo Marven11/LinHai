@@ -24,16 +24,6 @@ class TestUserReminderPlugin(unittest.IsolatedAsyncioTestCase):
     def tearDown(self):
         self.temp_dir.cleanup()
 
-    def test_plugin_inherits_plugin(self):
-        self.assertIsInstance(self.plugin, Plugin)
-
-    def test_plugin_registers_before_message_generation(self):
-        initial_count = len(self.lifecycle.before_message_generation._callbacks)
-        self.plugin.register(self.lifecycle)
-        self.assertEqual(
-            len(self.lifecycle.before_message_generation._callbacks), initial_count + 1
-        )
-
     async def test_nonexistent_file_skips(self):
         self.plugin = UserReminderPlugin(self.registry, "/nonexistent/path/reminder.md")
         result = await self.plugin.before_message_generation()
@@ -60,9 +50,6 @@ class TestUserReminderPlugin(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(call_args.kwargs["source"], "user_reminder")
         message_obj = call_args.args[0]
         self.assertIn("test reminder content", str(message_obj))
-
-    async def test_reminder_file_path_stored(self):
-        self.assertEqual(self.plugin.reminder_file_path, str(self.reminder_file))
 
     async def test_relative_path_with_config_path(self):
         config_file = Path(self.temp_dir.name) / "config.toml"

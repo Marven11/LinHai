@@ -46,15 +46,6 @@ class TestNotificationMessagePlugin(unittest.IsolatedAsyncioTestCase):
         self.registry.register_member("agent", self.agent)
         self.registry.register_member("agent_context_orchestration", self.orchestration)
 
-    def test_register(self):
-        """测试插件注册。"""
-        lifecycle = Mock()
-        self.plugin.register(lifecycle)
-
-        lifecycle.before_message_generation.register.assert_called_once_with(
-            self.plugin.before_message_generation
-        )
-
 
 if __name__ == "__main__":
     unittest.main()

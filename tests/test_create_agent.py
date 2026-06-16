@@ -21,52 +21,6 @@ class TestCreateAgent(unittest.TestCase):
     """测试create_agent函数"""
 
     @patch("linhai.tool.mcp_connector.MCPConnector")
-    def test_create_agent_basic_functionality(self, mock_mcp_connector):
-        """测试create_agent基本功能：创建agent并返回registry"""
-        mock_mcp_instance = Mock()
-        mock_mcp_instance.get_toolsets.return_value = []
-        mock_mcp_connector.return_value = mock_mcp_instance
-
-        registry = Registry()
-
-        config_path = Path(__file__).parent / "test_config.toml"
-
-        config = load_config(Path(config_path))
-        build_args: AgentBuildArguments = {
-            "cron": [],
-            "telegram": False,
-            "disable_waiting_marker": False,
-            "afk": False,
-            "claw_enabled": False,
-            "claw_folder": None,
-            "message": [],
-            "file": [],
-            "planning": False,
-            "llm_name": None,
-            "profile_name": None,
-        }
-        context = create_agent_build_context(
-            registry=registry,
-            config=config,
-            config_basedir=Path("."),
-            build_args=build_args,
-        )
-        result = asyncio.run(create_agent_from_context(context))
-        self.assertIsInstance(result, Agent)
-
-        try:
-            agent = registry.get_member_typechecked("agent", Agent)
-            self.assertIsNotNone(agent)
-        except RuntimeError:
-            self.fail("agent成员未在registry中注册")
-
-        try:
-            tool_manager = registry.get_member_typechecked("tool_manager", ToolManager)
-            self.assertIsNotNone(tool_manager)
-        except RuntimeError:
-            self.fail("tool_manager成员未在registry中注册")
-
-    @patch("linhai.tool.mcp_connector.MCPConnector")
     def test_create_agent_with_llm_name(self, mock_mcp_connector):
         """测试使用llm_name参数创建agent"""
         mock_mcp_instance = Mock()

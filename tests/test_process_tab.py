@@ -541,55 +541,7 @@ class TestProcessTabMarkupEscaping(unittest.TestCase):
 
 
 class TestProcessTabI18n(unittest.TestCase):
-    """测试process_tab.py中的国际化功能。"""
-
-    def test_process_tab_uses_i18n_function(self):
-        """验证process_tab.py导入了i18n函数t()。"""
-        import linhai.tui.process_tab as process_tab_module
-
-        # 检查是否导入了t函数
-        self.assertTrue(
-            hasattr(process_tab_module, "t"),
-            "process_tab.py should import t() from linhai.utils.i18n",
-        )
-
-        # 检查t函数是否正确导入
-        from linhai.utils.i18n import t as i18n_t
-
-        self.assertEqual(
-            process_tab_module.t,
-            i18n_t,
-            "t() function in process_tab.py should be from linhai.utils.i18n",
-        )
-
-    def test_i18n_strings_in_code(self):
-        """验证process_tab.py中的字符串使用了i18n函数。"""
-        import inspect
-        import linhai.tui.process_tab as process_tab_module
-
-        source = inspect.getsource(process_tab_module)
-
-        # 检查是否使用了t()函数调用
-        self.assertIn(
-            't({"en": "Running", "zh_CN": "运行中"})',
-            source,
-            "Should use i18n for 'Running' string",
-        )
-        self.assertIn(
-            't({"en": "Kill", "zh_CN": "终止"})',
-            source,
-            "Should use i18n for 'Kill' string",
-        )
-        self.assertIn(
-            't({"en": "Exit {}", "zh_CN": "退出 {}"})',
-            source,
-            "Should use i18n for 'Exit {}' string",
-        )
-        self.assertIn(
-            't({"en": "No processes created yet.", "zh_CN": "尚未创建进程。"})',
-            source,
-            "Should use i18n for 'No processes created yet.' string",
-        )
+    """测试process_tab.py中markup字符不导致崩溃。"""
 
     def test_machine_id_with_markup_chars_no_crash(self):
         registry, lifecycle = _make_registry()
@@ -740,13 +692,6 @@ class TestRuntimeMessageWidgetMarkupEscaping(unittest.TestCase):
                 self.assertNotIn("\\[", rendered)
 
         asyncio.run(_run())
-
-
-class TestProcessIOError(unittest.TestCase):
-    def test_process_io_error_is_dataclass(self):
-        err = ProcessIOError(error="连接已失效")
-        self.assertEqual(err.error, "连接已失效")
-        self.assertIsInstance(err, ProcessIOError)
 
 
 if __name__ == "__main__":

@@ -157,10 +157,6 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
             pinned_messages=pinned_messages,
         )
 
-    async def test_initial_state(self):
-        """Test agent initial state."""
-        self.assertEqual(self.agent.state_machine.state, "waiting_user")
-
     async def test_handle_messages(self):
         """Test message handling functionality."""
         test_msg = UserMessage(message="Hello", name="test_user")

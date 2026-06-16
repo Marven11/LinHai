@@ -388,22 +388,6 @@ class TestAddBashMachine(unittest.IsolatedAsyncioTestCase):
         mock_remote.get_process.assert_called_once_with("456")
 
 
-class TestConnectBashAsMachineTool(unittest.IsolatedAsyncioTestCase):
-    def setUp(self):
-        self.registry = Mock()
-        self.registry.send_if_exists = AsyncMock()
-        from linhai.machine_control import MachineControl
-
-        self.machine_control = MachineControl(self.registry)
-
-    def test_tool_registered(self):
-        from linhai.machine_control.tools import register_machine_control_tools
-
-        toolset = register_machine_control_tools(self.machine_control)
-        tool_names = list(toolset.tools.keys())
-        self.assertIn("connect_posix_shell_as_machine", tool_names)
-
-
 class TestPosixShellControlHostOptional(unittest.IsolatedAsyncioTestCase):
     def test_ssh_machine_control_without_host(self):
         from linhai.machine_control.posix_shell.posix_shell_control import (

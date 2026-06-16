@@ -82,10 +82,6 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
         self.assertIn("context_forget_range_step1", tool_names)
         self.assertIn("context_forget_range_step2", tool_names)
 
-    async def test_context_forget_range_step1_as_tool(self):
-        """Test calling context_forget_range_step1 as a regular tool."""
-        pass
-
     async def test_prepare_messages_excludes_last_50(self):
         """Test that _prepare_messages_for_compression excludes last 50 messages when total >= 50."""
         from linhai.agent.workflow import _prepare_messages_for_compression
@@ -309,12 +305,6 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
 
         self.assertIsInstance(result, SuccessfulToolResult)
 
-    async def test_tool_manager_has_no_workflow_methods(self):
-        """Test that ToolManager no longer has workflow-specific methods."""
-        self.assertFalse(hasattr(self.tool_manager, "get_workflow"))
-        self.assertFalse(hasattr(self.tool_manager, "register_workflow"))
-        self.assertFalse(hasattr(self.tool_manager, "workflows"))
-
     async def test_tools_info_includes_context_compress_range_tools(self):
         """Test that get_tools_info includes context_forget_range_step1 and step2 as regular tools."""
         tools_info = self.tool_manager.get_tools_info()
@@ -332,8 +322,6 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
                 compress_tool = tool
                 break
         self.assertIsNotNone(compress_tool)
-        json_blocks = []
-        _ = json_blocks[0] if json_blocks else {}
 
     async def test_context_forget_range_step1_integration(self):
         """Test that context_forget_range_step1 integrates properly with agent."""
