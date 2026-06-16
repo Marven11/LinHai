@@ -11,8 +11,13 @@ class DecodeState(enum.Enum):
     COMPOSED = 2
 
 
+_SAFE_BYTES = frozenset(
+    b'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 {}[]":,._-\\'
+)
+
+
 def encode(data: bytes, marker: bytes, max_length: int, text_only: bool) -> list[bytes]:
-    if data.isascii() and data.decode("ascii").isprintable():
+    if text_only and data and _SAFE_BYTES.issuperset(data):
         text_only = False
     assert max_length > METADATA_MAX_LENGTH
     step = (
@@ -71,7 +76,7 @@ class PulseDecoder:
                     stream = stream[pos + len(self.marker) :]
                     self.is_waiting_marker = False
                 else:
-                    stream = stream[-len(self.marker):]
+                    stream = stream[-len(self.marker) :]
                     break
             else:
                 state, decoded, remains = decode(stream)

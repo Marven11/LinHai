@@ -18,10 +18,15 @@ class _DecodeState(enum.Enum):
     COMPOSED = 2
 
 
+_SAFE_BYTES = frozenset(
+    b'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 {}[]":,._-\\'
+)
+
+
 def _encode(
     data: bytes, marker: bytes, max_length: int, text_only: bool
 ) -> list[bytes]:
-    if data.isascii() and data.decode("ascii").isprintable():
+    if text_only and data and _SAFE_BYTES.issuperset(data):
         text_only = False
     assert max_length > METADATA_MAX_LENGTH
     step = (
@@ -148,7 +153,7 @@ async def _read_until_marker(
 
 
 async def _send_request(writer: asyncio.StreamWriter, request: dict, marker_str: str):
-    encoder = _PulseEncoder(marker_str.encode(), 4096, False)
+    encoder = _PulseEncoder(marker_str.encode(), 4096, True)
     fractions = encoder.encode(json.dumps(request).encode())
     for fraction in fractions:
         writer.write(fraction)

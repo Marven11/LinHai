@@ -51,8 +51,13 @@ class DecodeState(enum.Enum):
     COMPOSED = 2
 
 
+_SAFE_BYTES = frozenset(
+    b'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 {}[]":,._-\\'
+)
+
+
 def encode(data: bytes, marker: bytes, max_length: int, text_only: bool) -> list[bytes]:
-    if data.isascii() and data.decode("ascii").isprintable():
+    if text_only and data and _SAFE_BYTES.issuperset(data):
         text_only = False
     assert max_length > METADATA_MAX_LENGTH
     step = (
@@ -148,7 +153,7 @@ class Trojan:
     def __init__(self, marker_bytes: bytes, pulse_max_length: int = 4096):
         self.current_dir = os.getcwd()
         self._pulse_decoder = PulseDecoder(marker_bytes)
-        self._pulse_encoder = PulseEncoder(marker_bytes, pulse_max_length, False)
+        self._pulse_encoder = PulseEncoder(marker_bytes, pulse_max_length, True)
         self.terminals: Dict[str, TerminalDict] = {}
         self._processes: Dict[str, asyncio.subprocess.Process] = {}
         self.stdout_lock = asyncio.Lock()
