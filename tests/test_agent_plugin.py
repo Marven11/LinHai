@@ -72,6 +72,10 @@ class TestSingleToolCallReminderPlugin(unittest.IsolatedAsyncioTestCase):
         self.agent.message_processor = MagicMock()
         self.agent.message_processor.get_messages = MagicMock(return_value=[])
         self.agent.message_processor.add_new_message = AsyncMock()
+        self.agent.get_current_model = MagicMock()
+        self.agent.get_current_model.return_value.get_native_toolcall_format.return_value = (
+            False
+        )
         self.registry = MagicMock()
         self.registry.get_member_typechecked = MagicMock(
             side_effect=lambda name, t: self.agent
@@ -134,8 +138,8 @@ class TestSingleToolCallReminderPlugin(unittest.IsolatedAsyncioTestCase):
     async def test_after_message_generation_openai_format(self):
         """测试openai工具调用格式时也追踪连续单工具调用。"""
         self.agent.get_current_model = MagicMock()
-        self.agent.get_current_model.return_value.get_custom_toolcall_format.return_value = (
-            False
+        self.agent.get_current_model.return_value.get_native_toolcall_format.return_value = (
+            True
         )
         self.agent.message_processor.update_notification_message = MagicMock()
 
@@ -202,7 +206,8 @@ class TestPromptFastAgentPlugin(unittest.IsolatedAsyncioTestCase):
     async def test_after_token_generation_with_too_many_tool_calls(self):
         """测试工具调用超过限制时使用truncate。"""
         mock_model = MagicMock(spec=OpenAi)
-        mock_model.get_name.return_value = "minimax"  # 使用get_name()而不是name属性
+        mock_model.get_name.return_value = "minimax"
+        mock_model.get_native_toolcall_format.return_value = False
         self.agent.get_current_model = MagicMock(return_value=mock_model)
 
         self.agent.message_processor.get_messages.return_value = [
@@ -689,6 +694,9 @@ class TestKimiK25ToolCallPlugin(unittest.IsolatedAsyncioTestCase):
         self.agent = MagicMock()
         self.agent.message_processor = MagicMock()
         self.agent.message_processor.add_new_message = AsyncMock()
+        self.agent.get_current_model.return_value.get_native_toolcall_format.return_value = (
+            False
+        )
         self.registry = MagicMock()
         self.registry.get_member_typechecked = MagicMock(return_value=self.agent)
         self.registry.send_if_exists = AsyncMock()
@@ -819,6 +827,9 @@ class TestMinimaxToolCallPlugin(unittest.IsolatedAsyncioTestCase):
         self.agent.message_processor = MagicMock()
         self.agent.message_processor.add_new_message = AsyncMock()
         self.agent.agent_llm = AsyncMock()
+        self.agent.get_current_model.return_value.get_native_toolcall_format.return_value = (
+            False
+        )
         self.registry = MagicMock()
         self.registry.get_member_typechecked = MagicMock(return_value=self.agent)
         self.registry.send_if_exists = AsyncMock()

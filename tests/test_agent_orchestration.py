@@ -77,6 +77,9 @@ class TestAgentContextOrchestration(unittest.IsolatedAsyncioTestCase):
         mock_agent = Mock(spec=Agent)
         mock_agent.message_processor = self.message_processor
         mock_agent.get_threshold_info = Mock(return_value=None)
+        mock_agent.get_current_model.return_value.get_native_toolcall_format.return_value = (
+            False
+        )
         self.registry.register_member("agent", mock_agent)
 
     async def test_add_soft_threshold_notification(self):

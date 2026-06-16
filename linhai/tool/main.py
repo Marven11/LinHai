@@ -232,7 +232,7 @@ class ToolManager:
         system_message.remove_introduction("TOOLS")
 
         agent = self.registry.get_member_typechecked("agent", Agent)
-        if not agent.get_current_model().get_custom_toolcall_format():
+        if agent.get_current_model().get_native_toolcall_format():
             return
 
         tools_info = self.get_tools_info()

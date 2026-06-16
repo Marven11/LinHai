@@ -19,6 +19,9 @@ class TestRuntimeImitationPlugin(unittest.IsolatedAsyncioTestCase):
         self.agent.agent_llm.interrupt = AsyncMock()
         self.agent.agent_llm = AsyncMock()
         self.agent.get_current_model = MagicMock()
+        self.agent.get_current_model.return_value.get_native_toolcall_format.return_value = (
+            False
+        )
 
         self.registry = MagicMock()
         self.registry.get_member_typechecked = MagicMock(return_value=self.agent)
@@ -40,6 +43,7 @@ class TestRuntimeImitationPlugin(unittest.IsolatedAsyncioTestCase):
         # 模拟deepseek模型
         mock_model = MagicMock(spec=OpenAi)
         mock_model.compatibility = "deepseek"
+        mock_model.get_native_toolcall_format.return_value = False
         self.agent.get_current_model = MagicMock(return_value=mock_model)
 
         current_content = "<<tool>>"
@@ -59,6 +63,7 @@ class TestRuntimeImitationPlugin(unittest.IsolatedAsyncioTestCase):
         # 模拟deepseek模型
         mock_model = MagicMock(spec=OpenAi)
         mock_model.compatibility = "deepseek"
+        mock_model.get_native_toolcall_format.return_value = False
         self.agent.get_current_model = MagicMock(return_value=mock_model)
 
         # <<tool>>出现在第二行，前面有换行符
@@ -79,6 +84,7 @@ class TestRuntimeImitationPlugin(unittest.IsolatedAsyncioTestCase):
         # 模拟deepseek模型
         mock_model = MagicMock(spec=OpenAi)
         mock_model.compatibility = "deepseek"
+        mock_model.get_native_toolcall_format.return_value = False
         self.agent.get_current_model = MagicMock(return_value=mock_model)
 
         # <<tool>>前面有空格
@@ -97,6 +103,7 @@ class TestRuntimeImitationPlugin(unittest.IsolatedAsyncioTestCase):
         # 模拟deepseek模型
         mock_model = MagicMock(spec=OpenAi)
         mock_model.compatibility = "deepseek"
+        mock_model.get_native_toolcall_format.return_value = False
         self.agent.get_current_model = MagicMock(return_value=mock_model)
 
         current_content = "<<agent>>"
@@ -115,6 +122,7 @@ class TestRuntimeImitationPlugin(unittest.IsolatedAsyncioTestCase):
         # 模拟非deepseek模型
         mock_model = MagicMock(spec=OpenAi)
         mock_model.compatibility = "qwen"
+        mock_model.get_native_toolcall_format.return_value = False
         self.agent.get_current_model = MagicMock(return_value=mock_model)
 
         current_content = "<<tool>>"
@@ -132,6 +140,7 @@ class TestRuntimeImitationPlugin(unittest.IsolatedAsyncioTestCase):
         # 模拟deepseek模型
         mock_model = MagicMock(spec=OpenAi)
         mock_model.compatibility = "deepseek"
+        mock_model.get_native_toolcall_format.return_value = False
         self.agent.get_current_model = MagicMock(return_value=mock_model)
 
         current_content = "<tool>{"

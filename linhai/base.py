@@ -566,8 +566,8 @@ class LanguageModel(Protocol):
         """获取兼容性标识（如deepseek/glm/minimax/kimi/None）。"""
         raise NotImplementedError()
 
-    def get_custom_toolcall_format(self) -> bool:
-        """获取是否使用自定义json toolcall代码块格式。"""
+    def get_native_toolcall_format(self) -> bool:
+        """获取是否使用OpenAI原生tool calling格式。"""
         raise NotImplementedError()
 
     async def reconnect(self) -> None:

@@ -307,7 +307,7 @@ class JsonCodeBlockPlugin(Plugin):
         full_response = parsed_answer.get_message().get_content() or ""
         agent = self.registry.get_member_typechecked("agent", Agent)
 
-        if not agent.get_current_model().get_custom_toolcall_format():
+        if agent.get_current_model().get_native_toolcall_format():
             return
 
         json_tool_calls, json_errors = extract_tool_calls_with_errors(
@@ -351,7 +351,7 @@ class KimiK25ToolCallPlugin(Plugin):
         current_content: str,
     ) -> bool:
         """在token生成后检查是否需要打断agent。"""
-        if not agent.get_current_model().get_custom_toolcall_format():
+        if agent.get_current_model().get_native_toolcall_format():
             return False
 
         if self._last_error_format_time is None:
@@ -381,7 +381,7 @@ class KimiK25ToolCallPlugin(Plugin):
             return
 
         agent = self.registry.get_member_typechecked("agent", Agent)
-        if not agent.get_current_model().get_custom_toolcall_format():
+        if agent.get_current_model().get_native_toolcall_format():
             return
 
         has_kimi_marker = "<|tool_call_begin|>" in full_response
@@ -452,7 +452,7 @@ class MinimaxToolCallPlugin(Plugin):
         _answer: Answer,
         current_content: str,
     ) -> bool:
-        if not agent.get_current_model().get_custom_toolcall_format():
+        if agent.get_current_model().get_native_toolcall_format():
             return False
 
         if self._last_error_format_time is None:
@@ -482,7 +482,7 @@ class MinimaxToolCallPlugin(Plugin):
             return
 
         agent = self.registry.get_member_typechecked("agent", Agent)
-        if not agent.get_current_model().get_custom_toolcall_format():
+        if agent.get_current_model().get_native_toolcall_format():
             return
 
         has_minimax_marker = "<minimax:tool_call>" in full_response
@@ -572,7 +572,7 @@ class RuntimeImitationPlugin(Plugin):
     ):
         """检查deepseek等是否在模仿runtime输出并阻断。"""
 
-        if not agent.get_current_model().get_custom_toolcall_format():
+        if agent.get_current_model().get_native_toolcall_format():
             return False
 
         if matches := re.search(r"^\s*<<([a-z_]+)>>", current_content, re.MULTILINE):
@@ -616,7 +616,7 @@ class GlmToolCallPlugin(Plugin):
         if model.get_compatibility() != "glm":
             return
 
-        if not model.get_custom_toolcall_format():
+        if not model.get_native_toolcall_format():
             return
         full_response = parsed_answer.get_message().get_content() or ""
 

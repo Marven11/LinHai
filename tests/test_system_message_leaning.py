@@ -55,7 +55,7 @@ class TestMachineControlPlugin(unittest.TestCase):
         self.assertEqual(first_prompt, second_prompt)
 
 
-class TestCustomToolcallFormatPlugin(unittest.TestCase):
+class TestNativeToolcallFormatPlugin(unittest.TestCase):
     def setUp(self):
         self.mock_registry = MagicMock()
         self.mock_registry.members = {}
@@ -68,17 +68,17 @@ class TestCustomToolcallFormatPlugin(unittest.TestCase):
         self.system_message = SystemMessage(self.mock_registry)
         self.mock_registry.members["system_message"] = self.system_message
 
-        from linhai.plugin.system_message_leaning import CustomToolcallFormatPlugin
+        from linhai.plugin.system_message_leaning import NativeToolcallFormatPlugin
 
-        self.plugin = CustomToolcallFormatPlugin(self.mock_registry)
+        self.plugin = NativeToolcallFormatPlugin(self.mock_registry)
 
-    async def call_after_helper(self, custom_format):
+    async def call_after_helper(self, native_format):
         mock_llm = MagicMock()
-        mock_llm.get_custom_toolcall_format.return_value = custom_format
+        mock_llm.get_native_toolcall_format.return_value = native_format
         await self.plugin.after_selecting_llm(mock_llm)
 
-    def test_removes_examples_when_custom_format_false(self):
-        asyncio.run(self.call_after_helper(False))
+    def test_removes_examples_when_native_format_true(self):
+        asyncio.run(self.call_after_helper(True))
         prompt = self.system_message.get_content()
         self.assertNotIn("json toolcall", prompt)
         example_titles = [t for t, _ in self.system_message.examples_items]
@@ -87,28 +87,28 @@ class TestCustomToolcallFormatPlugin(unittest.TestCase):
         self.assertNotIn("MULTIHOP MACHINES", example_titles)
         self.assertNotIn("SUDO BASH MACHINE", example_titles)
 
-    def test_keeps_examples_when_custom_format_true(self):
-        asyncio.run(self.call_after_helper(True))
+    def test_keeps_examples_when_native_format_false(self):
+        asyncio.run(self.call_after_helper(False))
         example_titles = [t for t, _ in self.system_message.examples_items]
         self.assertIn("TOOL CALL", example_titles)
         self.assertIn("SECRET", example_titles)
         self.assertIn("MULTIHOP MACHINES", example_titles)
         self.assertIn("SUDO BASH MACHINE", example_titles)
 
-    def test_removes_introductions_when_custom_format_false(self):
-        asyncio.run(self.call_after_helper(False))
+    def test_removes_introductions_when_native_format_true(self):
+        asyncio.run(self.call_after_helper(True))
         intro_titles = [t for t, _ in self.system_message.introduction_items]
         self.assertNotIn("TOOL USE", intro_titles)
         self.assertNotIn("WAITING USER AND AUTO RUN", intro_titles)
 
-    def test_idempotent_when_false(self):
+    def test_idempotent_when_native_format_false(self):
         asyncio.run(self.call_after_helper(False))
         first_prompt = self.system_message.get_content()
         asyncio.run(self.call_after_helper(False))
         second_prompt = self.system_message.get_content()
         self.assertEqual(first_prompt, second_prompt)
 
-    def test_idempotent_when_true(self):
+    def test_idempotent_when_native_format_true(self):
         asyncio.run(self.call_after_helper(True))
         first_prompt = self.system_message.get_content()
         asyncio.run(self.call_after_helper(True))
@@ -116,11 +116,11 @@ class TestCustomToolcallFormatPlugin(unittest.TestCase):
         self.assertEqual(first_prompt, second_prompt)
 
     def test_toggle_back_and_forth(self):
-        asyncio.run(self.call_after_helper(False))
+        asyncio.run(self.call_after_helper(True))
         example_titles_off = [t for t, _ in self.system_message.examples_items]
         self.assertNotIn("TOOL CALL", example_titles_off)
 
-        asyncio.run(self.call_after_helper(True))
+        asyncio.run(self.call_after_helper(False))
         example_titles_on = [t for t, _ in self.system_message.examples_items]
         self.assertIn("TOOL CALL", example_titles_on)
         self.assertIn("SECRET", example_titles_on)

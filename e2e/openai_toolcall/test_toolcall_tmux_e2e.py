@@ -25,7 +25,7 @@ def _create_test_config(config_path: Path) -> None:
         f'base_url = "{BASE_URL}"\n'
         f'api_key = "{API_KEY}"\n'
         f'model = "{MODEL}"\n'
-        f"custom_toolcall_format = false\n"
+        f"native_toolcall_format = true\n"
         f"\n"
         f"[[agent]]\n"
         f"compress_threshold = 0.8\n"

@@ -68,6 +68,7 @@ class TestAgentMarkerValidation(unittest.IsolatedAsyncioTestCase):
         self.mock_llm.answer_stream = AsyncMock()
         self.mock_llm.get_name = MagicMock(return_value="test-llm")
         self.mock_llm.get_explicit_cache_info = MagicMock(return_value=None)
+        self.mock_llm.get_native_toolcall_format = MagicMock(return_value=False)
 
         config = {
             "llms": [self.mock_llm],

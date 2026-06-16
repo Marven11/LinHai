@@ -108,6 +108,7 @@ class TestPromptFastAgentPlugin(unittest.TestCase):
 
         model = MagicMock(spec=OpenAi)
         model.get_name.return_value = "test-llm"
+        model.get_native_toolcall_format.return_value = False
         agent.get_current_model.return_value = model
 
         answer = MagicMock(spec=Answer)

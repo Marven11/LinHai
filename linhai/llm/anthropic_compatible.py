@@ -319,7 +319,7 @@ class AnthropicLanguageModel:
         compress_threshold: int | float | None,
         compatibility: str | None,
         name: str,
-        custom_toolcall_format: bool = True,
+        native_toolcall_format: bool = False,
     ):
         self.registry = registry
         self.model = model
@@ -342,15 +342,15 @@ class AnthropicLanguageModel:
         self.name = name
         self._support_image = support_image
         self._explicit_cache_info = explicit_cache_info
-        self._custom_toolcall_format = custom_toolcall_format
+        self._native_toolcall_format = native_toolcall_format
         self.previous_history: Sequence[Message] | None = None
         self.previous_input_tokens: int | None = None
 
     def get_compatibility(self) -> str | None:
         return self.compatibility
 
-    def get_custom_toolcall_format(self) -> bool:
-        return self._custom_toolcall_format
+    def get_native_toolcall_format(self) -> bool:
+        return self._native_toolcall_format
 
     def support_image(self):
         return self._support_image
@@ -540,7 +540,7 @@ class AnthropicLanguageModel:
         if system_prompt:
             params["system"] = system_prompt
 
-        if not self._custom_toolcall_format:
+        if self._native_toolcall_format:
             from linhai.tool.main import ToolManager
 
             tool_manager = self.registry.get_member_typechecked(

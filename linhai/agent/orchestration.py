@@ -712,9 +712,9 @@ class NotificationMessagePlugin:
             )
             cleanable_count = len(cleanable_messages)
 
-            custom_format = agent.get_current_model().get_custom_toolcall_format()
+            native_format = agent.get_current_model().get_native_toolcall_format()
 
-            if custom_format:
+            if not native_format:
                 if cleanable_count >= MIN_CLEANABLE_LARGE_MESSAGES:
                     example_call = (
                         '{"name": "context_forget_large_message", "arguments": {}}'

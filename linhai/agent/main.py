@@ -247,7 +247,7 @@ class Agent:
         await self.message_processor.add_new_message(message)
 
         current_llm = self.llm_manager.get_current_llm()
-        if not current_llm.get_custom_toolcall_format():
+        if current_llm.get_native_toolcall_format():
             parsed_toolcalls = await parsed_answer.get_openai_toolcalls()
             if parsed_toolcalls is None:
                 parsed_toolcalls = await parsed_answer.get_anthropic_toolcalls()

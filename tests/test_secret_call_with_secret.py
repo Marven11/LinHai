@@ -231,7 +231,7 @@ class TestSecretToolsetPlugin(unittest.TestCase):
 
         mock_agent = MagicMock()
         mock_llm = MagicMock()
-        mock_llm.get_custom_toolcall_format.return_value = True
+        mock_llm.get_native_toolcall_format.return_value = False
         mock_agent.get_current_model.return_value = mock_llm
 
         mock_tool_manager = MagicMock()
@@ -256,7 +256,7 @@ class TestSecretToolsetPlugin(unittest.TestCase):
 
         mock_agent = MagicMock()
         mock_llm = MagicMock()
-        mock_llm.get_custom_toolcall_format.return_value = False
+        mock_llm.get_native_toolcall_format.return_value = True
         mock_agent.get_current_model.return_value = mock_llm
 
         mock_tool_manager = MagicMock()

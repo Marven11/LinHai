@@ -500,7 +500,7 @@ async def _create_llm_instances(context: "AgentBuildContext") -> LlmManager:
                 name=llm_config.name,
                 support_image=llm_config.support_image,
                 explicit_cache_info=_build_explicit_cache_info(llm_config),
-                custom_toolcall_format=llm_config.custom_toolcall_format,
+                native_toolcall_format=llm_config.native_toolcall_format,
             )
         else:
             llm = OpenAi(
@@ -516,7 +516,7 @@ async def _create_llm_instances(context: "AgentBuildContext") -> LlmManager:
                 name=llm_config.name,
                 support_image=llm_config.support_image,
                 explicit_cache_info=_build_explicit_cache_info(llm_config),
-                custom_toolcall_format=llm_config.custom_toolcall_format,
+                native_toolcall_format=llm_config.native_toolcall_format,
             )
         llms.append(llm)
 

@@ -470,7 +470,7 @@ class OpenAi:
         compress_threshold: int | float | None = None,
         compatibility: str | None = None,
         name: str,
-        custom_toolcall_format: bool = True,
+        native_toolcall_format: bool = False,
     ):
         """初始化OpenAI语言模型。
 
@@ -511,13 +511,13 @@ class OpenAi:
         self._minimax_warning_sent: bool = False
         self._support_image = support_image
         self._explicit_cache_info = explicit_cache_info
-        self._custom_toolcall_format = custom_toolcall_format
+        self._native_toolcall_format = native_toolcall_format
 
     def get_compatibility(self) -> str | None:
         return self.compatibility
 
-    def get_custom_toolcall_format(self) -> bool:
-        return self._custom_toolcall_format
+    def get_native_toolcall_format(self) -> bool:
+        return self._native_toolcall_format
 
     def support_image(self):
         return self._support_image
@@ -689,7 +689,7 @@ class OpenAi:
 
         if self.tools:
             params["tools"] = self.tools
-        elif not self._custom_toolcall_format:
+        elif self._native_toolcall_format:
             from linhai.tool.main import ToolManager
 
             tool_manager = self.registry.get_member_typechecked(

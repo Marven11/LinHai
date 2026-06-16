@@ -343,7 +343,7 @@ class SecretToolsetPlugin:
         )
 
         current_llm = agent.get_current_model()
-        use_custom = current_llm.get_custom_toolcall_format()
+        use_custom = not current_llm.get_native_toolcall_format()
 
         if use_custom:
             tool_manager.set_toolset_enabled("secret_wrapper", False)

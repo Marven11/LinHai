@@ -19,7 +19,7 @@ class TestKimiK25ToolCallPlugin(unittest.IsolatedAsyncioTestCase):
         self.agent = AsyncMock()
         self.agent.get_current_model = MagicMock(
             return_value=MagicMock(
-                get_custom_toolcall_format=MagicMock(return_value=True)
+                get_native_toolcall_format=MagicMock(return_value=False)
             )
         )
         self.answer = MagicMock(spec=Answer)

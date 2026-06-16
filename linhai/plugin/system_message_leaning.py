@@ -50,7 +50,7 @@ class CurrentDirectoryPlugin(Plugin):
         lifecycle.before_agent_loop.register(self._before_agent_loop)
 
 
-class CustomToolcallFormatPlugin(Plugin):
+class NativeToolcallFormatPlugin(Plugin):
 
     _TOOLCALL_EXAMPLE_TITLES = (
         "TOOL CALL",
@@ -77,7 +77,7 @@ class CustomToolcallFormatPlugin(Plugin):
             t in self._TOOLCALL_EXAMPLE_TITLES for t, _ in system_message.examples_items
         )
 
-        if llm.get_custom_toolcall_format():
+        if not llm.get_native_toolcall_format():
             if not has_tool_use:
                 from linhai.prompt import INTRODUCTION_TOOL_USE
 

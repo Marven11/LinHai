@@ -33,8 +33,8 @@ class FakeOpenAiLlm:
         self.responses = responses
         self._idx = 0
 
-    def get_custom_toolcall_format(self):
-        return False
+    def get_native_toolcall_format(self):
+        return True
 
     def get_token_limit(self):
         return 65536

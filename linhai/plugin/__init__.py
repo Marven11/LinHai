@@ -57,7 +57,7 @@ from .claw import ClawHeartbeatPlugin
 from .system_message_leaning import (
     MachineControlIntroductionPlugin,
     CurrentDirectoryPlugin,
-    CustomToolcallFormatPlugin,
+    NativeToolcallFormatPlugin,
 )
 from .planning import TodolistCheckerPlugin, PlanningHeadingCheckPlugin
 from .reminder import ReminderPlugin, ReminderWriteGuardPlugin
@@ -125,7 +125,7 @@ __all__ = [
     "SudoBashHintPlugin",
     "StdioCommandCheckerPlugin",
     "PkillCheckerPlugin",
-    "CustomToolcallFormatPlugin",
+    "NativeToolcallFormatPlugin",
     "TelegramReactionReminderPlugin",
     "InterlinkPlugin",
 ]

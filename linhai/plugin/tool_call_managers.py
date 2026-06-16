@@ -63,7 +63,7 @@ class PromptFastAgentPlugin(Plugin):
         if max_toolcall is None:
             return False
 
-        if not agent.get_current_model().get_custom_toolcall_format():
+        if agent.get_current_model().get_native_toolcall_format():
             return False
 
         if current_content.count("\n```json toolcall") > max_toolcall:
@@ -111,7 +111,7 @@ class SlowStartPlugin(Plugin):
         self, agent: "Agent", answer: Answer, current_content: str
     ) -> bool:
         """在消息生成过程中检查是否错误输出了工具调用内容。"""
-        if not agent.get_current_model().get_custom_toolcall_format():
+        if agent.get_current_model().get_native_toolcall_format():
             return False
 
         if not self.enabled:
@@ -164,7 +164,7 @@ class WeirdTokenPlugin(Plugin):
                 return False
             if (
                 model.get_compatibility() == "minimax"
-                and model.get_custom_toolcall_format()
+                and not model.get_native_toolcall_format()
                 and line == "<tool_call>"
             ):
                 await agent.agent_llm.interrupt(
@@ -189,13 +189,13 @@ class SingleToolCallReminderPlugin(Plugin):
     async def after_message_generation(self, parsed_answer, tool_calls: list[dict]):
         """检查是否连续多次只调用了一个工具。"""
         agent = self.registry.get_member_typechecked("agent", Agent)
-        is_custom_format = agent.get_current_model().get_custom_toolcall_format()
+        is_native_format = agent.get_current_model().get_native_toolcall_format()
 
         if len(tool_calls) == 1:
             self.single_tool_call_count += 1
 
             if self.single_tool_call_count >= 2:
-                if is_custom_format:
+                if not is_native_format:
                     notification = RuntimeMessage(
                         t(
                             {
@@ -261,7 +261,7 @@ class ToolCallInReasoningPlugin(Plugin):
         """检查推理内容中是否包含工具调用，且实际输出中没有调用工具。"""
         agent = self.registry.get_member_typechecked("agent", Agent)
 
-        if not agent.get_current_model().get_custom_toolcall_format():
+        if agent.get_current_model().get_native_toolcall_format():
             return
 
         reasoning_content = parsed_answer._answer.get_reasoning_message()

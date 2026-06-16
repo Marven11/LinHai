@@ -155,12 +155,16 @@ class TestAfterConversationRestoreCallbacks(unittest.IsolatedAsyncioTestCase):
         from linhai.agent.main import Agent
 
         mock_agent = create_autospec(Agent, instance=True)
+        mock_agent.get_current_model.return_value.get_native_toolcall_format.return_value = (
+            False
+        )
         registry.register_member("agent", mock_agent)
         from linhai.llm_manager import LlmManager
 
         mock_llm_manager = create_autospec(LlmManager, instance=True)
         mock_llm = MagicMock()
         mock_llm.get_explicit_cache_info = MagicMock(return_value=None)
+        mock_llm.get_native_toolcall_format = MagicMock(return_value=False)
         mock_llm_manager.get_current_llm = MagicMock(return_value=mock_llm)
         registry.register_member("llm_manager", mock_llm_manager)
         registry.register_member("conversation_folder", Path(self.temp_dir.name))
