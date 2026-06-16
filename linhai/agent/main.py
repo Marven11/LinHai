@@ -249,6 +249,8 @@ class Agent:
         current_llm = self.llm_manager.get_current_llm()
         if not current_llm.get_custom_toolcall_format():
             parsed_toolcalls = await parsed_answer.get_openai_toolcalls()
+            if parsed_toolcalls is None:
+                parsed_toolcalls = await parsed_answer.get_anthropic_toolcalls()
             if parsed_toolcalls:
                 self.toolcall_processor.start_new_tool_call_round()
                 await self.toolcall_processor.call_openai_tools(parsed_toolcalls)

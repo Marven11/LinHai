@@ -18,7 +18,7 @@ from pydantic import BaseModel
 from linhai.type_hints import (
     LanguageModelMessage,
     OpenAiToolCall,
-    OpenAiToolCallResult,
+    NativeToolCallResult,
     UserMessage as UserMsgType,
     AssistantMessage as AsstMsgType,
     ToolResultMsg,
@@ -420,6 +420,15 @@ class OpenAiToolCallToken(BaseModel):
     args: str | None = None
 
 
+class AnthropicToolCallToken(BaseModel):
+    """Anthropic原生工具调用的token表示。"""
+
+    idx: int
+    id: str | None = None
+    name: str | None = None
+    args: str | None = None
+
+
 class AnswerTokenUsage(BaseModel):
     input_tokens: int
     output_tokens: int
@@ -482,7 +491,9 @@ def extract_usage(usage_dict: dict[str, Any]) -> AnswerTokenUsage | None:
 class Answer(Protocol):
     """LLM的一个回答"""
 
-    def __aiter__(self) -> AsyncIterator[AnswerToken | OpenAiToolCallToken]:
+    def __aiter__(
+        self,
+    ) -> AsyncIterator[AnswerToken | OpenAiToolCallToken | AnthropicToolCallToken]:
         """流式返回LLM的回答，iterator中的每个item是一个token"""
         raise NotImplementedError
 
@@ -510,8 +521,12 @@ class Answer(Protocol):
         """获取token使用情况"""
         raise NotImplementedError
 
-    async def get_openai_toolcalls(self) -> list[OpenAiToolCallResult] | None:
+    async def get_openai_toolcalls(self) -> list[NativeToolCallResult] | None:
         """获取解析后的OpenAI工具调用列表，参数已解析为dict"""
+        raise NotImplementedError
+
+    async def get_anthropic_toolcalls(self) -> list[NativeToolCallResult] | None:
+        """获取解析后的Anthropic工具调用列表，参数已解析为dict"""
         raise NotImplementedError
 
 

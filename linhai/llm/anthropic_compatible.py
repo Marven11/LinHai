@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import asyncio
+import json
 from typing import Sequence
 
 import anthropic
@@ -11,12 +13,15 @@ from linhai.base import (
     AnswerToken,
     AnswerTokenUsage,
     AssistantMessage,
+    AnthropicToolCallToken,
     ExplicitCacheInfo,
     Message,
     extract_usage,
 )
 from linhai.type_hints import (
-    OpenAiToolCallResult,
+    ParsedAnthropicToolCall,
+    FailedAnthropicToolCall,
+    NativeToolCallResult,
 )
 import linhai
 
@@ -44,7 +49,9 @@ class AnthropicAnswer:
         self.cached_input_tokens: int | None = None
         self.cache_creation_input_tokens: int | None = None
         self.llm_instance = llm_instance
-        self.toyield: list[AnswerToken] = []
+        self.toyield: list[AnswerToken | AnthropicToolCallToken] = []
+        self._anthropic_toolcall_parts: dict[int, dict[str, str | None]] = {}
+        self._current_content_block_idx: int = -1
 
     def __aiter__(self):
         return self
@@ -79,6 +86,26 @@ class AnthropicAnswer:
                 self.llm_instance.previous_input_tokens = self.input_tokens
             return
 
+        if event_type == "content_block_start":
+            content_block = event.content_block
+            if content_block.type == "tool_use":
+                idx = event.index
+                self._current_content_block_idx = idx
+                self._anthropic_toolcall_parts[idx] = {
+                    "id": content_block.id,
+                    "name": content_block.name,
+                    "args": "",
+                }
+                self.toyield.append(
+                    AnthropicToolCallToken(
+                        idx=idx,
+                        id=content_block.id,
+                        name=content_block.name,
+                        args=None,
+                    )
+                )
+            return
+
         if event_type == "content_block_delta":
             delta = event.delta
             if delta.type == "text_delta":
@@ -97,6 +124,21 @@ class AnthropicAnswer:
                     self.reasoning_content += thinking
                 self.toyield.append(AnswerToken(reasoning_content=thinking, content=""))
                 return
+            if delta.type == "input_json_delta":
+                idx = self._current_content_block_idx
+                if idx in self._anthropic_toolcall_parts:
+                    partial_json = delta.partial_json
+                    self._anthropic_toolcall_parts[idx]["args"] += partial_json
+                    self.toyield.append(
+                        AnthropicToolCallToken(
+                            idx=idx, id=None, name=None, args=partial_json
+                        )
+                    )
+                return
+            return
+
+        if event_type == "content_block_stop":
+            self._current_content_block_idx = -1
             return
 
         if event_type == "message_delta":
@@ -118,7 +160,7 @@ class AnthropicAnswer:
         if event_type == "message_stop":
             return
 
-    async def __anext__(self) -> AnswerToken:
+    async def __anext__(self) -> AnswerToken | AnthropicToolCallToken:
         while not self.toyield:
             await self.update_toyield()
             if not self.toyield:
@@ -130,6 +172,28 @@ class AnthropicAnswer:
             message=self.content,
             reasoning_message=self.reasoning_content,
         )
+        if self._anthropic_toolcall_parts:
+            from linhai.type_hints import OpenAiToolCall, FunctionCall
+
+            tool_calls: list[OpenAiToolCall] = []
+            for idx in sorted(self._anthropic_toolcall_parts):
+                part = self._anthropic_toolcall_parts[idx]
+                tc_id = part["id"]
+                tc_name = part["name"]
+                if tc_id is None or tc_name is None:
+                    continue
+                tool_calls.append(
+                    OpenAiToolCall(
+                        id=tc_id,
+                        function=FunctionCall(
+                            name=tc_name,
+                            arguments=part["args"] or "",
+                        ),
+                        type="function",
+                    )
+                )
+            if tool_calls:
+                msg.tool_calls = tool_calls
         return msg
 
     def get_reasoning_message(self) -> str | None:
@@ -161,7 +225,44 @@ class AnthropicAnswer:
             estimated_cached_input_tokens=self.estimated_cached_input_tokens,
         )
 
-    async def get_openai_toolcalls(self) -> list[OpenAiToolCallResult] | None:
+    async def get_anthropic_toolcalls(self) -> list[NativeToolCallResult] | None:
+        if not self._anthropic_toolcall_parts:
+            return None
+
+        async def _parse_args(args_str: str) -> dict:
+            return json.loads(args_str)
+
+        parse_coros = [
+            _parse_args(self._anthropic_toolcall_parts[idx]["args"] or "")
+            for idx in sorted(self._anthropic_toolcall_parts)
+        ]
+        results = await asyncio.gather(*parse_coros, return_exceptions=True)
+
+        parsed: list[NativeToolCallResult] = []
+        for idx, result in zip(sorted(self._anthropic_toolcall_parts), results):
+            part = self._anthropic_toolcall_parts[idx]
+            if isinstance(result, dict):
+                parsed.append(
+                    ParsedAnthropicToolCall(
+                        type="success",
+                        id=part["id"] or "",
+                        name=part["name"] or "",
+                        arguments=result,
+                    )
+                )
+            else:
+                parsed.append(
+                    FailedAnthropicToolCall(
+                        type="error",
+                        id=part["id"] or "",
+                        name=part["name"] or "",
+                        raw_arguments=part["args"] or "",
+                        error=str(result),
+                    )
+                )
+        return parsed or None
+
+    async def get_openai_toolcalls(self) -> list[NativeToolCallResult] | None:
         return None
 
 
@@ -317,12 +418,36 @@ class AnthropicLanguageModel:
             if role == "assistant":
                 reasoning = llm_msg.get("reasoning_content")
                 assistant_content = content if content is not None else ""
-                if reasoning:
-                    blocks = []
-                    blocks.append({"type": "thinking", "thinking": reasoning})
+                tool_calls = llm_msg.get("tool_calls")
+                if tool_calls:
+                    blocks: list[dict] = []
+                    if reasoning:
+                        blocks.append({"type": "thinking", "thinking": reasoning})
                     if assistant_content:
-                        blocks.append({"type": "text", "text": assistant_content})
+                        blocks.append({"type": "text", "text": str(assistant_content)})
+                    for tc in tool_calls:
+                        tc_func = tc.get("function", {})
+                        tc_args_str = tc_func.get("arguments", "{}")
+                        tc_input = (
+                            json.loads(tc_args_str)
+                            if isinstance(tc_args_str, str)
+                            else tc_args_str
+                        )
+                        blocks.append(
+                            {
+                                "type": "tool_use",
+                                "id": tc.get("id", ""),
+                                "name": tc_func.get("name", ""),
+                                "input": tc_input,
+                            }
+                        )
                     raw_messages.append({"role": "assistant", "content": blocks})
+                elif reasoning:
+                    blocks2: list[dict] = []
+                    blocks2.append({"type": "thinking", "thinking": reasoning})
+                    if assistant_content:
+                        blocks2.append({"type": "text", "text": str(assistant_content)})
+                    raw_messages.append({"role": "assistant", "content": blocks2})
                 else:
                     raw_messages.append(
                         {"role": "assistant", "content": str(assistant_content)}
@@ -414,6 +539,28 @@ class AnthropicLanguageModel:
 
         if system_prompt:
             params["system"] = system_prompt
+
+        if not self._custom_toolcall_format:
+            from linhai.tool.main import ToolManager
+
+            tool_manager = self.registry.get_member_typechecked(
+                "tool_manager", ToolManager
+            )
+            tools_info = tool_manager.get_tools_info()
+            if tools_info:
+                anthropic_tools: list[dict] = []
+                for tool in tools_info:
+                    func = tool.get("function", {})
+                    anthropic_tools.append(
+                        {
+                            "name": func.get("name", ""),
+                            "description": func.get("description", ""),
+                            "input_schema": func.get(
+                                "parameters", {"type": "object", "properties": {}}
+                            ),
+                        }
+                    )
+                params["tools"] = anthropic_tools
 
         stream = await self.client.messages.create(**params)
         answer = AnthropicAnswer(

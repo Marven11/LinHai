@@ -2,10 +2,14 @@ from typing import Literal, TypedDict, Tuple, Union, TYPE_CHECKING
 import asyncio
 import json
 import re
-from .base import Answer, Message, OpenAiToolCallToken
+from .base import Answer, Message, OpenAiToolCallToken, AnthropicToolCallToken
 from .agent.lifecycle import Lifecycle
 from .markdown_parser import extract_tool_calls_with_errors
-from linhai.type_hints import ToolCallDict, OpenAiToolCall, OpenAiToolCallResult
+from linhai.type_hints import (
+    ToolCallDict,
+    OpenAiToolCall,
+    NativeToolCallResult,
+)
 from .utils.streamjson import StreamJsonParser, Value, ValuePiece
 from .utils.common import BAD_TOOLCALL, guess_content_type
 
@@ -45,7 +49,24 @@ class OpenAiToolCallSegment(TypedDict):
     tool_name: str
 
 
-Segment = Union[NormalSegment, ReasoningSegment, ToolCallSegment, OpenAiToolCallSegment]
+class AnthropicToolCallSegment(TypedDict):
+    segment_type: Literal["anthropic_toolcall"]
+    idx: int
+    id: str | None
+    raw: str
+    is_finished: bool
+    is_corrupted: bool
+    markdown_representation: str
+    tool_name: str
+
+
+Segment = Union[
+    NormalSegment,
+    ReasoningSegment,
+    ToolCallSegment,
+    OpenAiToolCallSegment,
+    AnthropicToolCallSegment,
+]
 
 
 def _get_backtick_count(text: str) -> int:
@@ -214,6 +235,91 @@ class OpenAiToolCallFeeder:
             self._update_markdown()
 
 
+class AnthropicToolCallFeeder:
+    def __init__(self, segment: AnthropicToolCallSegment):
+        self._segment = segment
+        self._parser = StreamJsonParser()
+        self._current_key = ""
+        self._current_value = ""
+        self._content_before_current_value = ""
+        self._current_content = ""
+        self._guessed_content_type = ""
+
+    def feed(self, content: str) -> None:
+        self._segment["raw"] += content
+        if self._segment["is_corrupted"]:
+            return
+        self._parser.feed_string(content)
+        if self._parser.is_corrupted:
+            self._segment["is_corrupted"] = True
+            self._segment["markdown_representation"] = BAD_TOOLCALL
+            return
+        self._process_parser_values()
+
+    def finish(self) -> None:
+        self._segment["is_finished"] = True
+
+    def _process_parser_values(self) -> None:
+        for value in self._parser:
+            if value.index_key != self._current_key:
+                self._current_key = value.index_key
+                self._content_before_current_value = self._current_content
+                self._current_content += f"- {self._current_key}: `"
+
+            if isinstance(value, Value):
+                final_value = (
+                    value.value
+                    if isinstance(value.value, str)
+                    else json.dumps(value.value, ensure_ascii=False)
+                )
+
+                if "\n" in final_value:
+                    backticks = "`" * _get_backtick_count(final_value)
+                    self._current_content = (
+                        self._content_before_current_value
+                        + f"- {self._current_key}:\n\n{backticks}{self._guessed_content_type}\n{final_value}\n{backticks}\n\n"
+                    )
+                else:
+                    self._current_content = (
+                        self._content_before_current_value
+                        + f"- {self._current_key}: `{final_value}`\n"
+                    )
+
+                new_guessed_type = guess_content_type(final_value)
+                if not self._guessed_content_type or new_guessed_type:
+                    self._guessed_content_type = new_guessed_type
+
+                self._current_value = ""
+
+            elif isinstance(value, ValuePiece):
+                self._current_value += value.token
+                if "\n" in self._current_value:
+                    backticks = "`" * _get_backtick_count(self._current_value)
+                    self._current_content = (
+                        self._content_before_current_value
+                        + f"- {self._current_key}:\n\n{backticks}{self._guessed_content_type}\n{self._current_value}\n{backticks}"
+                    )
+                else:
+                    self._current_content = (
+                        self._content_before_current_value
+                        + f"- {self._current_key}: `{self._current_value}`"
+                    )
+
+        self._update_markdown()
+
+    def _update_markdown(self) -> None:
+        tool_name = self._segment["tool_name"] or "\u672a\u77e5\u5de5\u5177"
+        args_md = self._current_content.strip()
+        if args_md:
+            self._segment["markdown_representation"] = f"{tool_name}:\n\n{args_md}"
+        else:
+            self._segment["markdown_representation"] = f"{tool_name}:"
+
+    def refresh_tool_name(self) -> None:
+        if not self._segment["is_corrupted"]:
+            self._update_markdown()
+
+
 class ParsedAnswer:
     def __init__(
         self, answer: Answer, lifecycle: Lifecycle, agent, registry: "Registry"
@@ -232,6 +338,8 @@ class ParsedAnswer:
         self._current_feeder: ToolCallFeeder | None = None
         self._openai_toolcall_segments: dict[int, OpenAiToolCallSegment] = {}
         self._openai_toolcall_feeders: dict[int, OpenAiToolCallFeeder] = {}
+        self._anthropic_toolcall_segments: dict[int, AnthropicToolCallSegment] = {}
+        self._anthropic_toolcall_feeders: dict[int, AnthropicToolCallFeeder] = {}
 
     async def start_parsing(self):
         from linhai.task_supervisor import TaskSupervisor
@@ -280,6 +388,8 @@ class ParsedAnswer:
                 self._current_feeder.feed(content)
             elif current["segment_type"] == "openai_toolcall":
                 pass
+            elif current["segment_type"] == "anthropic_toolcall":
+                pass
             else:
                 current["content"] += content
             await self.lifecycle.after_segment_update.trigger(
@@ -327,6 +437,38 @@ class ParsedAnswer:
             feeder.feed(token.args)
         await self.lifecycle.after_segment_update.trigger(self, segment)
 
+    async def _process_anthropic_toolcall_token(
+        self, token: AnthropicToolCallToken
+    ) -> None:
+        idx = token.idx
+        segment = self._anthropic_toolcall_segments.get(idx)
+        feeder = self._anthropic_toolcall_feeders.get(idx)
+        if segment is None:
+            segment = AnthropicToolCallSegment(
+                segment_type="anthropic_toolcall",
+                idx=idx,
+                id=token.id,
+                raw="",
+                is_finished=False,
+                is_corrupted=False,
+                markdown_representation="",
+                tool_name="",
+            )
+            self._anthropic_toolcall_segments[idx] = segment
+            feeder = AnthropicToolCallFeeder(segment)
+            self._anthropic_toolcall_feeders[idx] = feeder
+            await self.segment_queue.put(segment)
+            await self.lifecycle.after_segment.trigger(self, segment)
+        assert feeder is not None
+        if token.id is not None:
+            segment["id"] = token.id
+        if token.name is not None:
+            segment["tool_name"] = token.name
+            feeder.refresh_tool_name()
+        if token.args is not None:
+            feeder.feed(token.args)
+        await self.lifecycle.after_segment_update.trigger(self, segment)
+
     async def _finish_current_segment(self):
         if self.current_segment is not None:
             self.current_segment["is_finished"] = True
@@ -342,6 +484,9 @@ class ParsedAnswer:
         async for token in self._answer:
             if self.interrupted:
                 break
+            if isinstance(token, AnthropicToolCallToken):
+                await self._process_anthropic_toolcall_token(token)
+                continue
             if isinstance(token, OpenAiToolCallToken):
                 await self._process_openai_toolcall_token(token)
                 continue
@@ -364,6 +509,12 @@ class ParsedAnswer:
         await self._finish_current_segment()
         for idx, segment in self._openai_toolcall_segments.items():
             feeder = self._openai_toolcall_feeders.get(idx)
+            if feeder is not None:
+                feeder.finish()
+            segment["is_finished"] = True
+            await self.lifecycle.after_segment_finished.trigger(self, segment)
+        for idx, segment in self._anthropic_toolcall_segments.items():
+            feeder = self._anthropic_toolcall_feeders.get(idx)
             if feeder is not None:
                 feeder.finish()
             segment["is_finished"] = True
@@ -392,6 +543,10 @@ class ParsedAnswer:
         tool_calls, errors = extract_tool_calls_with_errors(full_response)
         return tool_calls, errors
 
-    async def get_openai_toolcalls(self) -> list[OpenAiToolCallResult] | None:
+    async def get_openai_toolcalls(self) -> list[NativeToolCallResult] | None:
         """获取解析后的OpenAI工具调用列表，参数已解析为dict。"""
         return await self._answer.get_openai_toolcalls()
+
+    async def get_anthropic_toolcalls(self) -> list[NativeToolCallResult] | None:
+        """获取解析后的Anthropic工具调用列表，参数已解析为dict。"""
+        return await self._answer.get_anthropic_toolcalls()

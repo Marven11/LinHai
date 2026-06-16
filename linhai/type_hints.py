@@ -159,6 +159,26 @@ class FailedOpenAiToolCall(TypedDict):
 OpenAiToolCallResult: TypeAlias = ParsedOpenAiToolCall | FailedOpenAiToolCall
 
 
+class ParsedAnthropicToolCall(TypedDict):
+    type: Literal["success"]
+    id: str
+    name: str
+    arguments: dict
+
+
+class FailedAnthropicToolCall(TypedDict):
+    type: Literal["error"]
+    id: str
+    name: str
+    raw_arguments: str
+    error: str
+
+
+AnthropicToolCallResult: TypeAlias = ParsedAnthropicToolCall | FailedAnthropicToolCall
+
+NativeToolCallResult: TypeAlias = OpenAiToolCallResult | AnthropicToolCallResult
+
+
 class CumulativeTokenUsage(TypedDict):
     """累计token使用量TypedDict，用于TokenManager中的cumulative_token_usage。"""
 
@@ -188,4 +208,8 @@ __all__ = [
     "ParsedOpenAiToolCall",
     "FailedOpenAiToolCall",
     "OpenAiToolCallResult",
+    "ParsedAnthropicToolCall",
+    "FailedAnthropicToolCall",
+    "AnthropicToolCallResult",
+    "NativeToolCallResult",
 ]

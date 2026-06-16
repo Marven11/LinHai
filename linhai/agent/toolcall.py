@@ -20,7 +20,7 @@ from linhai.tool.base import (
     ToolResult,
 )
 from linhai.tool.main import ToolManager
-from linhai.type_hints import OpenAiToolCall, OpenAiToolCallResult
+from linhai.type_hints import NativeToolCallResult
 from linhai.utils.tokenizer import count_tokens, get_cl100k_base_tokenizer
 from linhai.utils.i18n import t
 from linhai.utils.common import UiNotice
@@ -426,7 +426,7 @@ class AgentToolcall:
             state_machine.transition_to_working()
 
     async def call_openai_tools(
-        self, parsed_tool_calls: list[OpenAiToolCallResult]
+        self, parsed_tool_calls: list[NativeToolCallResult]
     ) -> None:
         """处理解析后的工具调用列表。
 

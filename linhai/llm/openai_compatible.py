@@ -20,9 +20,9 @@ from linhai.base import (
 from linhai.type_hints import (
     FunctionCall,
     OpenAiToolCall,
-    OpenAiToolCallResult,
     ParsedOpenAiToolCall,
     FailedOpenAiToolCall,
+    NativeToolCallResult,
 )
 from linhai.utils.common import UiNotice
 import linhai
@@ -235,7 +235,7 @@ class OpenAiAnswer:
             )
         return result or None
 
-    async def get_openai_toolcalls(self) -> list[OpenAiToolCallResult] | None:
+    async def get_openai_toolcalls(self) -> list[NativeToolCallResult] | None:
         toolcalls = self._get_raw_toolcalls()
         if not toolcalls:
             return None
@@ -246,7 +246,7 @@ class OpenAiAnswer:
         parse_coros = [_parse_args(tc["function"]["arguments"]) for tc in toolcalls]
         results = await asyncio.gather(*parse_coros, return_exceptions=True)
 
-        parsed: list[OpenAiToolCallResult] = []
+        parsed: list[NativeToolCallResult] = []
         for tc, result in zip(toolcalls, results):
             if isinstance(result, dict):
                 parsed.append(
@@ -268,6 +268,9 @@ class OpenAiAnswer:
                     )
                 )
         return parsed or None
+
+    async def get_anthropic_toolcalls(self) -> list[NativeToolCallResult] | None:
+        return None
 
 
 class MinimaxAnswer:
@@ -410,7 +413,7 @@ class MinimaxAnswer:
     def _get_raw_toolcalls(self) -> list[OpenAiToolCall] | None:
         return self._openai_toolcalls
 
-    async def get_openai_toolcalls(self) -> list[OpenAiToolCallResult] | None:
+    async def get_openai_toolcalls(self) -> list[NativeToolCallResult] | None:
         toolcalls = self._get_raw_toolcalls()
         if not toolcalls:
             return None
@@ -421,7 +424,7 @@ class MinimaxAnswer:
         parse_coros = [_parse_args(tc["function"]["arguments"]) for tc in toolcalls]
         results = await asyncio.gather(*parse_coros, return_exceptions=True)
 
-        parsed: list[OpenAiToolCallResult] = []
+        parsed: list[NativeToolCallResult] = []
         for tc, result in zip(toolcalls, results):
             if isinstance(result, dict):
                 parsed.append(
@@ -443,6 +446,9 @@ class MinimaxAnswer:
                     )
                 )
         return parsed or None
+
+    async def get_anthropic_toolcalls(self) -> list[NativeToolCallResult] | None:
+        return None
 
 
 class OpenAi:
