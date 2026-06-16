@@ -127,11 +127,21 @@ class LLMConfig(BaseModel):
         return f"LLMConfig(name={self.name}, model={self.model})"
 
 
+class MCPBlacklistItem(BaseModel):
+    """MCP工具黑名单条目。"""
+
+    name: str = Field(..., min_length=1, description="要禁用的工具名")
+    reason: str = Field(..., min_length=1, description="禁用原因")
+
+
 class MCPConfig(BaseModel):
     """MCP服务器配置类型定义。"""
 
     name: str = Field(..., min_length=1, description="MCP服务器的唯一标识名称")
     command: str = Field(..., description="启动MCP服务器的完整命令")
+    blacklist_tools: list[MCPBlacklistItem] = Field(
+        default_factory=list, description="禁用的MCP工具列表"
+    )
 
     @field_validator("name")
     def validate_name(cls, v):  # pylint: disable=no-self-argument

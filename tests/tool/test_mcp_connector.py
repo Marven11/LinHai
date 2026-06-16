@@ -15,6 +15,7 @@ def _make_mock_conn() -> MagicMock:
     conn._session = AsyncMock()
     conn.toolset = MagicMock()
     conn.close = AsyncMock()
+    conn.blacklist_tools = {}
     return conn
 
 
@@ -40,7 +41,7 @@ class TestMCPServerConnection(unittest.IsolatedAsyncioTestCase):
 
         registry = Registry()
         connector = MCPConnector(registry)
-        conn = MCPServerConnection("test_server", "test_server.py", connector)
+        conn = MCPServerConnection("test_server", "test_server.py", connector, None)
         conn.start()
         await conn.wait_ready(timeout=5.0)
 
@@ -69,7 +70,7 @@ class TestMCPServerConnection(unittest.IsolatedAsyncioTestCase):
 
         registry = Registry()
         connector = MCPConnector(registry)
-        conn = MCPServerConnection("test_server", "test_server.py", connector)
+        conn = MCPServerConnection("test_server", "test_server.py", connector, None)
         conn.start()
 
         with self.assertRaises(asyncio.TimeoutError):
@@ -91,7 +92,7 @@ class TestMCPConnector(unittest.IsolatedAsyncioTestCase):
         mock_conn = _make_mock_conn()
         mock_conn_class.return_value = mock_conn
 
-        await self.connector.connect_mcp_server("test_server", "test_server.py")
+        await self.connector.connect_mcp_server("test_server", "test_server.py", None)
 
         self.assertIn("test_server", self.connector.sessions)
         self.assertEqual(self.connector.sessions["test_server"], mock_conn)
@@ -103,10 +104,12 @@ class TestMCPConnector(unittest.IsolatedAsyncioTestCase):
         mock_conn = _make_mock_conn()
         mock_conn_class.return_value = mock_conn
 
-        await self.connector.connect_mcp_server("test_server", "test_server.py")
+        await self.connector.connect_mcp_server("test_server", "test_server.py", None)
 
         with self.assertRaises(RuntimeError) as context:
-            await self.connector.connect_mcp_server("test_server", "another_server.py")
+            await self.connector.connect_mcp_server(
+                "test_server", "another_server.py", None
+            )
 
         self.assertIn("Duplicate name", str(context.exception))
 
@@ -321,6 +324,59 @@ class TestMCPSandbox(unittest.IsolatedAsyncioTestCase):
             "list_mcp_servers", {}
         )
         self.assertIsInstance(result, SuccessfulToolResult)
+
+
+class TestMCPBlacklist(unittest.IsolatedAsyncioTestCase):
+    async def asyncSetUp(self):
+        self.registry = Registry()
+        self.registry.register_member("process_sandbox", NoSandbox())
+        self.connector = MCPConnector(self.registry)
+
+    async def test_call_tool_raw_blacklisted(self):
+        conn = MCPServerConnection(
+            "test_server",
+            "test.py",
+            self.connector,
+            blacklist_tools={"mcp_test_server_run_code_unsafe": "禁止JS操控浏览器"},
+        )
+        self.connector.sessions["test_server"] = conn
+
+        result = await self.connector.call_tool_raw(
+            "test_server", "run_code_unsafe", {}
+        )
+
+        self.assertIsInstance(result, FailedToolResult)
+        self.assertIn("已被禁用", result.content)
+        self.assertIn("禁止JS操控浏览器", result.content)
+
+    async def test_blacklist_tool_name_conversion(self):
+        conn = MCPServerConnection(
+            "browser",
+            "test.py",
+            self.connector,
+            blacklist_tools={"mcp_browser_run_code_unsafe": "禁止JS操控浏览器"},
+        )
+        self.assertIn("mcp_browser_run_code_unsafe", conn.blacklist_tools)
+        self.assertEqual(
+            conn.blacklist_tools["mcp_browser_run_code_unsafe"],
+            "禁止JS操控浏览器",
+        )
+
+    async def test_serialize_includes_blacklist(self):
+        conn = MCPServerConnection(
+            "test_server",
+            "test.py",
+            self.connector,
+            blacklist_tools={"mcp_test_server_run_code_unsafe": "禁止JS操控浏览器"},
+        )
+        self.connector.sessions["test_server"] = conn
+
+        data = self.connector.serialize()
+        sessions = data["sessions"]
+        self.assertEqual(
+            sessions["test_server"]["blacklist_tools"],
+            {"mcp_test_server_run_code_unsafe": "禁止JS操控浏览器"},
+        )
 
 
 if __name__ == "__main__":

@@ -41,6 +41,7 @@ class TestMCPConnectorSerializeRestore(unittest.TestCase):
         conn = MCPConnector(registry)
         mock_conn = MagicMock(spec=MCPServerConnection)
         mock_conn.command = "python server.py"
+        mock_conn.blacklist_tools = {}
         conn.sessions["test_server"] = mock_conn
         data = conn.serialize()
         self.assertIn("test_server", data["sessions"])

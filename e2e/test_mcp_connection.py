@@ -33,7 +33,7 @@ def _get_server_command() -> str:
 
 async def _connect_mcp_server(registry: Registry) -> MCPConnector:
     connector = MCPConnector(registry)
-    await connector.connect_mcp_server("test", _get_server_command())
+    await connector.connect_mcp_server("test", _get_server_command(), None)
     return connector
 
 

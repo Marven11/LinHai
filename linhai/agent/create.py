@@ -551,7 +551,15 @@ async def _create_tool_manager(
     mcp_connector = MCPConnector(registry)
     if context["mcp_configs"]:
         for mcp_config in context["mcp_configs"]:
-            await mcp_connector.connect_mcp_server(mcp_config.name, mcp_config.command)
+            blacklist_dict = None
+            if mcp_config.blacklist_tools:
+                blacklist_dict = {
+                    f"mcp_{mcp_config.name}_{item.name}": item.reason
+                    for item in mcp_config.blacklist_tools
+                }
+            await mcp_connector.connect_mcp_server(
+                mcp_config.name, mcp_config.command, blacklist_dict
+            )
 
     tool_manager = ToolManager(
         registry=registry,

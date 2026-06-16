@@ -30,10 +30,17 @@ from ..utils.i18n import t
 
 
 class MCPServerConnection:
-    def __init__(self, name: str, command: str, connector: "MCPConnector"):
+    def __init__(
+        self,
+        name: str,
+        command: str,
+        connector: "MCPConnector",
+        blacklist_tools: dict[str, str] | None,
+    ):
         self.name = name
         self.command = command
         self.connector = connector
+        self.blacklist_tools: dict[str, str] = blacklist_tools or {}
         self.toolset: ToolSet | None = None
         self._ready_event = asyncio.Event()
         self._close_event = asyncio.Event()
@@ -107,11 +114,16 @@ class MCPConnector:
             conn.toolset for conn in self.sessions.values() if conn.toolset is not None
         ] + [self.connector_toolset]
 
-    async def connect_mcp_server(self, name: str, command: str):
+    async def connect_mcp_server(
+        self,
+        name: str,
+        command: str,
+        blacklist_tools: dict[str, str] | None,
+    ):
         if name in self.sessions:
             raise RuntimeError(f"Duplicate name: {name!r}")
 
-        conn = MCPServerConnection(name, command, self)
+        conn = MCPServerConnection(name, command, self, blacklist_tools)
         conn.start()
         await conn.wait_ready()
         self.sessions[name] = conn
@@ -131,8 +143,13 @@ class MCPConnector:
     async def call_tool_raw(
         self, server_name: str, tool_name: str, args: dict[str, Any]
     ):
+        conn = self.get_server(server_name)
+        full_name = f"mcp_{server_name}_{tool_name}"
+        if full_name in conn.blacklist_tools:
+            return FailedToolResult(
+                content=f"工具 {full_name} 已被禁用: {conn.blacklist_tools[full_name]}"
+            )
         try:
-            conn = self.get_server(server_name)
             assert conn._session is not None
             data = await conn._session.call_tool(tool_name, arguments=args)
             result = f"{data.meta=}\n"
@@ -173,10 +190,33 @@ class MCPConnector:
                     ),
                     schema={"type": "string"},
                 ),
+                "blacklist_tools": ToolArgInfo(
+                    desc=t(
+                        {
+                            "zh_CN": '可选的黑名单工具列表，每项包含name(工具原名)和reason(禁用原因)，如[{"name":"run_code_unsafe","reason":"禁止JS操控浏览器"}]',
+                            "en": 'Optional blacklist tools list, each item contains name (original tool name) and reason, e.g. [{"name":"run_code_unsafe","reason":"No JS browser control"}]',
+                        }
+                    ),
+                    schema={
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "name": {"type": "string"},
+                                "reason": {"type": "string"},
+                            },
+                            "required": ["name", "reason"],
+                        },
+                    },
+                ),
             },
             required_args=["name", "command"],
         )
-        async def connect_mcp_server(name: str, command: str):
+        async def connect_mcp_server(
+            name: str,
+            command: str,
+            blacklist_tools: list[dict[str, str]] | None = None,
+        ):
             sandbox = self.registry.get_member_typechecked(
                 "process_sandbox", ProcessSandboxProtocol
             )
@@ -185,8 +225,17 @@ class MCPConnector:
             wrapped_argv = sandbox.wrap_argv(command_lst)
             wrapped_command = " ".join(shlex.quote(arg) for arg in wrapped_argv)
 
+            blacklist_dict: dict[str, str] | None = None
+            if blacklist_tools:
+                blacklist_dict = {
+                    f"mcp_{name}_{item['name']}": item["reason"]
+                    for item in blacklist_tools
+                }
+
             try:
-                conn = await self.connect_mcp_server(name, wrapped_command)
+                conn = await self.connect_mcp_server(
+                    name, wrapped_command, blacklist_dict
+                )
                 assert conn.toolset is not None
                 return SuccessfulToolResult(
                     content=f"连接{command!r}成功，名字为{name!r}，添加了以下工具: "
@@ -253,7 +302,10 @@ class MCPConnector:
     def serialize(self) -> dict:
         sessions = {}
         for name, conn in self.sessions.items():
-            sessions[name] = {"command": conn.command}
+            sessions[name] = {
+                "command": conn.command,
+                "blacklist_tools": conn.blacklist_tools,
+            }
         return {"sessions": sessions}
 
     def restore_from(self, data: dict) -> None:
