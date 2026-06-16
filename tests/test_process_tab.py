@@ -26,10 +26,17 @@ class _FakeProcess:
         self._pid = pid
         self._exits_on_wait = exits_on_wait
         self._killed = False
+        self.wait_called = False
 
     @property
     def pid(self) -> str:
         return self._pid
+
+    @property
+    def returncode(self) -> int | None:
+        if self._exits_on_wait:
+            return 0
+        return None
 
     async def stdio_write(self, content: str, with_enter: bool):
         pass
@@ -38,6 +45,7 @@ class _FakeProcess:
         pass
 
     async def wait(self, timeout: float):
+        self.wait_called = True
         if self._exits_on_wait:
             return ProcessWaitResult(pid=self._pid, success=True, returncode=0)
         return ProcessWaitResult(pid=self._pid, success=False, error="timeout")
@@ -276,6 +284,38 @@ class TestProcessTabRealApp(unittest.TestCase):
 
                 status_static = rows[0].query_one(".status")
                 self.assertIn("Exit 0", str(status_static.render()))
+
+        asyncio.run(_run())
+
+    def test_poll_does_not_call_wait(self):
+        registry, lifecycle = _make_registry()
+        app = _make_app(registry)
+
+        async def _run():
+            async with app.run_test() as pilot:
+                process_tab = pilot.app.query_one(ProcessTabWidget)
+
+                proc = _FakeProcess("900", exits_on_wait=True)
+                info = ProcessCreateInfo(
+                    process=proc,
+                    argv=["echo", "data"],
+                    machine_id="master_host",
+                    initial_returncode=None,
+                )
+                await lifecycle.after_process_create.trigger(info)
+                await pilot.pause()
+
+                process_tab._poll_statuses()
+                await pilot.pause()
+
+                entry = process_tab._entries.get("900")
+                self.assertIsNotNone(entry)
+                _, returncode, _ = entry
+                self.assertEqual(returncode, 0)
+                self.assertFalse(
+                    proc.wait_called,
+                    "Polling must use returncode, not wait() which consumes stdio buffers",
+                )
 
         asyncio.run(_run())
 
