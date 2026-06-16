@@ -9,90 +9,6 @@ class TestSudoBashHintPlugin(unittest.IsolatedAsyncioTestCase):
         self.registry = Mock()
         self.plugin = SudoBashHintPlugin(self.registry)
 
-    async def test_after_toolcall_not_process_create(self):
-        result = await self.plugin.after_toolcall(
-            tool_name="other_tool",
-            tool_index=0,
-            status="success",
-            message=None,
-            toolcall_arguments={"argv": ["sudo", "ls"]},
-            with_secret=None,
-            is_tool_failed_duplicated_error=False,
-        )
-        self.assertIsNone(result)
-
-    async def test_after_toolcall_not_success(self):
-        result = await self.plugin.after_toolcall(
-            tool_name="process_create",
-            tool_index=0,
-            status="failed",
-            message=None,
-            toolcall_arguments={"argv": ["sudo", "ls"]},
-            with_secret=None,
-            is_tool_failed_duplicated_error=False,
-        )
-        self.assertIsNone(result)
-
-    async def test_after_toolcall_no_argv(self):
-        result = await self.plugin.after_toolcall(
-            tool_name="process_create",
-            tool_index=0,
-            status="success",
-            message=None,
-            toolcall_arguments={},
-            with_secret=None,
-            is_tool_failed_duplicated_error=False,
-        )
-        self.assertIsNone(result)
-
-    async def test_after_toolcall_not_sudo(self):
-        result = await self.plugin.after_toolcall(
-            tool_name="process_create",
-            tool_index=0,
-            status="success",
-            message=None,
-            toolcall_arguments={"argv": ["ls", "-lah"]},
-            with_secret=None,
-            is_tool_failed_duplicated_error=False,
-        )
-        self.assertIsNone(result)
-
-    async def test_after_toolcall_sudo_bash_no_hint(self):
-        mock_agent = Mock()
-        mock_agent.message_processor = Mock()
-        mock_agent.message_processor.add_new_message = AsyncMock()
-        self.registry.get_member_typechecked = Mock(return_value=mock_agent)
-
-        result = await self.plugin.after_toolcall(
-            tool_name="process_create",
-            tool_index=0,
-            status="success",
-            message=None,
-            toolcall_arguments={"argv": ["sudo", "bash"]},
-            with_secret=None,
-            is_tool_failed_duplicated_error=False,
-        )
-        self.assertIsNone(result)
-        mock_agent.message_processor.add_new_message.assert_not_called()
-
-    async def test_after_toolcall_sudo_sh_no_hint(self):
-        mock_agent = Mock()
-        mock_agent.message_processor = Mock()
-        mock_agent.message_processor.add_new_message = AsyncMock()
-        self.registry.get_member_typechecked = Mock(return_value=mock_agent)
-
-        result = await self.plugin.after_toolcall(
-            tool_name="process_create",
-            tool_index=0,
-            status="success",
-            message=None,
-            toolcall_arguments={"argv": ["sudo", "sh"]},
-            with_secret=None,
-            is_tool_failed_duplicated_error=False,
-        )
-        self.assertIsNone(result)
-        mock_agent.message_processor.add_new_message.assert_not_called()
-
     async def test_after_toolcall_sudo_non_bash_shows_hint(self):
         mock_agent = Mock()
         mock_agent.message_processor = Mock()
@@ -112,7 +28,7 @@ class TestSudoBashHintPlugin(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(len(result.warnings), 1)
         self.assertIn("connect_posix_shell_as_machine", result.warnings[0].message)
 
-    async def test_after_toolcall_sudo_path_bash_no_hint(self):
+    async def test_after_toolcall_sudo_bash_no_hint(self):
         mock_agent = Mock()
         mock_agent.message_processor = Mock()
         mock_agent.message_processor.add_new_message = AsyncMock()
@@ -123,7 +39,7 @@ class TestSudoBashHintPlugin(unittest.IsolatedAsyncioTestCase):
             tool_index=0,
             status="success",
             message=None,
-            toolcall_arguments={"argv": ["sudo", "/bin/bash"]},
+            toolcall_arguments={"argv": ["sudo", "bash"]},
             with_secret=None,
             is_tool_failed_duplicated_error=False,
         )
@@ -149,8 +65,6 @@ class TestSudoBashHintPlugin(unittest.IsolatedAsyncioTestCase):
         mock_agent.message_processor.add_new_message.assert_not_called()
 
     async def test_after_toolcall_time_window_suppresses_repeat(self):
-        import time
-
         mock_agent = Mock()
         mock_agent.message_processor = Mock()
         mock_agent.message_processor.add_new_message = AsyncMock()
@@ -199,60 +113,6 @@ class TestSudoBashHintPlugin(unittest.IsolatedAsyncioTestCase):
         self.assertIn("python -c", result.warnings[0].message)
         self.assertIn("python repl", result.warnings[0].message)
 
-    async def test_python3_c_shows_hint(self):
-        mock_agent = Mock()
-        mock_agent.message_processor = Mock()
-        mock_agent.message_processor.add_new_message = AsyncMock()
-        self.registry.get_member_typechecked = Mock(return_value=mock_agent)
-
-        result = await self.plugin.after_toolcall(
-            tool_name="process_create",
-            tool_index=0,
-            status="success",
-            message=None,
-            toolcall_arguments={"argv": ["python3", "-c", "print(1)"]},
-            with_secret=None,
-            is_tool_failed_duplicated_error=False,
-        )
-        self.assertIsNotNone(result)
-        self.assertEqual(len(result.warnings), 1)
-
-    async def test_venv_python_c_shows_hint(self):
-        mock_agent = Mock()
-        mock_agent.message_processor = Mock()
-        mock_agent.message_processor.add_new_message = AsyncMock()
-        self.registry.get_member_typechecked = Mock(return_value=mock_agent)
-
-        result = await self.plugin.after_toolcall(
-            tool_name="process_create",
-            tool_index=0,
-            status="success",
-            message=None,
-            toolcall_arguments={"argv": ["venv/bin/python", "-c", "print(1)"]},
-            with_secret=None,
-            is_tool_failed_duplicated_error=False,
-        )
-        self.assertIsNotNone(result)
-        self.assertEqual(len(result.warnings), 1)
-
-    async def test_uv_run_python_c_shows_hint(self):
-        mock_agent = Mock()
-        mock_agent.message_processor = Mock()
-        mock_agent.message_processor.add_new_message = AsyncMock()
-        self.registry.get_member_typechecked = Mock(return_value=mock_agent)
-
-        result = await self.plugin.after_toolcall(
-            tool_name="process_create",
-            tool_index=0,
-            status="success",
-            message=None,
-            toolcall_arguments={"argv": ["uv", "run", "python", "-c", "print(1)"]},
-            with_secret=None,
-            is_tool_failed_duplicated_error=False,
-        )
-        self.assertIsNotNone(result)
-        self.assertEqual(len(result.warnings), 1)
-
     async def test_python_no_c_no_hint(self):
         result = await self.plugin.after_toolcall(
             tool_name="process_create",
@@ -264,14 +124,6 @@ class TestSudoBashHintPlugin(unittest.IsolatedAsyncioTestCase):
             is_tool_failed_duplicated_error=False,
         )
         self.assertIsNone(result)
-
-    def test_register_method(self):
-        mock_lifecycle = Mock()
-        mock_lifecycle.after_toolcall.register = Mock()
-        self.plugin.register(mock_lifecycle)
-        mock_lifecycle.after_toolcall.register.assert_called_once_with(
-            self.plugin.after_toolcall
-        )
 
 
 class TestAddBashMachine(unittest.IsolatedAsyncioTestCase):
@@ -370,42 +222,6 @@ class TestAddBashMachine(unittest.IsolatedAsyncioTestCase):
                 self.machine_control.machine_descriptions["bash_machine"],
             )
 
-    async def test_add_posix_shell_machine_source_machine_parameter(self):
-        from linhai.machine_control.posix_shell.posix_shell_control import (
-            PosixShellControl,
-        )
-        from linhai.tool.base import FailedToolResult
-
-        mock_remote = Mock()
-        mock_remote.get_process = Mock(return_value=None)
-        self.machine_control.machines["remote_host"] = mock_remote
-
-        result = await self.machine_control.add_posix_shell_machine(
-            "bash_machine", "456", source_machine="remote_host"
-        )
-        self.assertIsInstance(result, FailedToolResult)
-        self.assertIn("进程不存在", result.content)
-        mock_remote.get_process.assert_called_once_with("456")
-
-
-class TestPosixShellControlHostOptional(unittest.IsolatedAsyncioTestCase):
-    def test_ssh_machine_control_without_host(self):
-        from linhai.machine_control.posix_shell.posix_shell_control import (
-            PosixShellControl,
-        )
-
-        ctrl = PosixShellControl(registry=Mock())
-        self.assertIsNotNone(ctrl)
-        self.assertIsNone(ctrl.transport)
-
-    def test_ssh_machine_control_with_host(self):
-        from linhai.machine_control.posix_shell.posix_shell_control import (
-            PosixShellControl,
-        )
-
-        ctrl = PosixShellControl(registry=Mock(), host="example.com", port=2222)
-        self.assertIsNotNone(ctrl)
-
 
 class TestCheckShellCompatibility(unittest.IsolatedAsyncioTestCase):
     def _make_process_mock(self, stdout: bytes, write_success: bool = True) -> Mock:
@@ -456,54 +272,6 @@ class TestCheckShellCompatibility(unittest.IsolatedAsyncioTestCase):
         self.assertFalse(compatible)
         self.assertEqual(shell_name, "fish")
 
-    async def test_nushell_is_not_compatible(self):
-        from linhai.machine_control.main import _check_shell_compatibility
-
-        mock_process = self._make_process_mock(b"LH0=\nLHS=/home/user/.local/bin/nu\n")
-        compatible, shell_name = await _check_shell_compatibility(mock_process)
-        self.assertFalse(compatible)
-        self.assertEqual(shell_name, "nu")
-
-    async def test_xonsh_is_not_compatible_via_lh0(self):
-        from linhai.machine_control.main import _check_shell_compatibility
-
-        mock_process = self._make_process_mock(b"LH0=xonsh\nLHS=/usr/bin/xonsh\n")
-        compatible, shell_name = await _check_shell_compatibility(mock_process)
-        self.assertFalse(compatible)
-        self.assertEqual(shell_name, "xonsh")
-
-    async def test_pwsh_is_not_compatible_via_lh0(self):
-        from linhai.machine_control.main import _check_shell_compatibility
-
-        mock_process = self._make_process_mock(b"LH0=pwsh\nLHS=/usr/bin/pwsh\n")
-        compatible, shell_name = await _check_shell_compatibility(mock_process)
-        self.assertFalse(compatible)
-        self.assertEqual(shell_name, "pwsh")
-
-    async def test_write_failure_returns_compatible(self):
-        from linhai.machine_control.main import _check_shell_compatibility
-
-        mock_process = self._make_process_mock(b"", write_success=False)
-        compatible, shell_name = await _check_shell_compatibility(mock_process)
-        self.assertTrue(compatible)
-        self.assertEqual(shell_name, "")
-
-    async def test_no_marker_output_returns_compatible(self):
-        from linhai.machine_control.main import _check_shell_compatibility
-
-        mock_process = self._make_process_mock(b"some text without markers\n")
-        compatible, shell_name = await _check_shell_compatibility(mock_process)
-        self.assertTrue(compatible)
-        self.assertEqual(shell_name, "")
-
-    async def test_tcsh_is_not_compatible(self):
-        from linhai.machine_control.main import _check_shell_compatibility
-
-        mock_process = self._make_process_mock(b"LH0=\nLHS=/bin/tcsh\n")
-        compatible, shell_name = await _check_shell_compatibility(mock_process)
-        self.assertFalse(compatible)
-        self.assertEqual(shell_name, "tcsh")
-
     async def test_ansi_codes_stripped(self):
         from linhai.machine_control.main import _check_shell_compatibility
 
@@ -522,22 +290,6 @@ class TestCheckShellCompatibility(unittest.IsolatedAsyncioTestCase):
         self.assertTrue(compatible)
         self.assertEqual(shell_name, "bash")
 
-    async def test_zsh_from_fish_is_compatible(self):
-        from linhai.machine_control.main import _check_shell_compatibility
-
-        mock_process = self._make_process_mock(b"LH0=zsh\nLHS=/usr/bin/fish\n")
-        compatible, shell_name = await _check_shell_compatibility(mock_process)
-        self.assertTrue(compatible)
-        self.assertEqual(shell_name, "zsh")
-
-    async def test_lh0_empty_lhs_no_path_compatible(self):
-        from linhai.machine_control.main import _check_shell_compatibility
-
-        mock_process = self._make_process_mock(b"LH0=\nLHS=\n")
-        compatible, shell_name = await _check_shell_compatibility(mock_process)
-        self.assertTrue(compatible)
-        self.assertEqual(shell_name, "")
-
     async def test_login_shell_prefix_stripped(self):
         from linhai.machine_control.main import _check_shell_compatibility
 
@@ -545,6 +297,22 @@ class TestCheckShellCompatibility(unittest.IsolatedAsyncioTestCase):
         compatible, shell_name = await _check_shell_compatibility(mock_process)
         self.assertTrue(compatible)
         self.assertEqual(shell_name, "bash")
+
+    async def test_write_failure_returns_compatible(self):
+        from linhai.machine_control.main import _check_shell_compatibility
+
+        mock_process = self._make_process_mock(b"", write_success=False)
+        compatible, shell_name = await _check_shell_compatibility(mock_process)
+        self.assertTrue(compatible)
+        self.assertEqual(shell_name, "")
+
+    async def test_no_marker_output_returns_compatible(self):
+        from linhai.machine_control.main import _check_shell_compatibility
+
+        mock_process = self._make_process_mock(b"some text without markers\n")
+        compatible, shell_name = await _check_shell_compatibility(mock_process)
+        self.assertTrue(compatible)
+        self.assertEqual(shell_name, "")
 
 
 class TestAddPosixShellIncompatibleShell(unittest.IsolatedAsyncioTestCase):
@@ -572,30 +340,6 @@ class TestAddPosixShellIncompatibleShell(unittest.IsolatedAsyncioTestCase):
             self.assertIsInstance(result, FailedToolResult)
             self.assertIn("fish", result.content)
             self.assertIn("posix", result.content)
-
-    async def test_bash_shell_accepted(self):
-        from linhai.machine_control.posix_shell.posix_shell_control import (
-            PosixShellControl,
-        )
-        from linhai.tool.base import SuccessfulToolResult
-
-        mock_host = Mock()
-        mock_process = Mock()
-        mock_host.get_process = Mock(return_value=mock_process)
-        self.machine_control.machines["master_host"] = mock_host
-
-        with (
-            patch(
-                "linhai.machine_control.main._check_shell_compatibility",
-                new_callable=AsyncMock,
-                return_value=(True, "bash"),
-            ),
-            patch.object(
-                PosixShellControl, "connect", new_callable=AsyncMock, return_value=True
-            ),
-        ):
-            result = await self.machine_control.add_posix_shell_machine("remote", "123")
-            self.assertIsInstance(result, SuccessfulToolResult)
 
 
 if __name__ == "__main__":

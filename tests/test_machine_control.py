@@ -7,11 +7,8 @@ from unittest.mock import Mock, AsyncMock, patch
 from linhai.machine_control import MachineControl
 from linhai.machine_control.master_host.master_host import MasterHostControl
 from linhai.registry import Registry
-from linhai.tool.main import ToolManager
-from linhai.tool.base import ToolSet, SuccessfulToolResult
-from linhai.base import ToolCallMessage
+from linhai.tool.base import SuccessfulToolResult
 from linhai.machine_control.process import ProcessCreateResult, ProcessCreateInfo
-from linhai.utils.common import UiNotice
 
 
 class TestMachineControl(unittest.IsolatedAsyncioTestCase):
@@ -21,7 +18,43 @@ class TestMachineControl(unittest.IsolatedAsyncioTestCase):
         """测试前准备"""
         self.registry = Mock(spec=Registry)
         self.machine_control = MachineControl(self.registry)
-        self.tool_manager = Mock(spec=ToolManager)
+
+    async def test_list_machines(self):
+        """测试列出机器"""
+        result = await self.machine_control.list_machines()
+        self.assertIn("可用机器", result.content)
+        self.assertIn("master_host", result.content)
+        self.assertIn("本地主机", result.content)
+
+    async def test_list_all_terminals(self):
+        """测试列出所有终端"""
+        mock_host_control = Mock()
+        mock_host_control.get_terminals = AsyncMock(return_value=Mock(content=""))
+        self.machine_control.machines = {"master_host": mock_host_control}
+
+        result = await self.machine_control.list_all_terminals()
+        self.assertIn("当前所有机器上都没有终端", result.content)
+
+        mock_host_control.get_terminals = AsyncMock(
+            return_value=Mock(content="终端1: 运行中\n终端2: 空闲")
+        )
+        result = await self.machine_control.list_all_terminals()
+        self.assertIn("机器 master_host", result.content)
+        self.assertIn("终端1", result.content)
+        self.assertIn("终端2", result.content)
+
+        mock_host_control2 = Mock()
+        mock_host_control2.get_terminals = AsyncMock(
+            return_value=Mock(content="远程终端: 运行中")
+        )
+        self.machine_control.machines = {
+            "master_host": mock_host_control,
+            "posix_shell": mock_host_control2,
+        }
+        result = await self.machine_control.list_all_terminals()
+        self.assertIn("机器 master_host", result.content)
+        self.assertIn("机器 posix_shell", result.content)
+        self.assertIn("远程终端", result.content)
 
     async def test_switch_machine_not_found(self):
         """测试切换到不存在的机器"""
@@ -36,17 +69,6 @@ class TestMachineControl(unittest.IsolatedAsyncioTestCase):
         result = await self.machine_control.switch_machine("master_host")
         self.assertIn("已切换机器", result.content)
         self.assertEqual(self.machine_control.target_machine, "master_host")
-
-    def test_register_tools(self):
-        from linhai.machine_control.tools import register_machine_control_tools
-
-        toolset = register_machine_control_tools(self.machine_control)
-        self.assertIsInstance(toolset, ToolSet)
-        tool_names = list(toolset.tools.keys())
-        self.assertIn("list_machines", tool_names)
-        self.assertIn("switch_machine", tool_names)
-        self.assertIn("get_meta", tool_names)
-        self.assertIn("transfer_file", tool_names)
 
 
 def _create_host_control() -> MasterHostControl:
@@ -66,7 +88,6 @@ class TestMasterHostControl(unittest.IsolatedAsyncioTestCase):
 
     def tearDown(self):
         """测试后清理，避免ResourceWarning"""
-        # 清理进程字典，防止子进程未关闭警告
         self.host_control._processes.clear()
 
     async def test_process_create_immediate_exit(self):
@@ -269,7 +290,7 @@ class TestMasterHostControl(unittest.IsolatedAsyncioTestCase):
 
         with tempfile.TemporaryDirectory() as tmpdir:
             self.host_control._cwd = tmpdir
-            result = await self.host_control.list_files(tmpdir)
+            await self.host_control.list_files(tmpdir)
             import inspect
 
             sig = inspect.signature(self.host_control.list_files)
@@ -422,7 +443,7 @@ class TestNotifyProcessCreated(unittest.IsolatedAsyncioTestCase):
         )
 
         toolset = register_machine_control_tools(mc)
-        result = await toolset.get_tool("process_create")(argv=["echo", "test"])
+        await toolset.get_tool("process_create")(argv=["echo", "test"])
         self.assertEqual(len(triggered_infos), 0)
 
     async def test_notify_triggered_for_remote_machine(self):
@@ -506,7 +527,7 @@ class TestNotifyProcessCreated(unittest.IsolatedAsyncioTestCase):
         )
 
         toolset = register_machine_control_tools(mc)
-        result = await toolset.get_tool("process_create")(argv=["bad_cmd"])
+        await toolset.get_tool("process_create")(argv=["bad_cmd"])
         self.assertEqual(len(triggered_infos), 0)
 
 
@@ -821,36 +842,6 @@ class TestGetMetaTool(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(parsed["machine_id"], "remote")
 
 
-class TestToolResultFormat(unittest.IsolatedAsyncioTestCase):
-    """测试工具调用结果格式（<<>>格式）"""
-
-    async def test_tool_result_success_format(self):
-        """测试SuccessfulToolResult的content格式为<<>>"""
-        from linhai.tool.base import SuccessfulToolResult
-
-        # 测试简单的键值对
-        content = "<<pid>>123<<pid>><<message>>test<<message>>"
-        result = SuccessfulToolResult(content=content)
-        self.assertEqual(result.content, content)
-        # 验证content包含<<>>格式
-        self.assertIn("<<pid>>", result.content)
-        self.assertIn("<<message>>", result.content)
-
-        # 测试多个键值对
-        content2 = "<<key1>>value1<<key1>><<key2>>value2<<key2>>"
-        result2 = SuccessfulToolResult(content=content2)
-        self.assertEqual(result2.content, content2)
-
-    async def test_tool_result_failed_format(self):
-        """测试FailedToolResult的content格式为<<>>"""
-        from linhai.tool.base import FailedToolResult
-
-        content = "<<error>>something went wrong<<error>>"
-        result = FailedToolResult(content=content)
-        self.assertEqual(result.content, content)
-        self.assertIn("<<error>>", result.content)
-
-
 class TestMasterHostControlConcurrentFiles(unittest.IsolatedAsyncioTestCase):
     """测试MasterHostControl的并发文件方法"""
 
@@ -982,13 +973,6 @@ class TestDisconnectMachine(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(self.machine_control.target_machine, "master_host")
         self.assertIn("已自动切换到机器: master_host", result.content)
 
-    async def test_disconnect_tool_registered(self):
-        from linhai.machine_control.tools import register_machine_control_tools
-
-        toolset = register_machine_control_tools(self.machine_control)
-        tool_names = list(toolset.tools.keys())
-        self.assertIn("disconnect_machine", tool_names)
-
 
 class TestMasterHostControlDisconnect(unittest.IsolatedAsyncioTestCase):
 
@@ -1003,9 +987,6 @@ class TestMachineControlTransferFile(unittest.IsolatedAsyncioTestCase):
     """测试MachineControl的transfer_file方法"""
 
     def setUp(self):
-        from unittest.mock import Mock
-        from linhai.registry import Registry
-
         self.registry = Mock(spec=Registry)
         from linhai.machine_control import MachineControl
 

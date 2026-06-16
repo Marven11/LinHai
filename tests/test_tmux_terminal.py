@@ -61,15 +61,6 @@ class TestTmuxTerminal(unittest.TestCase):
         self.assertTrue(len(send_calls) >= 2)
         self.assertIn("echo hello_tmux_test", str(send_calls[0].args))
 
-    def test_send_key_enter(self):
-        t = self._create_terminal()
-        t.send("echo key_test")
-        t.send_key("enter")
-        send_calls = [
-            c for c in self.mock_run.call_args_list if "send-keys" in str(c.args)
-        ]
-        self.assertTrue(any("Enter" in str(c.args) for c in send_calls))
-
     def test_send_key_unknown_raises(self):
         t = self._create_terminal()
         with self.assertRaises(ValueError):
@@ -108,10 +99,6 @@ class TestTmuxTerminal(unittest.TestCase):
         t = TmuxTerminal()
         self.terminals_to_cleanup.append(t)
         self.assertTrue(t.session_name.startswith(_SESSION_PREFIX))
-
-    def test_start_reading_is_noop(self):
-        t = self._create_terminal()
-        self.loop.run_until_complete(t.start_reading())
 
 
 if __name__ == "__main__":

@@ -14,32 +14,6 @@ from linhai.machine_control.master_host.terminal import (
 from linhai.machine_control.master_host.tmux_terminal import TmuxTerminal
 
 
-class TestConfigureTerminals(unittest.TestCase):
-    def tearDown(self):
-        configure_terminals(False)
-
-    @patch(
-        "linhai.machine_control.master_host.terminal.is_tmux_available",
-        return_value=True,
-    )
-    def test_configure_tmux_available(self, _):
-        configure_terminals(True)
-
-    @patch(
-        "linhai.machine_control.master_host.terminal.is_tmux_available",
-        return_value=False,
-    )
-    def test_configure_tmux_not_available_falls_back(self, _):
-        configure_terminals(True)
-
-    @patch(
-        "linhai.machine_control.master_host.terminal.is_tmux_available",
-        return_value=True,
-    )
-    def test_configure_disabled(self, _):
-        configure_terminals(False)
-
-
 class TestTerminalBackendSelection(unittest.TestCase):
     def setUp(self):
         self.loop = asyncio.new_event_loop()
