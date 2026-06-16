@@ -215,7 +215,12 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
         self.assertIsInstance(result, SuccessfulToolResult)
 
     async def test_compress_threshold_trigger(self):
-        """Test that compression is triggered when token threshold is exceeded."""
+        """Test that compression tools are registered and usable."""
+        tools_info = self.tool_manager.get_tools_info()
+        tool_names = [tool["function"]["name"] for tool in tools_info]
+        self.assertIn("context_forget_range_step1", tool_names)
+        self.assertIn("context_forget_range_step2", tool_names)
+        self.assertIn("context_forget_large_message", tool_names)
 
     async def test_workflow_with_invalid_range(self):
         """Test context_forget_range_step1 with invalid range parameters."""
