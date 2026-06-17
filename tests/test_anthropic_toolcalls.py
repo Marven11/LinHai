@@ -159,8 +159,8 @@ class TestAnthropicAnswerGetMessage(unittest.TestCase):
         self.assertEqual(msg.tool_calls[0]["function"]["name"], "write_file")
 
 
-class TestConvertMessages(unittest.TestCase):
-    def test_with_tool_calls(self):
+class TestConvertMessages(unittest.IsolatedAsyncioTestCase):
+    async def test_with_tool_calls(self):
         from linhai.type_hints import OpenAiToolCall, FunctionCall
 
         llm = AnthropicLanguageModel.__new__(AnthropicLanguageModel)
@@ -175,7 +175,7 @@ class TestConvertMessages(unittest.TestCase):
             )
         ]
 
-        _, raw = llm._convert_messages([asst])
+        _, raw = await llm._convert_messages([asst])
         self.assertEqual(len(raw), 1)
         msg = raw[0]
         self.assertEqual(msg["role"], "assistant")
@@ -186,7 +186,7 @@ class TestConvertMessages(unittest.TestCase):
         self.assertEqual(tool_use_blocks[0]["name"], "read_file")
         self.assertEqual(tool_use_blocks[0]["input"], {"f": "x"})
 
-    def test_tool_result(self):
+    async def test_tool_result(self):
         llm = AnthropicLanguageModel.__new__(AnthropicLanguageModel)
         llm._custom_toolcall_format = False
 
@@ -194,10 +194,41 @@ class TestConvertMessages(unittest.TestCase):
             tool_call_id="tc1", content="file content here", tool_name="read_file"
         )
 
-        _, raw = llm._convert_messages([tool_result])
+        _, raw = await llm._convert_messages([tool_result])
         self.assertEqual(len(raw), 1)
         msg = raw[0]
         self.assertEqual(msg["role"], "user")
         self.assertIsInstance(msg["content"], list)
         self.assertEqual(msg["content"][0]["type"], "tool_result")
         self.assertEqual(msg["content"][0]["tool_use_id"], "tc1")
+
+    async def test_convert_messages_invalid_json(self):
+        from linhai.type_hints import OpenAiToolCall, FunctionCall
+
+        llm = AnthropicLanguageModel.__new__(AnthropicLanguageModel)
+        llm._custom_toolcall_format = False
+
+        asst = AssistantMessage(message="Using tool now")
+        asst.tool_calls = [
+            OpenAiToolCall(
+                id="tc2",
+                function=FunctionCall(
+                    name="read_file",
+                    arguments='{"filepath": "/tmp/test\\uinvalid.txt"}',
+                ),
+                type="function",
+            )
+        ]
+
+        _, raw = await llm._convert_messages([asst])
+        self.assertEqual(len(raw), 1)
+        msg = raw[0]
+        self.assertEqual(msg["role"], "assistant")
+        self.assertIsInstance(msg["content"], list)
+        tool_use_blocks = [b for b in msg["content"] if b["type"] == "tool_use"]
+        self.assertEqual(len(tool_use_blocks), 1)
+        self.assertEqual(tool_use_blocks[0]["id"], "tc2")
+        self.assertEqual(tool_use_blocks[0]["name"], "read_file")
+        self.assertIsInstance(tool_use_blocks[0]["input"], dict)
+        self.assertIn("notice", tool_use_blocks[0]["input"])
+        self.assertIn("original_arguments", tool_use_blocks[0]["input"])

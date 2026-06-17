@@ -303,6 +303,10 @@ def _convert_content_to_anthropic(content) -> str | list[dict]:
     return ""
 
 
+async def _parse_tool_args(args_str: str) -> dict:
+    return json.loads(args_str)
+
+
 class AnthropicLanguageModel:
     """Anthropic语言模型实现，用于与Anthropic Messages API交互。"""
 
@@ -385,7 +389,7 @@ class AnthropicLanguageModel:
             **self._client_options,
         )
 
-    def _convert_messages(
+    async def _convert_messages(
         self, history: Sequence[Message]
     ) -> tuple[str | None, list[dict]]:
         system_parts: list[str] = []
@@ -430,11 +434,21 @@ class AnthropicLanguageModel:
                     for tc in tool_calls:
                         tc_func = tc.get("function", {})
                         tc_args_str = tc_func.get("arguments", "{}")
-                        tc_input = (
-                            json.loads(tc_args_str)
-                            if isinstance(tc_args_str, str)
-                            else tc_args_str
-                        )
+                        if isinstance(tc_args_str, str):
+                            results = await asyncio.gather(
+                                _parse_tool_args(tc_args_str),
+                                return_exceptions=True,
+                            )
+                            parsed = results[0]
+                            if isinstance(parsed, BaseException):
+                                tc_input = {
+                                    "notice": "此工具参数JSON格式错误，调用失败",
+                                    "original_arguments": tc_args_str,
+                                }
+                            else:
+                                tc_input = parsed
+                        else:
+                            tc_input = tc_args_str
                         blocks.append(
                             {
                                 "type": "tool_use",
@@ -524,7 +538,7 @@ class AnthropicLanguageModel:
         if self.previous_input_tokens is not None:
             estimated_cached_input_tokens = self._estimate_cached_input_tokens(history)
 
-        system_prompt, messages = self._convert_messages(history)
+        system_prompt, messages = await self._convert_messages(history)
 
         params: dict = {
             "model": self.model,
