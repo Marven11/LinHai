@@ -60,7 +60,12 @@ class AnthropicAnswer:
         if self.interrupted or self.truncated:
             raise StopAsyncIteration
 
-        event = await anext(self.stream, None)
+        results = await asyncio.gather(anext(self.stream, None), return_exceptions=True)
+        event = results[0]
+
+        if isinstance(event, BaseException):
+            self.interrupted = True
+            raise StopAsyncIteration from event
 
         if event is None:
             raise StopAsyncIteration
