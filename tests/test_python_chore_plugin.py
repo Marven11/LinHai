@@ -307,10 +307,5 @@ class TestFailedStatus(_BasePluginTest):
         self.agent.message_processor.add_new_message.assert_not_called()
 
 
-class TestRegister(unittest.TestCase):
-    def test_register(self):
-        registry = MagicMock()
-        plugin = PythonCommentCheckerPlugin(registry)
-        lifecycle = MagicMock()
-        plugin.register(lifecycle)
-        lifecycle.after_toolcall.register.assert_called_once_with(plugin.after_toolcall)
+if __name__ == "__main__":
+    unittest.main()

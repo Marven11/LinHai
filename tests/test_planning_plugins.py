@@ -318,9 +318,40 @@ class TestPlanningStatusReminderPlugin(unittest.IsolatedAsyncioTestCase):
 
         self.assertIsNone(result)
         self.assertEqual(self.plugin.status_counter, 0)
-        self.assertEqual(
-            self.plugin.todolist_counter, 3
-        )  # todolist_counter should increment when STATUS.md is modified
+        self.assertEqual(self.plugin.todolist_counter, 3)
+
+    async def test_notification_message_contains_counter_values(self):
+        agent = self.registry.get_member_typechecked("agent", MagicMock)
+        self.plugin.status_counter = 4
+        self.plugin.todolist_counter = 5
+
+        with patch.object(self.plugin, "_get_current_state", return_value="绿灯"):
+            await self.plugin.after_message_generation(
+                parsed_answer=MagicMock(),
+                tool_calls=[
+                    {"name": "read_file", "arguments": {"filepath": "test.txt"}},
+                ],
+            )
+
+        status_calls = [
+            c
+            for c in agent.message_processor.update_notification_message.call_args_list
+            if c.kwargs.get("source") == "planning_status_reminder"
+        ]
+        self.assertEqual(len(status_calls), 1)
+        status_msg = status_calls[0][0][0]
+        self.assertIsNotNone(status_msg)
+        self.assertIn("5", status_msg.message)
+
+        todolist_calls = [
+            c
+            for c in agent.message_processor.update_notification_message.call_args_list
+            if c.kwargs.get("source") == "planning_todolist_reminder"
+        ]
+        self.assertEqual(len(todolist_calls), 1)
+        todolist_msg = todolist_calls[0][0][0]
+        self.assertIsNotNone(todolist_msg)
+        self.assertIn("6", todolist_msg.message)
 
 
 class TestUserInputRuntimeMessagePlugin(unittest.IsolatedAsyncioTestCase):

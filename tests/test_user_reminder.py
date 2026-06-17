@@ -103,6 +103,25 @@ class TestUserReminderPlugin(unittest.IsolatedAsyncioTestCase):
         self.assertIsNone(result)
         self.agent.message_processor.update_notification_message.assert_not_called()
 
+    async def test_multiple_calls_override_previous_notification(self):
+        self.registry.register_member("agent", self.agent)
+        self.reminder_file.write_text("第一次提醒", encoding="utf-8")
+        await self.plugin.before_message_generation()
+        self.agent.message_processor.update_notification_message.assert_called()
+        first_call_msg = (
+            self.agent.message_processor.update_notification_message.call_args[0][0]
+        )
+        self.assertIn("第一次提醒", first_call_msg.message)
+
+        self.agent.message_processor.update_notification_message.reset_mock()
+        self.reminder_file.write_text("第二次提醒", encoding="utf-8")
+        await self.plugin.before_message_generation()
+        self.agent.message_processor.update_notification_message.assert_called()
+        second_call_msg = (
+            self.agent.message_processor.update_notification_message.call_args[0][0]
+        )
+        self.assertIn("第二次提醒", second_call_msg.message)
+
 
 if __name__ == "__main__":
     unittest.main()
