@@ -735,7 +735,7 @@ EXAMPLE_MULTIHOP_MACHINES = t(
         "zh_CN": """
 使用`process_create`连接到远程ssh主机，然后通过`connect_posix_shell_as_machine`将其添加为新机器
 
-注意：process_create以非pty模式启动进程，SSH密码认证需要TTY，因此需要使用askpass脚本来提供密码
+注意：process_create启动进程，SSH密码认证需要TTY，因此需要使用askpass脚本来提供密码
 
 首先创建askpass脚本，该脚本从环境变量中读取密码并输出：
 
@@ -782,7 +782,7 @@ EXAMPLE_MULTIHOP_MACHINES = t(
         "en": """
 Use `process_create` to connect to a remote ssh host, then add it as a new machine via `connect_posix_shell_as_machine`
 
-Note: process_create starts processes in non-pty mode. SSH password authentication requires a TTY, so you need to use an askpass script to provide the password.
+Note: process_create starts processes. SSH password authentication requires a TTY, so you need to use an askpass script to provide the password.
 
 First create the askpass script, which reads the password from an environment variable and outputs it:
 

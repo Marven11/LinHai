@@ -6,13 +6,9 @@ from unittest.mock import AsyncMock, Mock, patch
 from linhai.machine_control.trojan.shell_transport import (
     setup_trojan_in_shell,
     _execute_in_shell,
-    _is_pty_process,
-    _disable_pty_echo,
-    _upload_trojan_chunked,
     _split_marker_for_echo,
 )
 from linhai.machine_control.process import (
-    ProcessKillResult,
     ProcessReadResult,
     ProcessWriteResult,
 )
@@ -191,104 +187,6 @@ class TestSplitMarkerForEcho(unittest.TestCase):
         result = _split_marker_for_echo(marker)
         self.assertNotIn(marker, result)
         self.assertEqual("".join(result.split('""')), marker)
-
-
-class TestIsPtyProcess(unittest.TestCase):
-
-    def test_mock_returns_false(self):
-        mock = AsyncMock()
-        self.assertFalse(_is_pty_process(mock))
-
-    def test_non_pty_returns_false(self):
-        self.assertFalse(_is_pty_process("not a process"))
-        self.assertFalse(_is_pty_process(42))
-
-    def test_str_returns_false(self):
-        self.assertFalse(_is_pty_process("not a process"))
-
-
-class TestDisablePtyEcho(unittest.TestCase):
-
-    def setUp(self):
-        self.loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(self.loop)
-
-    def tearDown(self):
-        self.loop.close()
-
-    def test_non_pty_process_does_nothing(self):
-        async def test():
-            mock_process = AsyncMock()
-            await _disable_pty_echo(mock_process)
-            mock_process.stdio_write.assert_not_called()
-
-        self.loop.run_until_complete(test())
-
-
-class TestUploadTrojanChunked(unittest.TestCase):
-
-    def setUp(self):
-        self.loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(self.loop)
-
-    def tearDown(self):
-        self.loop.close()
-
-    def _make_mock_process(self, read_responses):
-        mock_process = AsyncMock()
-        mock_process.pid = "1"
-        mock_process.stdio_write = AsyncMock(
-            return_value=ProcessWriteResult(pid="1", success=True, message="ok")
-        )
-        responses = iter(read_responses)
-        default = ProcessReadResult(pid="1", success=True, stdout=b"", stderr=b"")
-
-        async def read_side_effect(wait_seconds):
-            return next(responses, default)
-
-        mock_process.stdio_read = AsyncMock(side_effect=read_side_effect)
-        return mock_process
-
-    def test_chunked_upload_success(self):
-        async def test():
-            marker_open = "<linhai_cmd_aaaa>"
-            marker_close = "</linhai_cmd_aaaa>"
-            read_responses = [
-                ProcessReadResult(
-                    pid="1",
-                    success=True,
-                    stdout=(
-                        f"{marker_open}\n/tmp/test.b64\n0{marker_close}\n"
-                    ).encode(),
-                    stderr=b"",
-                ),
-                ProcessReadResult(
-                    pid="1",
-                    success=True,
-                    stdout=(f"{marker_open}\n\n0{marker_close}\n").encode(),
-                    stderr=b"",
-                ),
-                ProcessReadResult(
-                    pid="1",
-                    success=True,
-                    stdout=(
-                        f"{marker_open}\n/tmp/trojan.py\n0{marker_close}\n"
-                    ).encode(),
-                    stderr=b"",
-                ),
-            ]
-            mock_process = self._make_mock_process(read_responses)
-            with patch(
-                "linhai.machine_control.trojan.shell_transport.uuid.uuid4"
-            ) as mock_uuid:
-                mock_uuid.return_value.hex = "aaaa"
-                exit_code, output, error = await _upload_trojan_chunked(
-                    mock_process, "aG VsbG8="
-                )
-                self.assertEqual(exit_code, 0)
-                self.assertIn("/tmp/trojan.py", output)
-
-        self.loop.run_until_complete(test())
 
 
 if __name__ == "__main__":

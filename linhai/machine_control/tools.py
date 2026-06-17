@@ -135,8 +135,8 @@ def register_machine_control_tools(machine_control: "MachineControl") -> ToolSet
         name="connect_posix_shell_as_machine",
         desc=t(
             {
-                "zh_CN": "连接已经打开的任何posix shell进程，部署jsonrpc远控进程并操控，支持任何非pty且stdio连接着posix shell(如bash)的进程，可用于sudo bash, docker exec -it sh, adb shell, ssh, nc -l等任何场景打开的posix shell",
-                "en": "Connect to any non-pty posix shell process with stdio connected (e.g. bash), deploy jsonrpc control. Supports sudo bash, docker exec -it sh, adb shell, ssh, nc -l, etc.",
+                "zh_CN": "连接已经打开的任何posix shell进程，部署jsonrpc远控进程并操控，支持任何stdio连接着posix shell(如bash)的进程，可用于sudo bash, docker exec -it sh, adb shell, ssh, nc -l等任何场景打开的posix shell",
+                "en": "Connect to any posix shell process with stdio connected (e.g. bash), deploy jsonrpc control. Supports sudo bash, docker exec -it sh, adb shell, ssh, nc -l, etc.",
             }
         ),
         args={
@@ -400,8 +400,8 @@ def register_machine_control_tools(machine_control: "MachineControl") -> ToolSet
         name="process_create",
         desc=t(
             {
-                "zh_CN": "以非pty模式创建一个进程，等待一段时间后检查状态。如果进程已退出则返回退出码和输出，否则返回运行中状态。进程的stdin/stdout/stderr通过pipe连接，可使用process_stdio_read/write进行交互",
-                "en": "Create a process in non-pty mode, wait and check status. Returns exit code and output if exited, otherwise running status. Process stdin/stdout/stderr are connected via pipes, use process_stdio_read/write for interaction",
+                "zh_CN": "创建一个进程，等待一段时间后检查状态。如果进程已退出则返回退出码和输出，否则返回运行中状态。进程的stdin/stdout/stderr通过pipe连接，可使用process_stdio_read/write进行交互",
+                "en": "Create a process, wait and check status. Returns exit code and output if exited, otherwise running status. Process stdin/stdout/stderr are connected via pipes, use process_stdio_read/write for interaction",
             }
         ),
         args={

@@ -13,7 +13,6 @@ import platform
 import asyncio
 import tempfile
 import shutil
-import termios
 import http.client
 import urllib.parse
 import ssl
@@ -814,13 +813,6 @@ def main():
         sys.exit(1)
 
     marker_bytes = f"<linhai_pulse_{marker_hex}>".encode()
-
-    if sys.stdin.isatty():
-        fd = sys.stdin.fileno()
-        settings = termios.tcgetattr(fd)
-        settings[3] = settings[3] & ~termios.ICANON & ~termios.ECHO
-        settings[1] = settings[1] & ~termios.OPOST
-        termios.tcsetattr(fd, termios.TCSANOW, settings)
 
     trojan = Trojan(marker_bytes)
 

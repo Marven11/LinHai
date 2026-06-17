@@ -56,8 +56,9 @@ class TestPosixShellControlE2E(unittest.IsolatedAsyncioTestCase):
         await control.disconnect()
         if process.stdin and not process.stdin.is_closing():
             process.stdin.close()
-        process.kill()
-        await process.wait()
+        if process.returncode is None:
+            process.kill()
+            await process.wait()
         process._transport.close()
 
     async def test_connect_with_local_bash(self):

@@ -481,7 +481,7 @@ class MachineControl:
                 )
                 await agent_message.add_new_message(
                     RuntimeMessage(
-                        "提示：非pty模式下ssh启动的bash不会自动输出任何内容。"
+                        "提示：ssh启动的bash不会自动输出任何内容。"
                         "建议：1) 指定命令为bash -i以获取交互提示符；"
                         "2) 启动后输入whoami测试是否连接成功；"
                         "3) 使用ssh -v查看连接流程"

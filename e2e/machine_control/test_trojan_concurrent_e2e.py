@@ -36,8 +36,9 @@ class TestTrojanConcurrentE2E(unittest.IsolatedAsyncioTestCase):
     async def _cleanup(self, process: asyncio.subprocess.Process) -> None:
         if process.stdin and not process.stdin.is_closing():
             process.stdin.close()
-        process.kill()
-        await process.wait()
+        if process.returncode is None:
+            process.kill()
+            await process.wait()
 
     async def test_concurrent_ping_and_read_file(self):
         control, adapter, process = await self._create_control()

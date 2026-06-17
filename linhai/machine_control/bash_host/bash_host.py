@@ -9,8 +9,6 @@ from typing import Any, Dict, Optional, Union
 
 from rich.text import Text
 
-from linhai.machine_control.master_host.process import LocalPtyProcess
-
 from linhai.tool.base import (
     SuccessfulToolResult,
     FailedToolResult,
@@ -70,38 +68,6 @@ class BashHostControl:
 
     async def connect(self, process: Process) -> bool:
         self._shell_process = process
-
-        if isinstance(process, LocalPtyProcess):
-            await asyncio.sleep(0.5)
-            await process.stdio_read(1.0)
-            await process.stdio_write("stty -echo -icanon -opost", with_enter=True)
-            await asyncio.sleep(0.3)
-            await process.stdio_read(0.5)
-
-            await process.stdio_write(
-                "command -v timeout >/dev/null 2>&1 && echo _LH_TO_",
-                with_enter=True,
-            )
-            await asyncio.sleep(0.3)
-            r = await process.stdio_read(0.5)
-            if not isinstance(r, ProcessIOError) and r.success:
-                cleaned = _strip_ansi_and_cr(r.stdout.decode("utf-8", errors="replace"))
-                if "_LH_TO_" in cleaned:
-                    self._timeout_mode = "timeout"
-
-            if self._timeout_mode != "timeout":
-                await process.stdio_write(
-                    "command -v perl >/dev/null 2>&1 && echo _LH_PL_",
-                    with_enter=True,
-                )
-                await asyncio.sleep(0.3)
-                r = await process.stdio_read(0.5)
-                if not isinstance(r, ProcessIOError) and r.success:
-                    cleaned = _strip_ansi_and_cr(
-                        r.stdout.decode("utf-8", errors="replace")
-                    )
-                    if "_LH_PL_" in cleaned:
-                        self._timeout_mode = "perl"
 
         rc, stdout, stderr = await self.execute_raw(
             "TMPDIR=$(mktemp -d /tmp/linhai_bash_XXXXXX) && echo $TMPDIR && echo $TMPDIR > $TMPDIR/.dir"

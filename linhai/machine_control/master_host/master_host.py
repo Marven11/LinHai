@@ -36,7 +36,7 @@ from .file import (
     list_files_glob,
     read_file_with_sed,
 )
-from .process import LocalProcess, LocalPtyProcess
+from .process import LocalProcess
 
 
 class MasterHostControl:
@@ -50,7 +50,7 @@ class MasterHostControl:
         self._registry = registry
         self._machine_id = "master_host"
         self._cwd = os.getcwd()
-        self._processes: dict[str, LocalProcess | LocalPtyProcess] = {}
+        self._processes: dict[str, LocalProcess] = {}
         configure_terminals(tmux_terminal)
 
     def _resolve_path(self, path: str) -> Path:
