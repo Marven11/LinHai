@@ -983,6 +983,28 @@ class TestMasterHostControlDisconnect(unittest.IsolatedAsyncioTestCase):
         self.assertIn("master_host", str(ctx.exception))
 
 
+class TestMachineHeartbeatConfig(unittest.TestCase):
+    """测试enable_machine_heartbeat配置项"""
+
+    def test_default_disables_heartbeat(self):
+        """默认False时不注册heartbeat插件"""
+        registry = Mock(spec=Registry)
+        mc = MachineControl(registry)
+        mock_lifecycle = Mock()
+        mock_lifecycle.before_agent_loop.register = Mock()
+        mc.register_plugin(mock_lifecycle)
+        mock_lifecycle.before_agent_loop.register.assert_not_called()
+
+    def test_enabled_registers_heartbeat(self):
+        """设置为True时注册heartbeat插件"""
+        registry = Mock(spec=Registry)
+        mc = MachineControl(registry, enable_machine_heartbeat=True)
+        mock_lifecycle = Mock()
+        mock_lifecycle.before_agent_loop.register = Mock()
+        mc.register_plugin(mock_lifecycle)
+        mock_lifecycle.before_agent_loop.register.assert_called_once()
+
+
 class TestMachineControlTransferFile(unittest.IsolatedAsyncioTestCase):
     """测试MachineControl的transfer_file方法"""
 

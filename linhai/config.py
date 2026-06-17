@@ -410,6 +410,10 @@ class ToolConfig(BaseModel):
         default="BLOCK",
         description="默认规则（当没有规则匹配时）",
     )
+    enable_machine_heartbeat: bool = Field(
+        default=False,
+        description="是否启用机器heartbeat，启用时定期向已连接机器发送ping保持连接",
+    )
 
     @field_validator("max_toolcall_token_in_round")
     def validate_max_toolcall_token_in_round(cls, v):

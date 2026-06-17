@@ -81,10 +81,12 @@ class MachineControl:
         registry: Registry,
         tmux_terminal: bool = True,
         remote_shell_control: str = "python",
+        enable_machine_heartbeat: bool = False,
     ):
         self.registry = registry
         self.target_machine = "master_host"
         self.remote_shell_control = remote_shell_control
+        self._enable_machine_heartbeat = enable_machine_heartbeat
         self.machines: Dict[str, HostControl] = {
             "master_host": MasterHostControl(registry, tmux_terminal=tmux_terminal),
         }
@@ -457,8 +459,9 @@ class MachineControl:
 
     def register_plugin(self, lifecycle: "Lifecycle"):
         """注册插件到lifecycle。"""
-        heartbeat_plugin = MachineHeartbeatPlugin(self.registry, self)
-        heartbeat_plugin.register(lifecycle)
+        if self._enable_machine_heartbeat:
+            heartbeat_plugin = MachineHeartbeatPlugin(self.registry, self)
+            heartbeat_plugin.register(lifecycle)
         lifecycle.after_conversation_restore.register(self._after_conversation_restore)
 
         async def _on_process_create(info: "ProcessCreateInfo") -> None:
