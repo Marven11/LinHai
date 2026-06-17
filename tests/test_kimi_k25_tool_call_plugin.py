@@ -72,6 +72,26 @@ class TestKimiK25ToolCallPlugin(unittest.IsolatedAsyncioTestCase):
             self.plugin.after_message_generation
         )
 
+    async def test_tool_call_missing_required_fields(self) -> None:
+        self.registry.get_member_typechecked = MagicMock(return_value=self.agent)
+        self.agent.message_processor.add_new_message = AsyncMock()
+        self.registry.send_if_exists = AsyncMock()
+        self.answer.get_message.return_value.get_content.return_value = (
+            "<|tool_call_begin|> {'function': 'incomplete'}\nother"
+        )
+        await self.plugin.after_message_generation(self.answer, [])
+        self.assertIsNotNone(self.plugin._last_error_format_time)
+
+    async def test_tool_call_empty_block(self) -> None:
+        self.registry.get_member_typechecked = MagicMock(return_value=self.agent)
+        self.agent.message_processor.add_new_message = AsyncMock()
+        self.registry.send_if_exists = AsyncMock()
+        self.answer.get_message.return_value.get_content.return_value = (
+            "<|tool_call_begin|>\n\nother"
+        )
+        await self.plugin.after_message_generation(self.answer, [])
+        self.assertIsNotNone(self.plugin._last_error_format_time)
+
 
 if __name__ == "__main__":
     unittest.main()

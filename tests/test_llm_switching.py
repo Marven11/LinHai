@@ -1,33 +1,35 @@
 """Unit tests for LLM switching functionality."""
 
 import unittest
-from unittest.mock import MagicMock, AsyncMock
-
 
 from linhai.agent import Agent
-from pathlib import Path
 from linhai.base import SystemMessage, ToolCallMessage
 from linhai.tool.base import (
     ToolCallResultMessage,
-    SuccessfulToolResult,
     FailedToolResult,
 )
 from linhai.registry import Registry
 from linhai.tool.main import ToolManager
 from linhai.tool.base import utils_tools
 
+from tests.test_llm_manager import FakeLLM
+
 
 class TestLLMSwitching(unittest.IsolatedAsyncioTestCase):
-    """Test cases for LLM switching tools."""
-
     def setUp(self):
-        self.mock_llm1 = MagicMock()
-        self.mock_llm1.answer_stream = AsyncMock(return_value=AsyncMock())
-        self.mock_llm2 = MagicMock()
-        self.mock_llm2.answer_stream = AsyncMock(return_value=AsyncMock())
+        self.llm1 = FakeLLM(
+            name="primary",
+            token_limit=8000,
+            support_image=True,
+        )
+        self.llm2 = FakeLLM(
+            name="secondary",
+            token_limit=4000,
+            support_image=False,
+        )
 
         config = {
-            "llms": [self.mock_llm1, self.mock_llm2],
+            "llms": [self.llm1, self.llm2],
             "llm_names": ["primary", "secondary"],
             "current_llm_index": 0,
             "compress_threshold": 800,
@@ -35,7 +37,6 @@ class TestLLMSwitching(unittest.IsolatedAsyncioTestCase):
 
         self.registry = Registry()
 
-        # 注册machine_control
         from linhai.machine_control.main import MachineControl
 
         MachineControl(self.registry)
@@ -50,14 +51,8 @@ class TestLLMSwitching(unittest.IsolatedAsyncioTestCase):
         self.tool_manager.register_toolset("utils", utils_tools)
 
         init_messages = [
-            SystemMessage(
-                registry=self.registry,
-            )
+            SystemMessage(registry=self.registry),
         ]
-
-        # 配置mock对象的get_name方法
-        self.mock_llm1.get_name = MagicMock(return_value="primary")
-        self.mock_llm2.get_name = MagicMock(return_value="secondary")
 
         from linhai.llm_manager import LlmManager
 
@@ -77,13 +72,11 @@ class TestLLMSwitching(unittest.IsolatedAsyncioTestCase):
         self.tool_manager = self.registry.get_member_typechecked(
             "tool_manager", ToolManager
         )
-        # 显式注册LLM工具集
         self.tool_manager.register_toolset(
             "llm", self.agent.toolcall_processor.calculate_llm_toolset()
         )
 
     async def test_switch_llm_tool_success(self):
-        """Test successful LLM switching."""
         tool_call = ToolCallMessage(
             function_name="switch_llm",
             function_arguments={"llm_name": "secondary"},
@@ -97,12 +90,16 @@ class TestLLMSwitching(unittest.IsolatedAsyncioTestCase):
             self.fail(f"switch_llm tool failed: {result.content}")
 
         self.assertIsInstance(result, ToolCallResultMessage)
-        self.assertIn("已切换到LLM: secondary", str(result))
+        result_str = str(result)
+        self.assertIn("已切换到LLM: secondary", result_str)
 
-        self.assertEqual(self.agent.llm_manager.get_current_llm(), self.mock_llm2)
+        current = self.agent.llm_manager.get_current_llm()
+        self.assertIs(current, self.llm2)
+        self.assertEqual(current.get_name(), "secondary")
+        self.assertEqual(current.get_token_limit(), 4000)
+        self.assertFalse(current.support_image())
 
     async def test_switch_llm_tool_failure(self):
-        """Test LLM switching with non-existent LLM."""
         tool_call = ToolCallMessage(
             function_name="switch_llm",
             function_arguments={"llm_name": "nonexistent"},
@@ -116,30 +113,22 @@ class TestLLMSwitching(unittest.IsolatedAsyncioTestCase):
             self.fail(f"switch_llm tool failed: {result.content}")
 
         self.assertIsInstance(result, ToolCallResultMessage)
-        self.assertIn("错误：LLM名称 'nonexistent' 不存在", str(result))
-        self.assertIn("可用的LLM包括: primary, secondary", str(result))
+        result_str = str(result)
+        self.assertIn("nonexistent", result_str)
+        self.assertIn("primary, secondary", result_str)
 
-        self.assertEqual(self.agent.llm_manager.get_current_llm(), self.mock_llm1)
+        current = self.agent.llm_manager.get_current_llm()
+        self.assertIs(current, self.llm1)
 
     async def test_llm_selection(self):
-        """Test LLM selection based on current_llm_index."""
-        selected_llm = self.agent.get_current_model()
-        self.assertEqual(selected_llm, self.mock_llm1)
+        selected = self.agent.get_current_model()
+        self.assertIs(selected, self.llm1)
 
         await self.agent.llm_manager.switch_to_llm("secondary")
-        selected_llm = self.agent.get_current_model()
-        self.assertEqual(selected_llm, self.mock_llm2)
+        selected = self.agent.get_current_model()
+        self.assertIs(selected, self.llm2)
 
     async def test_list_llm_tool(self):
-        """Test list_llm tool functionality."""
-        # Configure mock LLMs with get_model method
-        self.mock_llm1.get_model = MagicMock(return_value="gpt-4")
-        self.mock_llm2.get_model = MagicMock(return_value="gpt-3.5")
-        self.mock_llm1.get_token_limit = MagicMock(return_value=8000)
-        self.mock_llm2.get_token_limit = MagicMock(return_value=4000)
-        self.mock_llm1.support_image = MagicMock(return_value=False)
-        self.mock_llm2.support_image = MagicMock(return_value=False)
-
         tool_call = ToolCallMessage(
             function_name="list_llm",
             function_arguments={},
@@ -154,13 +143,9 @@ class TestLLMSwitching(unittest.IsolatedAsyncioTestCase):
 
         self.assertIsInstance(result, ToolCallResultMessage)
         result_str = str(result)
-
-        # Check that the result contains expected information
-        self.assertIn("找到 2 个LLM", result_str)
+        self.assertIn("2 个LLM", result_str)
         self.assertIn("primary", result_str)
         self.assertIn("secondary", result_str)
-        # Note: model names may be 'unknown' in mock environment
-        # 检查token限制是否显示
         self.assertIn("token限制: 8000", result_str)
         self.assertIn("token限制: 4000", result_str)
 

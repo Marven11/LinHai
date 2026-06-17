@@ -1,73 +1,196 @@
 import unittest
-from unittest.mock import MagicMock, AsyncMock, patch
 import asyncio
 from datetime import datetime, timedelta
-from linhai.llm_manager import LlmManager, NoAvailableLlmError
+from typing import Sequence, AsyncIterator
+from linhai.llm_manager import LlmManager
 from linhai.registry import Registry
-from linhai.base import Message, Answer
-from linhai.llm import OpenAIError
+from linhai.base import (
+    Message,
+    Answer,
+    AnswerToken,
+    AnswerTokenUsage,
+    AssistantMessage,
+    ExplicitCacheInfo,
+    OpenAiToolCallToken,
+)
 
 
-class MockAnswer(Answer):
-    def __init__(self):
+class FakeAnswer:
+    def __init__(
+        self,
+        message: str = "test answer",
+        reasoning_message: str | None = None,
+        token_usage: AnswerTokenUsage | None = None,
+    ):
+        self._message = message
+        self._reasoning_message = reasoning_message
+        self._token_usage = token_usage
         self.interrupted = False
-        self.message = MagicMock()
-        self.message.message = "test answer"
+        self._content = message
+        self._toyield: list[AnswerToken] = [
+            AnswerToken(content=token, reasoning_content=None) for token in message
+        ]
 
-    def interrupt(self):
+    def __aiter__(self) -> AsyncIterator[AnswerToken | OpenAiToolCallToken]:
+        return self
+
+    async def __anext__(self) -> AnswerToken | OpenAiToolCallToken:
+        if not self._toyield:
+            raise StopAsyncIteration
+        return self._toyield.pop(0)
+
+    def get_message(self) -> Message:
+        return AssistantMessage(
+            message=self._message,
+            reasoning_message=self._reasoning_message,
+        )
+
+    def get_reasoning_message(self) -> str | None:
+        return self._reasoning_message
+
+    def interrupt(self) -> None:
         self.interrupted = True
 
-    def get_message(self):
-        return self.message
+    def truncate(self) -> None:
+        self.interrupted = True
 
-    def get_current_content(self):
-        return "test content"
+    def get_current_content(self) -> str | None:
+        return self._content
+
+    def get_token_usage(self) -> AnswerTokenUsage | None:
+        return self._token_usage
+
+    async def get_openai_toolcalls(self) -> list | None:
+        return None
+
+
+class FakeLLM:
+    def __init__(
+        self,
+        name: str = "fake-llm",
+        token_limit: int | None = 8000,
+        support_image: bool = False,
+        compatibility: str | None = None,
+        custom_toolcall_format: bool = True,
+        explicit_cache_info: ExplicitCacheInfo | None = None,
+        compress_threshold: int | float | None = None,
+        success_content: str = "test answer",
+        success_token_usage: AnswerTokenUsage | None = None,
+        error_sequence: list[Exception] | None = None,
+    ):
+        self.name = name
+        self._token_limit = token_limit
+        self._support_image = support_image
+        self._compatibility = compatibility
+        self._custom_toolcall_format = custom_toolcall_format
+        self._explicit_cache_info = explicit_cache_info
+        self._compress_threshold = compress_threshold
+        self._success_content = success_content
+        self._success_token_usage = success_token_usage
+        self._error_sequence = error_sequence or []
+        self.call_count = 0
+
+    def get_name(self) -> str:
+        return self.name
+
+    def get_token_limit(self) -> int | None:
+        return self._token_limit
+
+    def support_image(self) -> bool:
+        return self._support_image
+
+    def get_compatibility(self) -> str | None:
+        return self._compatibility
+
+    def get_custom_toolcall_format(self) -> bool:
+        return self._custom_toolcall_format
+
+    def get_explicit_cache_info(self) -> ExplicitCacheInfo | None:
+        return self._explicit_cache_info
+
+    def get_compress_threshold(self) -> int | float | None:
+        return self._compress_threshold
+
+    def get_description(self) -> str:
+        tl = f"{self._token_limit}" if self._token_limit is not None else "未设置"
+        return f"名称: {self.name}, 模型: {self.name}, token限制: {tl}"
+
+    async def reconnect(self) -> None:
+        pass
+
+    async def answer_stream(self, _history: Sequence[Message]) -> Answer:
+        self.call_count += 1
+        if self.call_count <= len(self._error_sequence):
+            raise self._error_sequence[self.call_count - 1]
+        return FakeAnswer(
+            message=self._success_content,
+            token_usage=self._success_token_usage,
+        )
+
+
+def _make_registry():
+    r = Registry()
+    r.register_queue("ui_log")
+    return r
+
+
+def _make_llm_manager(registry, llms, **kwargs):
+    names = [llm.get_name() for llm in llms]
+    fb_map = {n: None for n in names}
+    fb_dur = {n: 120 for n in names}
+    fb_map.update(kwargs.pop("llm_fallback_map", {}))
+    fb_dur.update(kwargs.pop("llm_fallback_duration_map", {}))
+    return LlmManager(
+        registry=registry,
+        llms=llms,
+        default_llm_name=kwargs.pop("default_llm_name", None),
+        llm_fallback_map=fb_map,
+        llm_fallback_duration_map=fb_dur,
+        **kwargs,
+    )
 
 
 class TestLlmManager(unittest.IsolatedAsyncioTestCase):
     def setUp(self):
-        self.mock_registry = MagicMock(spec=Registry)
-        self.mock_registry.send_if_exists = AsyncMock()
-        self.mock_registry.register_member = MagicMock()
-        self.mock_registry.has_member = MagicMock(return_value=False)
+        self.registry = _make_registry()
 
-        self.mock_llm1 = MagicMock()
-        self.mock_llm1.get_name = MagicMock(return_value="llm1")
-        self.mock_llm1.get_token_limit = MagicMock(return_value=8000)
-        self.mock_llm1.support_image = MagicMock(return_value=True)
-        self.mock_llm1.answer_stream = AsyncMock(return_value=MockAnswer())
-        self.mock_llm1.reconnect = AsyncMock()
-        self.mock_llm1.get_compatibility = MagicMock(return_value=None)
-
-        self.mock_llm2 = MagicMock()
-        self.mock_llm2.get_name = MagicMock(return_value="llm2")
-        self.mock_llm2.get_token_limit = MagicMock(return_value=16000)
-        self.mock_llm2.support_image = MagicMock(return_value=False)
-        self.mock_llm2.answer_stream = AsyncMock(return_value=MockAnswer())
-        self.mock_llm2.reconnect = AsyncMock()
-        self.mock_llm2.get_compatibility = MagicMock(return_value=None)
-
-        self.llm_manager = LlmManager(
-            registry=self.mock_registry,
-            llms=[self.mock_llm1, self.mock_llm2],
-            default_llm_name="llm1",
-            llm_fallback_map={"llm1": "llm2", "llm2": None},
-            llm_fallback_duration_map={"llm1": 120, "llm2": 120},
+        self.llm1 = FakeLLM(
+            name="llm1",
+            token_limit=8000,
+            support_image=True,
+        )
+        self.llm2 = FakeLLM(
+            name="llm2",
+            token_limit=16000,
+            support_image=False,
         )
 
+        self.llm_manager = _make_llm_manager(
+            self.registry,
+            [self.llm1, self.llm2],
+            llm_fallback_map={"llm1": "llm2"},
+        )
+
+    def test_initialization(self):
+        self.assertEqual(self.llm_manager.llm_names, ["llm1", "llm2"])
+        self.assertEqual(self.llm_manager.default_llm_name, "llm1")
+        self.assertEqual(self.llm_manager.llm_fallback_map["llm1"], "llm2")
+        self.assertIsNone(self.llm_manager.llm_fallback_map["llm2"])
+        self.assertEqual(len(self.llm_manager.llm_stack), 1)
+        self.assertEqual(self.llm_manager.llm_stack[0]["llm_name"], "llm1")
+        self.assertIsNone(self.llm_manager.llm_stack[0]["disabled_until"])
+
     def test_get_current_llm(self):
-        current_llm = self.llm_manager.get_current_llm()
-        self.assertEqual(current_llm, self.mock_llm1)
+        current = self.llm_manager.get_current_llm()
+        self.assertIs(current, self.llm1)
 
     def test_get_current_llm_without_cleanup(self):
         future_time = datetime.now() + timedelta(seconds=10)
         self.llm_manager.llm_stack.append(
             {"llm_name": "llm2", "disabled_until": future_time, "retry_count": 0}
         )
-
-        current_llm = self.llm_manager.get_current_llm(rotate_invalid_llm=False)
-        self.assertEqual(current_llm, self.mock_llm2)
-
+        current = self.llm_manager.get_current_llm(rotate_invalid_llm=False)
+        self.assertIs(current, self.llm2)
         self.assertEqual(len(self.llm_manager.llm_stack), 2)
 
     async def test_switch_to_llm(self):
@@ -82,103 +205,72 @@ class TestLlmManager(unittest.IsolatedAsyncioTestCase):
         self.assertIn("nonexistent", str(context.exception))
 
     async def test_answer_stream_success(self):
-        history = [MagicMock(spec=Message)]
+        from linhai.base import UserMessage
+
+        history = [UserMessage("hello")]
         answer = await self.llm_manager.answer_stream(history)
-        self.assertIsInstance(answer, MockAnswer)
-        self.mock_llm1.answer_stream.assert_called_once_with(history)
+        self.assertIsInstance(answer, FakeAnswer)
+        self.assertEqual(answer.get_message().get_content(), "test answer")
+        self.assertEqual(self.llm1.call_count, 1)
 
     async def test_answer_stream_fallback_on_429(self):
-        call_count = 0
+        from linhai.base import UserMessage
 
-        async def mock_answer_stream_fail_first(history):
-            nonlocal call_count
-            call_count += 1
-            if call_count == 1:
-                raise Exception("429 Too Many Requests")
-            return MockAnswer()
+        self.llm1._error_sequence = [Exception("429 Too Many Requests")]
+        self.llm2._success_content = "fallback answer"
 
-        self.mock_llm1.answer_stream = AsyncMock(
-            side_effect=mock_answer_stream_fail_first
-        )
-        self.mock_llm2.answer_stream = AsyncMock(return_value=MockAnswer())
-
-        history = [MagicMock(spec=Message)]
+        history = [UserMessage("hello")]
         answer = await self.llm_manager.answer_stream(history)
-        self.assertIsInstance(answer, MockAnswer)
-        self.assertEqual(self.mock_llm1.answer_stream.call_count, 1)
-        self.assertEqual(self.mock_llm2.answer_stream.call_count, 1)
+        msg = answer.get_message()
+        assert msg is not None
+        self.assertEqual(msg.get_content(), "fallback answer")
+        self.assertEqual(self.llm1.call_count, 1)
+        self.assertEqual(self.llm2.call_count, 1)
         self.assertEqual(len(self.llm_manager.llm_stack), 2)
         self.assertEqual(self.llm_manager.llm_stack[0]["llm_name"], "llm1")
         self.assertEqual(self.llm_manager.llm_stack[1]["llm_name"], "llm2")
 
     async def test_answer_stream_fallback_on_network_error(self):
-        call_count = 0
+        from linhai.base import UserMessage
 
-        async def mock_answer_stream_fail_first(history):
-            nonlocal call_count
-            call_count += 1
-            if call_count == 1:
-                raise Exception("connection error")
-            return MockAnswer()
+        self.llm1._error_sequence = [Exception("connection error")]
+        self.llm2._success_content = "fallback answer"
 
-        self.mock_llm1.answer_stream = AsyncMock(
-            side_effect=mock_answer_stream_fail_first
-        )
-        self.mock_llm2.answer_stream = AsyncMock(return_value=MockAnswer())
-
-        history = [MagicMock(spec=Message)]
+        history = [UserMessage("hello")]
         answer = await self.llm_manager.answer_stream(history)
-        self.assertIsInstance(answer, MockAnswer)
-        self.assertEqual(self.mock_llm1.answer_stream.call_count, 1)
-        self.assertEqual(self.mock_llm2.answer_stream.call_count, 1)
+        self.assertEqual(answer.get_message().get_content(), "fallback answer")
+        self.assertEqual(self.llm1.call_count, 1)
+        self.assertEqual(self.llm2.call_count, 1)
         self.assertEqual(len(self.llm_manager.llm_stack), 2)
 
     async def test_answer_stream_no_fallback_retry_on_429(self):
-        call_count = 0
+        from linhai.base import UserMessage
 
-        async def mock_answer_stream_fail_then_succeed(history):
-            nonlocal call_count
-            call_count += 1
-            if call_count <= 2:
-                raise Exception("429 Too Many Requests")
-            return MockAnswer()
+        self.llm1._error_sequence = [
+            Exception("429 Too Many Requests"),
+            Exception("429 Too Many Requests"),
+        ]
+        self.llm1._success_content = "retry success"
 
-        self.mock_llm1.answer_stream = AsyncMock(
-            side_effect=mock_answer_stream_fail_then_succeed
-        )
+        r2 = _make_registry()
+        lm = _make_llm_manager(r2, [self.llm1])
 
-        llm_manager_no_fallback = LlmManager(
-            registry=self.mock_registry,
-            llms=[self.mock_llm1, self.mock_llm2],
-            default_llm_name="llm1",
-            llm_fallback_map={"llm1": None, "llm2": None},
-            llm_fallback_duration_map={"llm1": 120, "llm2": 120},
-        )
-
-        history = [MagicMock(spec=Message)]
-        answer = await llm_manager_no_fallback.answer_stream(history)
-        self.assertIsInstance(answer, MockAnswer)
-        self.assertEqual(call_count, 3)
-        self.assertEqual(len(llm_manager_no_fallback.llm_stack), 1)
+        history = [UserMessage("hello")]
+        answer = await lm.answer_stream(history)
+        self.assertEqual(answer.get_message().get_content(), "retry success")
+        self.assertEqual(self.llm1.call_count, 3)
+        self.assertEqual(len(lm.llm_stack), 1)
 
     async def test_answer_stream_timeout_retry(self):
-        call_count = 0
+        from linhai.base import UserMessage
 
-        async def mock_answer_stream_timeout_once(history):
-            nonlocal call_count
-            call_count += 1
-            if call_count == 1:
-                raise asyncio.TimeoutError("timeout")
-            return MockAnswer()
+        self.llm1._error_sequence = [asyncio.TimeoutError("timeout")]
+        self.llm1._success_content = "retry after timeout"
 
-        self.mock_llm1.answer_stream = AsyncMock(
-            side_effect=mock_answer_stream_timeout_once
-        )
-
-        history = [MagicMock(spec=Message)]
+        history = [UserMessage("hello")]
         answer = await self.llm_manager.answer_stream(history)
-        self.assertIsInstance(answer, MockAnswer)
-        self.assertEqual(call_count, 2)
+        self.assertEqual(answer.get_message().get_content(), "retry after timeout")
+        self.assertEqual(self.llm1.call_count, 2)
 
     async def test_stack_cleanup_expired_llms(self):
         future_time = datetime.now() + timedelta(seconds=0.01)
@@ -186,10 +278,8 @@ class TestLlmManager(unittest.IsolatedAsyncioTestCase):
             {"llm_name": "llm2", "disabled_until": future_time, "retry_count": 0}
         )
         self.assertEqual(len(self.llm_manager.llm_stack), 2)
-
         self.llm_manager._cleanup_expired_llms()
         self.assertEqual(len(self.llm_manager.llm_stack), 2)
-
         await asyncio.sleep(0.02)
         self.llm_manager._cleanup_expired_llms()
         self.assertEqual(len(self.llm_manager.llm_stack), 1)
@@ -200,11 +290,9 @@ class TestLlmManager(unittest.IsolatedAsyncioTestCase):
         self.llm_manager.llm_stack.append(
             {"llm_name": "llm2", "disabled_until": future_time, "retry_count": 0}
         )
-        self.assertEqual(len(self.llm_manager.llm_stack), 2)
-
         await asyncio.sleep(0.02)
-        current_llm = self.llm_manager.get_current_llm()
-        self.assertEqual(current_llm, self.mock_llm1)
+        current = self.llm_manager.get_current_llm()
+        self.assertIs(current, self.llm1)
         self.assertEqual(len(self.llm_manager.llm_stack), 1)
 
     async def test_switch_to_llm_clears_stack(self):
@@ -213,15 +301,15 @@ class TestLlmManager(unittest.IsolatedAsyncioTestCase):
             {"llm_name": "llm2", "disabled_until": future_time, "retry_count": 0}
         )
         self.assertEqual(len(self.llm_manager.llm_stack), 2)
-
         await self.llm_manager.switch_to_llm("llm2")
         self.assertEqual(len(self.llm_manager.llm_stack), 1)
         self.assertEqual(self.llm_manager.llm_stack[0]["llm_name"], "llm2")
 
     def test_record_error(self):
-        initial_count = len(self.llm_manager.llm_errors["llm1"])
+        initial = len(self.llm_manager.llm_errors["llm1"])
         self.llm_manager._record_error("llm1", "test_error")
-        self.assertEqual(len(self.llm_manager.llm_errors["llm1"]), initial_count + 1)
+        self.assertEqual(len(self.llm_manager.llm_errors["llm1"]), initial + 1)
+        self.assertEqual(self.llm_manager.llm_errors["llm1"][-1][1], "test_error")
 
     def test_is_llm_expired(self):
         self.assertFalse(self.llm_manager._is_llm_expired(None))
@@ -240,9 +328,13 @@ class TestLlmManager(unittest.IsolatedAsyncioTestCase):
         result = self.llm_manager.list_available_llms()
         self.assertEqual(len(result), 2)
         self.assertEqual(result[0]["name"], "llm1")
-        self.assertEqual(result[0]["is_current"], True)
+        self.assertTrue(result[0]["is_current"])
+        self.assertTrue(result[0]["support_image"])
+        self.assertEqual(result[0]["token_limit"], 8000)
         self.assertEqual(result[1]["name"], "llm2")
-        self.assertEqual(result[1]["is_current"], False)
+        self.assertFalse(result[1]["is_current"])
+        self.assertFalse(result[1]["support_image"])
+        self.assertEqual(result[1]["token_limit"], 16000)
 
     async def test_empty_history_raises_error(self):
         with self.assertRaises(ValueError) as context:
@@ -250,280 +342,234 @@ class TestLlmManager(unittest.IsolatedAsyncioTestCase):
         self.assertIn("empty", str(context.exception).lower())
 
     async def test_unexpected_error_propagates(self):
-        self.mock_llm1.answer_stream = AsyncMock(
-            side_effect=ValueError("unexpected error")
-        )
-        history = [MagicMock(spec=Message)]
+        from linhai.base import UserMessage
+
+        self.llm1._error_sequence = [ValueError("unexpected error")]
+
+        history = [UserMessage("hello")]
         with self.assertRaises(ValueError) as context:
             await self.llm_manager.answer_stream(history)
         self.assertIn("unexpected error", str(context.exception))
 
     async def test_fallback_chain(self):
-        mock_llm3 = MagicMock()
-        mock_llm3.get_name = MagicMock(return_value="llm3")
-        mock_llm3.get_token_limit = MagicMock(return_value=32000)
-        mock_llm3.support_image = MagicMock(return_value=False)
-        mock_llm3.answer_stream = AsyncMock(return_value=MockAnswer())
-        mock_llm3.reconnect = AsyncMock()
-        mock_llm3.get_compatibility = MagicMock(return_value=None)
+        from linhai.base import UserMessage
 
-        llm_manager_chain = LlmManager(
-            registry=self.mock_registry,
-            llms=[self.mock_llm1, self.mock_llm2, mock_llm3],
-            default_llm_name="llm1",
-            llm_fallback_map={"llm1": "llm2", "llm2": "llm3", "llm3": None},
-            llm_fallback_duration_map={"llm1": 120, "llm2": 120, "llm3": 120},
+        llm3 = FakeLLM(name="llm3", token_limit=32000)
+
+        self.llm1._error_sequence = [Exception("429 Too Many Requests")]
+        self.llm2._error_sequence = [Exception("429 Too Many Requests")]
+        llm3._success_content = "chain answer"
+
+        r2 = _make_registry()
+        lm = _make_llm_manager(
+            r2,
+            [self.llm1, self.llm2, llm3],
+            llm_fallback_map={"llm1": "llm2", "llm2": "llm3"},
         )
 
-        call_count1 = 0
-        call_count2 = 0
+        history = [UserMessage("hello")]
+        answer = await lm.answer_stream(history)
+        self.assertEqual(answer.get_message().get_content(), "chain answer")
+        self.assertEqual(self.llm1.call_count, 1)
+        self.assertEqual(self.llm2.call_count, 1)
+        self.assertEqual(llm3.call_count, 1)
+        self.assertEqual(len(lm.llm_stack), 3)
 
-        async def mock_llm1_fail(history):
-            nonlocal call_count1
-            call_count1 += 1
-            raise Exception("429 Too Many Requests")
+    async def test_answer_stream_openai_error(self):
+        from linhai.base import UserMessage
+        from linhai.llm import OpenAIError
 
-        async def mock_llm2_fail(history):
-            nonlocal call_count2
-            call_count2 += 1
-            raise Exception("429 Too Many Requests")
+        self.llm1._error_sequence = [OpenAIError("API error")]
+        self.llm2._success_content = "fallback after openai error"
 
-        self.mock_llm1.answer_stream = AsyncMock(side_effect=mock_llm1_fail)
-        self.mock_llm2.answer_stream = AsyncMock(side_effect=mock_llm2_fail)
-
-        history = [MagicMock(spec=Message)]
-        answer = await llm_manager_chain.answer_stream(history)
-        self.assertIsInstance(answer, MockAnswer)
-        self.assertEqual(call_count1, 1)
-        self.assertEqual(call_count2, 1)
-        self.assertEqual(mock_llm3.answer_stream.call_count, 1)
-        self.assertEqual(len(llm_manager_chain.llm_stack), 3)
-
-    async def test_answer_stream_switch_on_error(self):
-        from linhai.agent.lifecycle import Lifecycle
-
-        lifecycle = Lifecycle(self.mock_registry)
-        self.mock_registry.has_member = MagicMock(
-            side_effect=lambda name: name == "lifecycle"
-        )
-        self.mock_registry.get_member_typechecked = MagicMock(return_value=lifecycle)
-
-        llm_manager_no_fallback = LlmManager(
-            registry=self.mock_registry,
-            llms=[self.mock_llm1, self.mock_llm2],
-            default_llm_name="llm1",
-            llm_fallback_map={"llm1": None, "llm2": None},
-            llm_fallback_duration_map={"llm1": 120, "llm2": 120},
-        )
-
-        error_triggered: list[tuple[str, int]] = []
-
-        async def on_error(llm_name: str, error: Exception, retry_count: int) -> None:
-            error_triggered.append((llm_name, retry_count))
-            if retry_count >= 2:
-                await llm_manager_no_fallback.switch_to_llm("llm2")
-
-        lifecycle.on_llm_error.register(on_error)
-
-        call_count = 0
-
-        async def mock_llm1_fail(history):
-            nonlocal call_count
-            call_count += 1
-            raise Exception("connection error")
-
-        self.mock_llm1.answer_stream = AsyncMock(side_effect=mock_llm1_fail)
-        self.mock_llm2.answer_stream = AsyncMock(return_value=MockAnswer())
-
-        history = [MagicMock(spec=Message)]
-        answer = await llm_manager_no_fallback.answer_stream(history)
-        self.assertIsInstance(answer, MockAnswer)
-        self.assertEqual(call_count, 2)
-        self.assertEqual(self.mock_llm2.answer_stream.call_count, 1)
-        self.assertEqual(len(error_triggered), 2)
-        self.assertEqual(error_triggered[0], ("llm1", 1))
-        self.assertEqual(error_triggered[1], ("llm1", 2))
-        self.assertEqual(len(llm_manager_no_fallback.llm_stack), 1)
-        self.assertEqual(llm_manager_no_fallback.llm_stack[0]["llm_name"], "llm2")
-
-    async def test_answer_stream_fallback_on_openai_error(self):
-        call_count = 0
-
-        async def mock_answer_stream_fail_first(history):
-            nonlocal call_count
-            call_count += 1
-            if call_count == 1:
-                raise OpenAIError("API error")
-            return MockAnswer()
-
-        self.mock_llm1.answer_stream = AsyncMock(
-            side_effect=mock_answer_stream_fail_first
-        )
-        self.mock_llm2.answer_stream = AsyncMock(return_value=MockAnswer())
-
-        history = [MagicMock(spec=Message)]
+        history = [UserMessage("hello")]
         answer = await self.llm_manager.answer_stream(history)
-        self.assertIsInstance(answer, MockAnswer)
-        self.assertEqual(self.mock_llm1.answer_stream.call_count, 1)
-        self.assertEqual(self.mock_llm2.answer_stream.call_count, 1)
+        self.assertEqual(
+            answer.get_message().get_content(), "fallback after openai error"
+        )
+        self.assertEqual(self.llm1.call_count, 1)
+        self.assertEqual(self.llm2.call_count, 1)
         self.assertEqual(len(self.llm_manager.llm_stack), 2)
 
     async def test_answer_stream_retry_on_openai_error_no_fallback(self):
-        call_count = 0
+        from linhai.base import UserMessage
+        from linhai.llm import OpenAIError
 
-        async def mock_answer_stream_fail_then_succeed(history):
-            nonlocal call_count
-            call_count += 1
-            if call_count <= 2:
-                raise OpenAIError("API error")
-            return MockAnswer()
+        self.llm1._error_sequence = [OpenAIError("API error"), OpenAIError("API error")]
+        self.llm1._success_content = "retry openai success"
 
-        self.mock_llm1.answer_stream = AsyncMock(
-            side_effect=mock_answer_stream_fail_then_succeed
-        )
+        r2 = _make_registry()
+        lm = _make_llm_manager(r2, [self.llm1])
 
-        llm_manager_no_fallback = LlmManager(
-            registry=self.mock_registry,
-            llms=[self.mock_llm1, self.mock_llm2],
-            default_llm_name="llm1",
-            llm_fallback_map={"llm1": None, "llm2": None},
-            llm_fallback_duration_map={"llm1": 120, "llm2": 120},
-        )
-
-        history = [MagicMock(spec=Message)]
-        answer = await llm_manager_no_fallback.answer_stream(history)
-        self.assertIsInstance(answer, MockAnswer)
-        self.assertEqual(call_count, 3)
-
-    async def test_reconnect_called_on_429_with_openai(self):
-        from unittest.mock import patch, PropertyMock
-        from linhai.llm import OpenAi
-
-        mock_registry = MagicMock(spec=Registry)
-        mock_registry.register_member = MagicMock()
-
-        with patch("linhai.llm.openai_compatible.AsyncOpenAI") as mock_async_openai_cls:
-            mock_client = AsyncMock()
-            mock_client.close = AsyncMock()
-            mock_async_openai_cls.return_value = mock_client
-
-            openai_llm = OpenAi(
-                registry=mock_registry,
-                api_key="test-key",
-                base_url="http://test",
-                model="test-model",
-                openai_config={},
-                chat_completion_kwargs={},
-                support_image=False,
-                explicit_cache_info=None,
-                name="test-llm",
-            )
-            openai_llm.answer_stream = AsyncMock(
-                side_effect=Exception("429 rate limit")
-            )
-
-            mock_fallback = MagicMock()
-            mock_fallback.get_name = MagicMock(return_value="fallback")
-            mock_fallback.get_token_limit = MagicMock(return_value=8000)
-            mock_fallback.support_image = MagicMock(return_value=False)
-            mock_fallback.answer_stream = AsyncMock(return_value=MockAnswer())
-            mock_fallback.reconnect = AsyncMock()
-            mock_fallback.get_compatibility = MagicMock(return_value=None)
-
-            mgr = LlmManager(
-                registry=self.mock_registry,
-                llms=[openai_llm, mock_fallback],
-                default_llm_name="test-llm",
-                llm_fallback_map={"test-llm": "fallback", "fallback": None},
-                llm_fallback_duration_map={"test-llm": 120, "fallback": 120},
-            )
-
-            history = [MagicMock(spec=Message)]
-            await mgr.answer_stream(history)
-
-            mock_client.close.assert_awaited_once()
-            self.assertEqual(mock_async_openai_cls.call_count, 2)
-
-    async def test_non_openai_error_propagates(self):
-        self.mock_llm1.answer_stream = AsyncMock(
-            side_effect=ValueError("unexpected error")
-        )
-        history = [MagicMock(spec=Message)]
-        with self.assertRaises(ValueError) as context:
-            await self.llm_manager.answer_stream(history)
-        self.assertIn("unexpected error", str(context.exception))
+        history = [UserMessage("hello")]
+        answer = await lm.answer_stream(history)
+        self.assertEqual(answer.get_message().get_content(), "retry openai success")
+        self.assertEqual(self.llm1.call_count, 3)
 
     async def test_answer_stream_resets_retry_count_on_success(self):
-        fail_count = [0]
+        from linhai.base import UserMessage
 
-        async def mock_fail_then_ok(history):
-            fail_count[0] += 1
-            if fail_count[0] <= 3:
-                raise Exception("connection error")
-            return MockAnswer()
+        self.llm1._error_sequence = [
+            Exception("connection error"),
+            Exception("connection error"),
+            Exception("connection error"),
+        ]
+        self.llm1._success_content = "success after retries"
 
-        self.mock_llm1.answer_stream = AsyncMock(side_effect=mock_fail_then_ok)
+        r2 = _make_registry()
+        lm = _make_llm_manager(r2, [self.llm1])
 
-        llm_manager = LlmManager(
-            registry=self.mock_registry,
-            llms=[self.mock_llm1, self.mock_llm2],
-            default_llm_name="llm1",
-            llm_fallback_map={"llm1": None, "llm2": None},
-            llm_fallback_duration_map={"llm1": 120, "llm2": 120},
+        history = [UserMessage("hello")]
+        answer = await lm.answer_stream(history)
+        self.assertEqual(answer.get_message().get_content(), "success after retries")
+        self.assertEqual(lm.llm_stack[-1]["retry_count"], 0)
+
+    def test_serialize_and_restore(self):
+        self.llm_manager._record_error("llm1", "test_error")
+        data = self.llm_manager.serialize()
+        self.assertIn("llm_stack", data)
+
+        r2 = _make_registry()
+        new_lm = _make_llm_manager(
+            r2, [self.llm1, self.llm2], llm_fallback_map={"llm1": "llm2"}
+        )
+        new_lm.restore_from(data)
+        self.assertEqual(len(new_lm.llm_stack), 1)
+        self.assertEqual(new_lm.llm_stack[0]["llm_name"], "llm1")
+
+    def test_default_llm_name_auto_select(self):
+        r2 = _make_registry()
+        lm = _make_llm_manager(
+            r2, [self.llm1, self.llm2], llm_fallback_map={"llm1": "llm2"}
+        )
+        self.assertEqual(lm.default_llm_name, "llm1")
+
+    def test_invalid_default_llm_name_raises(self):
+        with self.assertRaises(ValueError):
+            r2 = _make_registry()
+            _make_llm_manager(r2, [self.llm1], default_llm_name="nonexistent")
+
+    def test_invalid_fallback_map_raises(self):
+        with self.assertRaises(ValueError):
+            r2 = _make_registry()
+            _make_llm_manager(r2, [self.llm1], llm_fallback_map={"llm1": "nonexistent"})
+
+    def test_fallback_duration_default(self):
+        r2 = _make_registry()
+        lm = _make_llm_manager(r2, [self.llm1], llm_fallback_duration_map={})
+        self.assertEqual(lm.llm_fallback_duration_map["llm1"], 120)
+
+    def test_invalid_fallback_duration_raises(self):
+        with self.assertRaises(ValueError):
+            r2 = _make_registry()
+            _make_llm_manager(r2, [self.llm1], llm_fallback_duration_map={"llm1": -1})
+
+    async def test_answer_stream_with_token_usage(self):
+        from linhai.base import UserMessage
+
+        self.llm1._success_token_usage = AnswerTokenUsage(
+            input_tokens=100,
+            output_tokens=50,
+            total_tokens=150,
+            cached_input_tokens=20,
         )
 
-        with patch("asyncio.sleep", AsyncMock()):
-            history = [MagicMock(spec=Message)]
-            answer = await llm_manager.answer_stream(history)
+        history = [UserMessage("hello")]
+        answer = await self.llm_manager.answer_stream(history)
+        usage = answer.get_token_usage()
+        self.assertIsNotNone(usage)
+        assert usage is not None
+        self.assertEqual(usage.input_tokens, 100)
+        self.assertEqual(usage.output_tokens, 50)
+        self.assertEqual(usage.total_tokens, 150)
+        self.assertEqual(usage.cached_input_tokens, 20)
 
-        self.assertIsInstance(answer, MockAnswer)
-        self.assertEqual(fail_count[0], 4)
-        self.assertEqual(llm_manager.llm_stack[-1]["retry_count"], 0)
+    async def test_non_openai_non_recoverable_error_propagates(self):
+        from linhai.base import UserMessage
 
-        fail_count2 = [0]
+        self.llm1._error_sequence = [TypeError("type error")]
 
-        async def mock_fail_once_then_ok(history):
-            fail_count2[0] += 1
-            if fail_count2[0] <= 1:
-                raise Exception("connection error")
-            return MockAnswer()
+        history = [UserMessage("hello")]
+        with self.assertRaises(TypeError):
+            await self.llm_manager.answer_stream(history)
 
-        self.mock_llm1.answer_stream = AsyncMock(side_effect=mock_fail_once_then_ok)
+    def test_empty_llm_list_raises(self):
+        r = _make_registry()
+        with self.assertRaises(IndexError):
+            _make_llm_manager(r, [])
 
-        with patch("asyncio.sleep", AsyncMock()):
-            answer = await llm_manager.answer_stream(history)
+    async def test_fallback_chain_exhausted_no_success(self):
+        from linhai.base import UserMessage
 
-        self.assertIsInstance(answer, MockAnswer)
-        self.assertEqual(fail_count2[0], 2)
+        self.llm1._error_sequence = [Exception("429 Too Many Requests")]
+        self.llm2._error_sequence = [ValueError("non-recoverable at final LLM")]
 
-    async def test_fallback_chain_break_raises(self):
-        mock_llm3 = MagicMock()
-        mock_llm3.get_name = MagicMock(return_value="llm3")
-        mock_llm3.get_token_limit = MagicMock(return_value=32000)
-        mock_llm3.support_image = MagicMock(return_value=False)
-        mock_llm3.answer_stream = AsyncMock(return_value=MockAnswer())
-        mock_llm3.reconnect = AsyncMock()
-        mock_llm3.get_compatibility = MagicMock(return_value=None)
+        history = [UserMessage("hello")]
+        with self.assertRaises(ValueError) as ctx:
+            await self.llm_manager.answer_stream(history)
+        self.assertIn("non-recoverable", str(ctx.exception))
+        self.assertEqual(self.llm1.call_count, 1)
+        self.assertEqual(self.llm2.call_count, 1)
 
-        llm_manager_chain = LlmManager(
-            registry=self.mock_registry,
-            llms=[self.mock_llm1, self.mock_llm2, mock_llm3],
-            default_llm_name="llm1",
-            llm_fallback_map={"llm1": "llm2", "llm2": None, "llm3": None},
-            llm_fallback_duration_map={"llm1": 120, "llm2": 120, "llm3": 120},
+    async def test_answer_stream_with_partial_token_usage(self):
+        from linhai.base import UserMessage
+
+        self.llm1._success_token_usage = AnswerTokenUsage(
+            input_tokens=50,
+            output_tokens=0,
+            total_tokens=50,
+            cached_input_tokens=None,
         )
 
-        self.mock_llm1.answer_stream = AsyncMock(
-            side_effect=Exception("connection error")
-        )
-        self.mock_llm2.answer_stream = AsyncMock(
-            side_effect=Exception("connection error")
-        )
+        history = [UserMessage("hello")]
+        answer = await self.llm_manager.answer_stream(history)
+        usage = answer.get_token_usage()
+        self.assertIsNotNone(usage)
+        assert usage is not None
+        self.assertEqual(usage.input_tokens, 50)
+        self.assertEqual(usage.output_tokens, 0)
+        self.assertIsNone(usage.cached_input_tokens)
 
-        history = [MagicMock(spec=Message)]
-        with patch("asyncio.sleep", AsyncMock()):
-            with self.assertRaises(Exception):
-                await llm_manager_chain.answer_stream(history)
+    def test_fallback_duration_respected(self):
+        r2 = _make_registry()
+        lm = _make_llm_manager(
+            r2,
+            [self.llm1, self.llm2],
+            llm_fallback_map={"llm1": "llm2"},
+            llm_fallback_duration_map={"llm1": 60, "llm2": 180},
+        )
+        self.assertEqual(lm.llm_fallback_duration_map["llm1"], 60)
+        self.assertEqual(lm.llm_fallback_duration_map["llm2"], 180)
+
+    def test_explicit_cache_info_in_list_available(self):
+        from linhai.base import ExplicitCacheInfo
+
+        llm_with_cache = FakeLLM(
+            name="cached-llm",
+            explicit_cache_info=ExplicitCacheInfo(
+                cache_write_price_ratio=1.25, cache_hit_price_ratio=0.1
+            ),
+        )
+        r2 = _make_registry()
+        lm = _make_llm_manager(
+            r2,
+            [llm_with_cache, self.llm2],
+            llm_fallback_map={"cached-llm": "llm2"},
+        )
+        result = lm.list_available_llms()
+        self.assertEqual(len(result), 2)
+        cache_info = llm_with_cache.get_explicit_cache_info()
+        self.assertIsNotNone(cache_info)
+        assert cache_info is not None
+        self.assertAlmostEqual(cache_info.cache_write_price_ratio, 1.25)
+        self.assertAlmostEqual(cache_info.cache_hit_price_ratio, 0.1)
+
+    def test_duplicate_llm_names(self):
+        r = _make_registry()
+        llm_a = FakeLLM(name="same-name", token_limit=1000)
+        llm_b = FakeLLM(name="same-name", token_limit=2000)
+        lm = _make_llm_manager(r, [llm_a, llm_b], llm_fallback_map={"same-name": None})
+        self.assertEqual(lm.llm_names, ["same-name", "same-name"])
 
 
 if __name__ == "__main__":

@@ -102,6 +102,26 @@ class TestMinimaxToolCallPlugin(unittest.IsolatedAsyncioTestCase):
             self.plugin.after_message_generation
         )
 
+    async def test_tool_call_with_missing_name_field(self) -> None:
+        self.registry.get_member_typechecked = MagicMock(return_value=self.agent)
+        self.agent.message_processor.add_new_message = AsyncMock()
+        self.registry.send_if_exists = AsyncMock()
+        self.answer.get_message.return_value.get_content.return_value = (
+            "[TOOL_CALL]\n" '{"arguments": {}}\n' "</TOOL_CALL>\n"
+        )
+        await self.plugin.after_message_generation(self.answer, [])
+        self.assertIsNotNone(self.plugin._last_error_format_time)
+
+    async def test_tool_call_empty_marker(self) -> None:
+        self.registry.get_member_typechecked = MagicMock(return_value=self.agent)
+        self.agent.message_processor.add_new_message = AsyncMock()
+        self.registry.send_if_exists = AsyncMock()
+        self.answer.get_message.return_value.get_content.return_value = (
+            "[TOOL_CALL]\n" "\n" "</TOOL_CALL>\n"
+        )
+        await self.plugin.after_message_generation(self.answer, [])
+        self.assertIsNotNone(self.plugin._last_error_format_time)
+
 
 if __name__ == "__main__":
     unittest.main()

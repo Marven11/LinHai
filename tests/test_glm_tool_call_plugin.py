@@ -109,6 +109,22 @@ class TestGlmToolCallPlugin(unittest.IsolatedAsyncioTestCase):
             self.plugin.after_message_generation
         )
 
+    async def test_tool_call_json_missing_fields(self) -> None:
+        agent = MockAgent("glm")
+        self.registry.get_member_typechecked = MagicMock(return_value=agent)
+        full_response = "```json toolcall\n" '{"name": "incomplete_tool"}\n' "```"
+        self.answer.get_message.return_value.get_content.return_value = full_response
+        await self.plugin.after_message_generation(self.answer, [])
+        agent.message_processor.add_new_message.assert_not_called()
+
+    async def test_empty_tool_call_block(self) -> None:
+        agent = MockAgent("glm")
+        self.registry.get_member_typechecked = MagicMock(return_value=agent)
+        full_response = "```json toolcall\n" "{}\n" "```"
+        self.answer.get_message.return_value.get_content.return_value = full_response
+        await self.plugin.after_message_generation(self.answer, [])
+        agent.message_processor.add_new_message.assert_not_called()
+
 
 if __name__ == "__main__":
     unittest.main()
