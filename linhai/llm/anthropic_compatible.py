@@ -423,7 +423,7 @@ class AnthropicLanguageModel:
 
             if role == "assistant":
                 reasoning = llm_msg.get("reasoning_content")
-                assistant_content = content if content is not None else ""
+                assistant_content = content if content is not None else "I"
                 tool_calls = llm_msg.get("tool_calls")
                 if tool_calls:
                     blocks: list[dict] = []
