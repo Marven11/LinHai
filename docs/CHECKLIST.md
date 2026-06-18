@@ -1,0 +1,12 @@
+- 本地检查通过
+  - 所有(500+)unittest通过
+  - `pyright linhai/` 通过
+  - `black linhai/ tests` 通过
+- 检查 CI 并修复 CI 存在的错误
+  - 使用给定脚本检查 CI 失败消息（完成条件：已经检查或者CI没有失败）
+- 提交PR被合并
+  - CI 全部通过
+  - 循环等待 PR 被合并
+  - PR 被合并
+  - issue 被关闭
+
