@@ -141,7 +141,9 @@ class ClawHeartbeatPlugin(Plugin):
                 RuntimeMessage(
                     f"{minutes}分钟过去了，用户仍然没有回复。"
                     "你应该诚实地更新claw记忆等文档，记录当前状态，"
-                    "重新诚实地反思用户交代的任务是否真正完成"
+                    "重新诚实地反思用户交代的任务是否真正完成。"
+                    "如果你连续多次收到heartbeat且未收到用户消息，"
+                    "考虑仅输出waiting marker以避免打扰用户"
                 )
             )
             self._next_reminder_time = time.monotonic() + self.heartbeat_interval
