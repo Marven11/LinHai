@@ -8,7 +8,7 @@ async def test_deepseek_basic(llm_client):
         response = await llm_client.chat.completions.create(
             model="deepseek/deepseek-v4-flash",
             messages=[{"role": "user", "content": "Say hello"}],
-            max_tokens=200,
+            max_tokens=4096,
         )
         if response.choices and response.choices[0].message.content:
             return

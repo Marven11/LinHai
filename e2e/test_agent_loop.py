@@ -37,7 +37,7 @@ def _create_test_agent(token: str) -> Agent:
                 "X-Title": "LinHai E2E Tests",
             }
         },
-        chat_completion_kwargs={"max_tokens": 300},
+        chat_completion_kwargs={"max_tokens": 4096},
         support_image=False,
         explicit_cache_info=None,
         name=LLM_NAME,

@@ -45,7 +45,7 @@ def _create_llm_from_env_config(tmp_dir: str) -> tuple[OpenAi, Registry, str]:
             }
         },
         chat_completion_kwargs={
-            "max_tokens": 200,
+            "max_tokens": 4096,
             "stream_options": {"include_usage": True},
         },
         support_image=False,

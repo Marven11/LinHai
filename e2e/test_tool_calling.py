@@ -57,7 +57,7 @@ async def _get_tool_call_response(client: AsyncOpenAI) -> str:
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": "What is the weather in Tokyo?"},
             ],
-            max_tokens=300,
+            max_tokens=4096,
         )
         content = response.choices[0].message.content or ""
         tool_calls, _ = extract_tool_calls_with_errors(content)
@@ -105,7 +105,7 @@ async def test_tool_result_processing(llm_client: AsyncOpenAI):
                 {"role": "assistant", "content": content},
                 {"role": "user", "content": tool_result},
             ],
-            max_tokens=200,
+            max_tokens=4096,
         )
         final = response2.choices[0].message.content or ""
         return final if final else None
