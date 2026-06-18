@@ -1107,3 +1107,53 @@ class TestPlanningChecklistPlugin(unittest.IsolatedAsyncioTestCase):
             ],
         )
         self.mock_agent.message_processor.add_new_message.assert_not_called()
+
+    async def test_before_waiting_user_warns_when_items_missing(self):
+        self.todolist_file.write_text("- [ ] 本地检查通过\n")
+        mock_state_machine = MagicMock()
+        mock_state_machine.transition_to_working = MagicMock()
+
+        original_side_effect = self.registry.get_member_typechecked.side_effect
+
+        def side_effect(name, cls):
+            if name == "state_machine":
+                return mock_state_machine
+            return original_side_effect(name, cls)
+
+        self.registry.get_member_typechecked.side_effect = side_effect
+        await self.plugin.before_waiting_user(self.mock_agent)
+        self.mock_agent.message_processor.add_new_message.assert_called_once()
+        call_args = self.mock_agent.message_processor.add_new_message.call_args[0][0]
+        self.assertIsInstance(call_args, RuntimeMessage)
+        self.assertIn("所有unittest通过", call_args.message)
+        self.assertIn("pyright通过", call_args.message)
+        self.assertIn("警告", call_args.message)
+        mock_state_machine.transition_to_working.assert_called_once()
+
+    async def test_before_waiting_user_no_warning_when_all_items_present(self):
+        self.todolist_file.write_text(
+            "- [ ] 本地检查通过\n- [.] 所有unittest通过\n- [x] pyright通过\n"
+        )
+
+        await self.plugin.before_waiting_user(self.mock_agent)
+        self.mock_agent.message_processor.add_new_message.assert_not_called()
+
+    async def test_before_waiting_user_no_action_when_no_checklist_items(self):
+        plugin = PlanningChecklistPlugin(
+            self.registry, self.temp_dir / "nonexistent.md"
+        )
+        await plugin.before_waiting_user(self.mock_agent)
+        self.mock_agent.message_processor.add_new_message.assert_not_called()
+
+    async def test_before_waiting_user_no_action_when_no_todolist(self):
+        self.todolist_file.unlink()
+        await self.plugin.before_waiting_user(self.mock_agent)
+        self.mock_agent.message_processor.add_new_message.assert_not_called()
+
+    async def test_before_waiting_user_no_action_when_no_conversation_folder(self):
+        def side_effect(name, cls):
+            return None
+
+        self.registry.get_member_typechecked.side_effect = side_effect
+        await self.plugin.before_waiting_user(self.mock_agent)
+        self.mock_agent.message_processor.add_new_message.assert_not_called()

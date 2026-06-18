@@ -588,6 +588,15 @@ class PlanningChecklistPlugin(Plugin):
             return None
         return (conversation_folder / "planning" / "TODOLIST.md").resolve()
 
+    def _check_todolist_content(self, content: str) -> list[str]:
+        todolist_task_lines = TODOLIST_TASK_PATTERN.findall(content)
+        missing_items = []
+        for item in self.checklist_items:
+            found = any(item in line for line in todolist_task_lines)
+            if not found:
+                missing_items.append(item)
+        return missing_items
+
     def _compute_final_content(
         self, todolist_path: Path, tool_calls: list[dict]
     ) -> Optional[str]:
@@ -632,12 +641,7 @@ class PlanningChecklistPlugin(Plugin):
         if content is None:
             return
 
-        todolist_task_lines = TODOLIST_TASK_PATTERN.findall(content)
-        missing_items = []
-        for item in self.checklist_items:
-            found = any(item in line for line in todolist_task_lines)
-            if not found:
-                missing_items.append(item)
+        missing_items = self._check_todolist_content(content)
 
         if missing_items:
             agent = self.registry.get_member_typechecked("agent", Agent)
@@ -648,5 +652,30 @@ class PlanningChecklistPlugin(Plugin):
                 RuntimeMessage(MISSING_CHECKLIST_WARNING.format(items=items_text))
             )
 
+    async def before_waiting_user(self, agent: "linhai_agent") -> None:
+        if not self.checklist_items:
+            return
+
+        todolist_path = self._get_todolist_path()
+        if todolist_path is None:
+            return
+
+        if not todolist_path.exists():
+            return
+
+        content = todolist_path.read_text(encoding="utf-8")
+        missing_items = self._check_todolist_content(content)
+
+        if missing_items:
+            items_text = "\n".join(f"  - {item}" for item in missing_items)
+            await agent.message_processor.add_new_message(
+                RuntimeMessage(MISSING_CHECKLIST_WARNING.format(items=items_text))
+            )
+            state_machine = self.registry.get_member_typechecked(
+                "state_machine", AgentStateMachine
+            )
+            state_machine.transition_to_working()
+
     def register(self, lifecycle: Lifecycle):
         lifecycle.after_message_generation.register(self.after_message_generation)
+        lifecycle.before_waiting_user.register(self.before_waiting_user)
