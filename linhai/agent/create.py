@@ -402,6 +402,7 @@ async def create_agent_from_context(
             DesignMdReminderPlugin,
             PlanningInitOverridePlugin,
             PlanningHeadingCheckPlugin,
+            DeepseekTodolistProtectionPlugin,
         )
 
         PlanningStatusReminderPlugin(context["registry"]).register(agent.lifecycle)
@@ -409,6 +410,7 @@ async def create_agent_from_context(
         DesignMdReminderPlugin(context["registry"]).register(agent.lifecycle)
         PlanningInitOverridePlugin(context["registry"]).register(agent.lifecycle)
         PlanningHeadingCheckPlugin(context["registry"]).register(agent.lifecycle)
+        DeepseekTodolistProtectionPlugin(context["registry"]).register(agent.lifecycle)
 
     if context["claw_enabled"]:
         from linhai.plugin.claw import ClawPlugin, ClawHeartbeatPlugin

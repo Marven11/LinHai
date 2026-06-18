@@ -3,16 +3,24 @@ from typing import TYPE_CHECKING, Optional
 import re
 from os import access, R_OK
 
+from typing import Union
+
 from linhai.agent import Agent
 from linhai.agent.lifecycle import Lifecycle
 from linhai.agent.messages import RuntimeMessage
-from linhai.tool.base import ToolCallResultMessage, FileContentToolResult
+from linhai.tool.base import (
+    ToolCallResultMessage,
+    FileContentToolResult,
+    FailedToolResult,
+    SuccessfulToolResult,
+)
 from linhai.agent.state_machine import AgentStateMachine
 from linhai.agent.planning import PlanningPromptMessage
 from linhai.registry import Registry
 from linhai.utils.i18n import t
 from linhai.base import Answer, UserMessage, Message
 from linhai.plugin.file_operations import Plugin
+from linhai.type_hints import WithSecret
 
 if TYPE_CHECKING:
     from linhai.agent.main import Agent as linhai_agent
@@ -478,3 +486,69 @@ class PlanningHeadingCheckPlugin(Plugin):
 
     def register(self, lifecycle: Lifecycle):
         lifecycle.after_message_generation.register(self.after_message_generation)
+
+
+BANNED_DELETE_COMMANDS = {"rm", "trash"}
+
+TODOLIST_DELETE_BLOCK_MESSAGE = (
+    "错误：不要删除TODOLIST.md！"
+    "你**必须**严格按照系统提示仔细更新TODOLIST.md！"
+    "**绝对禁止**删除重写！"
+    "**必须**保持已经完成的任务不变！"
+    "**必须**将每一个需要完成的任务**都**列在TODOLIST.md中！"
+    "**必须**诚实地标记每个任务的状态为完成/没有完成/正在完成！"
+    "**禁止**任何形式的遗漏！"
+    "**再次强调**：**必须**事无巨细地列出每个需要完成的任务！"
+)
+
+
+class DeepseekTodolistProtectionPlugin(Plugin):
+    """阻止deepseek通过process_create调用rm/trash删除TODOLIST.md的插件。"""
+
+    async def before_tool_call(
+        self,
+        tool_name: str,
+        toolcall_arguments: dict,
+        with_secret: WithSecret | None,
+    ) -> Union[SuccessfulToolResult, FailedToolResult, dict, None]:
+        tool_name_lower = tool_name.lower()
+        if tool_name_lower != "process_create":
+            return None
+
+        agent = self.registry.get_member_typechecked("agent", Agent)
+        if agent is None:
+            return None
+
+        model = agent.get_current_model()
+        if model.get_compatibility() != "deepseek":
+            return None
+
+        argv = toolcall_arguments.get("argv")
+        if not argv or not isinstance(argv, list) or len(argv) == 0:
+            return None
+
+        if argv[0] not in BANNED_DELETE_COMMANDS:
+            return None
+
+        conversation_folder = self.registry.get_member_typechecked(
+            "conversation_folder", Path
+        )
+        if conversation_folder is None:
+            return None
+
+        todolist_path = (conversation_folder / "planning" / "TODOLIST.md").resolve()
+        todolist_resolved = str(todolist_path)
+        for arg in argv[1:]:
+            if isinstance(arg, str):
+                arg_path = Path(arg)
+                if arg_path.is_absolute():
+                    arg_resolved = str(arg_path.resolve())
+                else:
+                    arg_resolved = str(arg_path)
+                if arg_resolved == todolist_resolved:
+                    return FailedToolResult(content=TODOLIST_DELETE_BLOCK_MESSAGE)
+
+        return None
+
+    def register(self, lifecycle: Lifecycle):
+        lifecycle.before_tool_call.register(self.before_tool_call)

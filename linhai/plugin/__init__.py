@@ -59,7 +59,11 @@ from .system_message_leaning import (
     CurrentDirectoryPlugin,
     NativeToolcallFormatPlugin,
 )
-from .planning import TodolistCheckerPlugin, PlanningHeadingCheckPlugin
+from .planning import (
+    TodolistCheckerPlugin,
+    PlanningHeadingCheckPlugin,
+    DeepseekTodolistProtectionPlugin,
+)
 from .reminder import ReminderPlugin, ReminderWriteGuardPlugin
 from .python_chore import PythonCommentCheckerPlugin
 from .telegram import TelegramReactionReminderPlugin
@@ -111,6 +115,7 @@ __all__ = [
     "CurrentDirectoryPlugin",
     "TodolistCheckerPlugin",
     "PlanningHeadingCheckPlugin",
+    "DeepseekTodolistProtectionPlugin",
     "ReminderPlugin",
     "ReminderWriteGuardPlugin",
     "is_small_file",

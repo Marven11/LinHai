@@ -10,12 +10,16 @@ from linhai.plugin.planning import (
     DesignMdReminderPlugin,
     PlanningInitOverridePlugin,
     PlanningHeadingCheckPlugin,
+    DeepseekTodolistProtectionPlugin,
+    BANNED_DELETE_COMMANDS,
+    TODOLIST_DELETE_BLOCK_MESSAGE,
 )
 from linhai.plugin.file_operations import Plugin
 from linhai.agent.lifecycle import Lifecycle
 from linhai.registry import Registry
 from linhai.agent.messages import RuntimeMessage
 from linhai.base import UserMessage, Answer
+from linhai.tool.base import FailedToolResult
 
 
 class TestPlanningStatusReminderPlugin(unittest.IsolatedAsyncioTestCase):
@@ -741,3 +745,147 @@ class TestPlanningHeadingCheckPlugin(unittest.IsolatedAsyncioTestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestDeepseekTodolistProtectionPlugin(unittest.IsolatedAsyncioTestCase):
+    """测试DeepseekTodolistProtectionPlugin插件。"""
+
+    def setUp(self):
+        self.registry = MagicMock(spec=Registry)
+        self.plugin = DeepseekTodolistProtectionPlugin(self.registry)
+
+        self.temp_dir = Path(tempfile.mkdtemp())
+        self.planning_dir = self.temp_dir / "planning"
+        self.planning_dir.mkdir()
+        self.todolist_file = self.planning_dir / "TODOLIST.md"
+        self.todolist_file.write_text("- [ ] test task\n")
+
+        self.mock_agent = MagicMock()
+        self.mock_model = MagicMock()
+        self.mock_model.get_compatibility = MagicMock(return_value="deepseek")
+        self.mock_agent.get_current_model = MagicMock(return_value=self.mock_model)
+
+        def side_effect(name, cls):
+            if name == "agent":
+                return self.mock_agent
+            elif name == "conversation_folder":
+                return self.temp_dir
+            return None
+
+        self.registry.get_member_typechecked.side_effect = side_effect
+
+    def tearDown(self):
+        import shutil
+
+        shutil.rmtree(self.temp_dir, ignore_errors=True)
+
+    async def test_blocks_rm_of_todolist_when_deepseek(self):
+        result = await self.plugin.before_tool_call(
+            "process_create",
+            {"argv": ["rm", str(self.todolist_file)]},
+            None,
+        )
+        self.assertIsInstance(result, FailedToolResult)
+        assert isinstance(result, FailedToolResult)
+        self.assertIn("不要删除TODOLIST.md", result.content)
+
+    async def test_blocks_trash_of_todolist_when_deepseek(self):
+        result = await self.plugin.before_tool_call(
+            "process_create",
+            {"argv": ["trash", str(self.todolist_file)]},
+            None,
+        )
+        self.assertIsInstance(result, FailedToolResult)
+
+    async def test_blocks_with_extra_flags(self):
+        result = await self.plugin.before_tool_call(
+            "process_create",
+            {"argv": ["rm", "-rf", str(self.todolist_file)]},
+            None,
+        )
+        self.assertIsInstance(result, FailedToolResult)
+
+    async def test_does_not_block_when_not_deepseek(self):
+        self.mock_model.get_compatibility.return_value = "kimi"
+        result = await self.plugin.before_tool_call(
+            "process_create",
+            {"argv": ["rm", str(self.todolist_file)]},
+            None,
+        )
+        self.assertIsNone(result)
+
+    async def test_does_not_block_non_delete_command(self):
+        result = await self.plugin.before_tool_call(
+            "process_create",
+            {"argv": ["ls", str(self.todolist_file)]},
+            None,
+        )
+        self.assertIsNone(result)
+
+    async def test_does_not_block_rm_of_other_file(self):
+        result = await self.plugin.before_tool_call(
+            "process_create",
+            {"argv": ["rm", "/tmp/other.txt"]},
+            None,
+        )
+        self.assertIsNone(result)
+
+    async def test_does_not_block_non_process_create(self):
+        result = await self.plugin.before_tool_call(
+            "write_file",
+            {"filepath": str(self.todolist_file), "content": "test"},
+            None,
+        )
+        self.assertIsNone(result)
+
+    async def test_does_not_block_when_no_argv(self):
+        result = await self.plugin.before_tool_call(
+            "process_create",
+            {},
+            None,
+        )
+        self.assertIsNone(result)
+
+    async def test_does_not_block_when_agent_none(self):
+        self.registry.get_member_typechecked.side_effect = lambda name, cls: None
+        result = await self.plugin.before_tool_call(
+            "process_create",
+            {"argv": ["rm", str(self.todolist_file)]},
+            None,
+        )
+        self.assertIsNone(result)
+
+    async def test_does_not_block_when_no_conversation_folder(self):
+        def side_effect(name, cls):
+            if name == "agent":
+                return self.mock_agent
+            return None
+
+        self.registry.get_member_typechecked.side_effect = side_effect
+        result = await self.plugin.before_tool_call(
+            "process_create",
+            {"argv": ["rm", str(self.todolist_file)]},
+            None,
+        )
+        self.assertIsNone(result)
+
+    async def test_blocks_case_insensitive_tool_name(self):
+        result = await self.plugin.before_tool_call(
+            "PROCESS_CREATE",
+            {"argv": ["rm", str(self.todolist_file)]},
+            None,
+        )
+        self.assertIsInstance(result, FailedToolResult)
+
+    async def test_block_message_matches_issue_spec(self):
+        result = await self.plugin.before_tool_call(
+            "process_create",
+            {"argv": ["rm", str(self.todolist_file)]},
+            None,
+        )
+        self.assertIsInstance(result, FailedToolResult)
+        assert isinstance(result, FailedToolResult)
+        self.assertEqual(result.content, TODOLIST_DELETE_BLOCK_MESSAGE)
+
+    def test_banned_delete_commands(self):
+        self.assertEqual(BANNED_DELETE_COMMANDS, {"rm", "trash"})
