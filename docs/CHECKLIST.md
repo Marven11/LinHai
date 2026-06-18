@@ -3,7 +3,7 @@
   - `pyright linhai/` 通过
   - `black linhai/ tests` 通过
 - 提交PR被合并
-  - CI 全部通过（实际查看 CI 状态而不靠无用的mergeble状态推断）
+  - 三个 CI 全部通过（实际查看 CI 状态而不靠无用的mergeble状态推断）
   - 循环等待 PR 被合并
   - PR 被合并
   - issue 被关闭
