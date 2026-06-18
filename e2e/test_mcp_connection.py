@@ -70,7 +70,7 @@ async def test_mcp_tool_call():
 def _get_last_assistant_message(agent: Agent) -> str:
     messages = agent.message_processor.get_messages()
     for msg in reversed(messages):
-        if isinstance(msg, AssistantMessage):
+        if isinstance(msg, AssistantMessage) and msg.message is not None:
             return msg.message
     return ""
 
@@ -136,7 +136,7 @@ async def test_mcp_llm_coordination():
 
         await agent.message_processor.add_new_message(
             UserMessage(
-                "Please use the mcp_test_add tool with a=3 and b=5 to calculate 3+5."
+                "Please use the mcp_test_multiply tool with a=114514 and b=1919810 to calculate 114514*1919810."
             )
         )
         for _ in range(5):
@@ -144,6 +144,6 @@ async def test_mcp_llm_coordination():
 
         response = _get_last_assistant_message(agent)
         await mcp_connector.disconnect_mcp_server("test")
-        return response if len(response) > 0 and "8" in response else None
+        return response if len(response) > 0 and "219845122340" in response else None
 
     await retry_llm_call(try_once)
