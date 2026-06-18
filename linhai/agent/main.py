@@ -75,6 +75,7 @@ class Agent:
         self.lifecycle.after_parsed_user_message.register(command_callback)
         self.lifecycle.after_token_generation.register(self.after_token_generation)
         self.lifecycle.on_llm_error.register(self._on_llm_error)
+        self.lifecycle.before_exit.register(self._cleanup_before_exit)
 
     def get_threshold_info(self) -> ThresholdInfo | None:
         """获取阈值信息。
@@ -317,6 +318,10 @@ class Agent:
                 break
             await asyncio.to_thread(self.message_processor._save_context)
             await asyncio.sleep(0)
+
+    async def _cleanup_before_exit(self):
+        if self.agent_llm._current_parsed_answer is not None:
+            self.agent_llm._current_parsed_answer.interrupt()
 
     def serialize(self) -> dict:
         return {}

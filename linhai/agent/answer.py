@@ -63,11 +63,13 @@ class AgentLlm:
         parsed_answer = ParsedAnswer(
             answer, lifecycle, agent=agent, registry=self.registry
         )
+        self._current_parsed_answer = parsed_answer
         await parsed_answer.start_parsing()
         await lifecycle.after_new_parsed_answer.trigger(parsed_answer)
         await self.registry.send("parsed_agent_answer", parsed_answer)
 
         completed_normally = await parsed_answer.wait_parsing()
+        self._current_parsed_answer = None
         return answer, parsed_answer, completed_normally
 
     async def interrupt(self, agent_message: str, ui_notice: str):
