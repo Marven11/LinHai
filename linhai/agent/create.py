@@ -75,6 +75,7 @@ class AgentBuildArguments(TypedDict):
     git_worktree: bool
     restore_path: Optional[Path]
     interlink: Optional[str]
+    planning_checklist: Optional[Path]
 
 
 class AgentBuildContext(TypedDict):
@@ -111,6 +112,7 @@ class AgentBuildContext(TypedDict):
     plugins: Optional[list[str]]
     git_worktree: bool
     interlink: Optional[str]
+    planning_checklist: Optional[Path]
 
 
 def _resolve_agent_profile(config: Config, profile_name: Optional[str]) -> AgentConfig:
@@ -257,6 +259,7 @@ def create_agent_build_context(
         "plugins": agent_config.plugins,
         "git_worktree": build_args.get("git_worktree", False),
         "interlink": build_args.get("interlink"),
+        "planning_checklist": build_args.get("planning_checklist"),
     }
 
 
@@ -411,6 +414,19 @@ async def create_agent_from_context(
         PlanningInitOverridePlugin(context["registry"]).register(agent.lifecycle)
         PlanningHeadingCheckPlugin(context["registry"]).register(agent.lifecycle)
         DeepseekTodolistProtectionPlugin(context["registry"]).register(agent.lifecycle)
+
+        planning_checklist = context.get("planning_checklist")
+        if planning_checklist is not None:
+            checklist_path = planning_checklist
+            if not checklist_path.is_absolute():
+                from pathlib import Path as _Path
+
+                checklist_path = _Path.cwd() / checklist_path
+            from linhai.plugin.planning import PlanningChecklistPlugin
+
+            PlanningChecklistPlugin(context["registry"], checklist_path).register(
+                agent.lifecycle
+            )
 
     if context["claw_enabled"]:
         from linhai.plugin.claw import ClawPlugin, ClawHeartbeatPlugin

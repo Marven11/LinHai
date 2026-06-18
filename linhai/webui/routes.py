@@ -77,6 +77,7 @@ async def create_agent(request: AgentCreateRequest):
         "git_worktree": False,
         "restore_path": Path(request.restore_path) if request.restore_path else None,
         "interlink": None,
+        "planning_checklist": None,
     }
 
     manager = get_manager()

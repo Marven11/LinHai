@@ -91,6 +91,7 @@ async def run(args):
         "message": args.message,
         "file": args.file,
         "planning": args.planning,
+        "planning_checklist": args.planning_checklist,
         "llm_name": args.llm,
         "profile_name": args.profile,
         "git_worktree": args.git_worktree,
@@ -163,6 +164,12 @@ def main():
         "--planning",
         action="store_true",
         help="启用文档规划模式",
+    )
+    parser.add_argument(
+        "--planning-checklist",
+        type=Path,
+        default=None,
+        help="planning checklist文件路径",
     )
     parser.add_argument(
         "--afk",

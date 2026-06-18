@@ -11,6 +11,7 @@ from linhai.plugin.planning import (
     PlanningInitOverridePlugin,
     PlanningHeadingCheckPlugin,
     DeepseekTodolistProtectionPlugin,
+    PlanningChecklistPlugin,
     BANNED_DELETE_COMMANDS,
     TODOLIST_DELETE_BLOCK_MESSAGE,
 )
@@ -889,3 +890,220 @@ class TestDeepseekTodolistProtectionPlugin(unittest.IsolatedAsyncioTestCase):
 
     def test_banned_delete_commands(self):
         self.assertEqual(BANNED_DELETE_COMMANDS, {"rm", "trash"})
+
+
+class TestPlanningChecklistPlugin(unittest.IsolatedAsyncioTestCase):
+    """测试PlanningChecklistPlugin插件。"""
+
+    def setUp(self):
+        self.registry = MagicMock(spec=Registry)
+        self.temp_dir = Path(tempfile.mkdtemp())
+        self.planning_dir = self.temp_dir / "planning"
+        self.planning_dir.mkdir()
+        self.todolist_file = self.planning_dir / "TODOLIST.md"
+        self.todolist_file.write_text("- [ ] 已有任务\n")
+
+        self.checklist_file = self.temp_dir / "CHECKLIST.md"
+        self.checklist_file.write_text(
+            "- 本地检查通过\n  - 所有unittest通过\n  - pyright通过\n"
+        )
+
+        self.mock_agent = AsyncMock()
+        self.mock_agent.message_processor = MagicMock()
+        self.mock_agent.message_processor.add_new_message = AsyncMock()
+
+        def side_effect(name, cls):
+            if name == "agent":
+                return self.mock_agent
+            elif name == "conversation_folder":
+                return self.temp_dir
+            return None
+
+        self.registry.get_member_typechecked.side_effect = side_effect
+
+        self.plugin = PlanningChecklistPlugin(self.registry, self.checklist_file)
+
+    def tearDown(self):
+        import shutil
+
+        shutil.rmtree(self.temp_dir, ignore_errors=True)
+
+    def _make_plugin(self):
+        from linhai.plugin.planning import PlanningChecklistPlugin
+
+        return PlanningChecklistPlugin(self.registry, self.checklist_file)
+
+    async def test_checklist_items_extracted(self):
+        self.assertEqual(
+            self.plugin.checklist_items,
+            ["本地检查通过", "所有unittest通过", "pyright通过"],
+        )
+
+    async def test_no_checklist_items_when_file_not_exists(self):
+        plugin = PlanningChecklistPlugin(
+            self.registry, self.temp_dir / "nonexistent.md"
+        )
+        self.assertEqual(plugin.checklist_items, [])
+
+    async def test_no_action_when_no_checklist_items(self):
+        plugin = PlanningChecklistPlugin(
+            self.registry, self.temp_dir / "nonexistent.md"
+        )
+        await plugin.after_message_generation(
+            parsed_answer=MagicMock(),
+            tool_calls=[
+                {
+                    "name": "write_file",
+                    "arguments": {
+                        "filepath": str(self.todolist_file),
+                        "content": "- [ ] test\n",
+                    },
+                },
+            ],
+        )
+        self.mock_agent.message_processor.add_new_message.assert_not_called()
+
+    async def test_no_action_when_not_todolist_file(self):
+        await self.plugin.after_message_generation(
+            parsed_answer=MagicMock(),
+            tool_calls=[
+                {
+                    "name": "write_file",
+                    "arguments": {
+                        "filepath": str(self.planning_dir / "STATUS.md"),
+                        "content": "test",
+                    },
+                },
+            ],
+        )
+        self.mock_agent.message_processor.add_new_message.assert_not_called()
+
+    async def test_no_warning_when_all_items_present(self):
+        await self.plugin.after_message_generation(
+            parsed_answer=MagicMock(),
+            tool_calls=[
+                {
+                    "name": "write_file",
+                    "arguments": {
+                        "filepath": str(self.todolist_file),
+                        "content": "- [ ] 本地检查通过\n- [ ] 所有unittest通过\n- [ ] pyright通过\n",
+                    },
+                },
+            ],
+        )
+        self.mock_agent.message_processor.add_new_message.assert_not_called()
+
+    async def test_warning_when_items_missing(self):
+        await self.plugin.after_message_generation(
+            parsed_answer=MagicMock(),
+            tool_calls=[
+                {
+                    "name": "write_file",
+                    "arguments": {
+                        "filepath": str(self.todolist_file),
+                        "content": "- [ ] 本地检查通过\n",
+                    },
+                },
+            ],
+        )
+        self.mock_agent.message_processor.add_new_message.assert_called_once()
+        call_args = self.mock_agent.message_processor.add_new_message.call_args[0][0]
+        self.assertIsInstance(call_args, RuntimeMessage)
+        self.assertIn("所有unittest通过", call_args.message)
+        self.assertIn("pyright通过", call_args.message)
+        self.assertIn("警告", call_args.message)
+
+    async def test_substring_matching(self):
+        await self.plugin.after_message_generation(
+            parsed_answer=MagicMock(),
+            tool_calls=[
+                {
+                    "name": "write_file",
+                    "arguments": {
+                        "filepath": str(self.todolist_file),
+                        "content": "- [ ] 本地检查通过（必须）\n- [ ] 所有unittest通过很重要\n- [.] pyright通过检查\n",
+                    },
+                },
+            ],
+        )
+        self.mock_agent.message_processor.add_new_message.assert_not_called()
+
+    async def test_replace_file_content_detection(self):
+        await self.plugin.after_message_generation(
+            parsed_answer=MagicMock(),
+            tool_calls=[
+                {
+                    "name": "replace_file_content",
+                    "arguments": {
+                        "filepath": str(self.todolist_file),
+                        "old": "- [ ] 已有任务\n",
+                        "new": "- [ ] 已有任务\n- [ ] 本地检查通过\n",
+                    },
+                },
+            ],
+        )
+        self.mock_agent.message_processor.add_new_message.assert_called_once()
+        call_args = self.mock_agent.message_processor.add_new_message.call_args[0][0]
+        self.assertIn("所有unittest通过", call_args.message)
+        self.assertIn("pyright通过", call_args.message)
+
+    async def test_multiple_tool_calls_sequential(self):
+        await self.plugin.after_message_generation(
+            parsed_answer=MagicMock(),
+            tool_calls=[
+                {
+                    "name": "replace_file_content",
+                    "arguments": {
+                        "filepath": str(self.todolist_file),
+                        "old": "- [ ] 已有任务\n",
+                        "new": "- [ ] 已有任务\n- [ ] 本地检查通过\n",
+                    },
+                },
+                {
+                    "name": "replace_file_content",
+                    "arguments": {
+                        "filepath": str(self.todolist_file),
+                        "old": "本地检查通过",
+                        "new": "本地检查通过\n- [.] 所有unittest通过",
+                    },
+                },
+            ],
+        )
+        self.mock_agent.message_processor.add_new_message.assert_called_once()
+        call_args = self.mock_agent.message_processor.add_new_message.call_args[0][0]
+        self.assertIn("pyright通过", call_args.message)
+
+    async def test_no_agent_scenario(self):
+        self.registry.get_member_typechecked.side_effect = lambda name, cls: None
+        await self.plugin.after_message_generation(
+            parsed_answer=MagicMock(),
+            tool_calls=[
+                {
+                    "name": "write_file",
+                    "arguments": {
+                        "filepath": str(self.todolist_file),
+                        "content": "empty\n",
+                    },
+                },
+            ],
+        )
+        self.mock_agent.message_processor.add_new_message.assert_not_called()
+
+    async def test_no_conversation_folder_scenario(self):
+        def side_effect(name, cls):
+            return None
+
+        self.registry.get_member_typechecked.side_effect = side_effect
+        await self.plugin.after_message_generation(
+            parsed_answer=MagicMock(),
+            tool_calls=[
+                {
+                    "name": "write_file",
+                    "arguments": {
+                        "filepath": str(self.todolist_file),
+                        "content": "empty\n",
+                    },
+                },
+            ],
+        )
+        self.mock_agent.message_processor.add_new_message.assert_not_called()

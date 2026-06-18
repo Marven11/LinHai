@@ -552,3 +552,101 @@ class DeepseekTodolistProtectionPlugin(Plugin):
 
     def register(self, lifecycle: Lifecycle):
         lifecycle.before_tool_call.register(self.before_tool_call)
+
+
+CHECKLIST_ITEM_PATTERN = re.compile(r"^ *- (.+)$", re.MULTILINE)
+
+TODOLIST_TASK_PATTERN = re.compile(r"^\s*- \[.\].*$", re.MULTILINE)
+
+MISSING_CHECKLIST_WARNING = (
+    "警告：以下项没有在TODOLIST.md中作为任务项正确标记，"
+    "你需要正确使用`- [ ]`等符号正确标记任务项而不仅仅是添加文本本身，"
+    "你是否需要添加？{items}；"
+)
+
+
+class PlanningChecklistPlugin(Plugin):
+    """检查planning checklist项是否存在于TODOLIST.md中的插件。"""
+
+    def __init__(self, registry: Registry, checklist_path: Path):
+        super().__init__(registry)
+        self.registry = registry
+        self.checklist_path = checklist_path
+        self.checklist_items: list[str] = []
+
+        if checklist_path.exists() and access(checklist_path, R_OK):
+            content = checklist_path.read_text(encoding="utf-8")
+            self.checklist_items = [
+                m.group(1) for m in CHECKLIST_ITEM_PATTERN.finditer(content)
+            ]
+
+    def _get_todolist_path(self) -> Optional[Path]:
+        conversation_folder = self.registry.get_member_typechecked(
+            "conversation_folder", Path
+        )
+        if conversation_folder is None:
+            return None
+        return (conversation_folder / "planning" / "TODOLIST.md").resolve()
+
+    def _compute_final_content(
+        self, todolist_path: Path, tool_calls: list[dict]
+    ) -> Optional[str]:
+        content = None
+        for tool_call in tool_calls:
+            tool_name = tool_call.get("name")
+            tool_arguments = tool_call.get("arguments", {})
+            filepath = tool_arguments.get("filepath")
+            if not filepath:
+                continue
+            if Path(filepath).resolve() != todolist_path:
+                continue
+            if tool_name == "write_file":
+                content = tool_arguments.get("content")
+            elif tool_name == "replace_file_content":
+                if content is None:
+                    if not todolist_path.exists():
+                        return None
+                    content = todolist_path.read_text(encoding="utf-8")
+                old = tool_arguments.get("old", "")
+                new = tool_arguments.get("new", "")
+                times = tool_arguments.get("replace_times", 1)
+                if times == -1:
+                    content = content.replace(old, new)
+                else:
+                    content = content.replace(old, new, times)
+        return content
+
+    async def after_message_generation(
+        self,
+        parsed_answer,
+        tool_calls: list[dict],
+    ) -> None:
+        if not self.checklist_items:
+            return
+
+        todolist_path = self._get_todolist_path()
+        if todolist_path is None:
+            return
+
+        content = self._compute_final_content(todolist_path, tool_calls)
+        if content is None:
+            return
+
+        todolist_task_lines = TODOLIST_TASK_PATTERN.findall(content)
+        missing_items = []
+        for item in self.checklist_items:
+            found = any(item in line for line in todolist_task_lines)
+            if not found:
+                missing_items.append(item)
+
+        if missing_items:
+            agent = self.registry.get_member_typechecked("agent", Agent)
+            if agent is None:
+                return
+            items_text = "\n".join(f"  - {item}" for item in missing_items)
+            await agent.message_processor.add_new_message(
+                RuntimeMessage(MISSING_CHECKLIST_WARNING.format(items=items_text))
+            )
+
+    def register(self, lifecycle: Lifecycle):
+        lifecycle.after_message_generation.register(self.after_message_generation)

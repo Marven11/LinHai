@@ -63,6 +63,7 @@ from .planning import (
     TodolistCheckerPlugin,
     PlanningHeadingCheckPlugin,
     DeepseekTodolistProtectionPlugin,
+    PlanningChecklistPlugin,
 )
 from .reminder import ReminderPlugin, ReminderWriteGuardPlugin
 from .python_chore import PythonCommentCheckerPlugin
@@ -116,6 +117,7 @@ __all__ = [
     "TodolistCheckerPlugin",
     "PlanningHeadingCheckPlugin",
     "DeepseekTodolistProtectionPlugin",
+    "PlanningChecklistPlugin",
     "ReminderPlugin",
     "ReminderWriteGuardPlugin",
     "is_small_file",
