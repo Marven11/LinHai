@@ -42,9 +42,9 @@ class AnthropicAnswer:
         self.interrupted = False
         self.truncated = False
         self.registry = registry
-        self.total_tokens = 0
-        self.input_tokens = 0
-        self.output_tokens = 0
+        self.total_tokens: int = 0
+        self.input_tokens: int = 0
+        self.output_tokens: int | None = None
         self.estimated_cached_input_tokens = estimated_cached_input_tokens
         self.cached_input_tokens: int | None = None
         self.cache_creation_input_tokens: int | None = None
@@ -86,7 +86,8 @@ class AnthropicAnswer:
             if usage.cache_creation_input_tokens:
                 self.cache_creation_input_tokens = usage.cache_creation_input_tokens
                 self.input_tokens += usage.cache_creation_input_tokens
-            self.total_tokens = self.input_tokens + self.output_tokens
+            if self.output_tokens is not None:
+                self.total_tokens = self.input_tokens + self.output_tokens
             if self.llm_instance is not None and self.input_tokens > 0:
                 self.llm_instance.previous_input_tokens = self.input_tokens
             return
@@ -157,7 +158,8 @@ class AnthropicAnswer:
             if usage.cache_creation_input_tokens:
                 self.cache_creation_input_tokens = usage.cache_creation_input_tokens
                 self.input_tokens += usage.cache_creation_input_tokens
-            self.total_tokens = self.input_tokens + self.output_tokens
+            if self.output_tokens is not None:
+                self.total_tokens = self.input_tokens + self.output_tokens
             if self.llm_instance is not None and self.input_tokens > 0:
                 self.llm_instance.previous_input_tokens = self.input_tokens
             return
@@ -220,6 +222,8 @@ class AnthropicAnswer:
 
     def get_token_usage(self) -> AnswerTokenUsage | None:
         if self.total_tokens == 0:
+            return None
+        if self.output_tokens is None:
             return None
         return AnswerTokenUsage(
             input_tokens=self.input_tokens,
