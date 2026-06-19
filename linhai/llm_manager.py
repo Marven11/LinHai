@@ -263,7 +263,7 @@ class LlmManager:
                             "ui_log",
                             UiNotice(
                                 level="WARNING",
-                                content=f"LLM '{llm_name}' \u9519\u8bef: {error_str[:100]}\uff0c\u5c06\u5728 {delay:.1f} \u79d2\u540e\u91cd\u8bd5",
+                                content=f"LLM '{llm_name}' \u9519\u8bef: {error_str}\uff0c\u5c06\u5728 {delay:.1f} \u79d2\u540e\u91cd\u8bd5",
                             ),
                         )
                         await asyncio.sleep(delay)
@@ -287,7 +287,7 @@ class LlmManager:
                                 "ui_log",
                                 UiNotice(
                                     level="WARNING",
-                                    content=f"LLM '{llm_name}' \u9519\u8bef: {error_str[:100]}\uff0c\u5df2\u5207\u6362\u5230fallback LLM: {fallback_llm}\uff0c1\u5206\u949f\u540e\u6062\u590d",
+                                    content=f"LLM '{llm_name}' \u9519\u8bef: {error_str}\uff0c\u5df2\u5207\u6362\u5230fallback LLM: {fallback_llm}\uff0c1\u5206\u949f\u540e\u6062\u590d",
                                 ),
                             )
                         else:
@@ -296,7 +296,7 @@ class LlmManager:
                                 "ui_log",
                                 UiNotice(
                                     level="WARNING",
-                                    content=f"LLM '{llm_name}' \u9519\u8bef: {error_str[:100]}\uff0c\u5c06\u5728 {delay:.1f} \u79d2\u540e\u91cd\u8bd5",
+                                    content=f"LLM '{llm_name}' \u9519\u8bef: {error_str}\uff0c\u5c06\u5728 {delay:.1f} \u79d2\u540e\u91cd\u8bd5",
                                 ),
                             )
                             await asyncio.sleep(delay)

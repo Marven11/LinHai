@@ -234,7 +234,7 @@ class RuntimeMessageWidget(Static):
 
     DEFAULT_CSS = """
     RuntimeMessageWidget {
-        width: auto;
+        width: 100%;
         height: auto;
         layout: horizontal;
     }
