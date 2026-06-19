@@ -331,6 +331,49 @@ class TestStdioCommandCheckerPlugin(unittest.IsolatedAsyncioTestCase):
         )
         self.assertIsNone(result2)
 
+    async def test_call_with_secret_unwrap_warns(self):
+        mock_agent = Mock()
+        mock_agent.message_processor = Mock()
+        mock_agent.message_processor.add_new_message = AsyncMock()
+        self.registry.get_member_typechecked = Mock(return_value=mock_agent)
+
+        result = await self.plugin.after_toolcall(
+            tool_name="call_with_secret",
+            tool_index=0,
+            status="success",
+            message=None,
+            toolcall_arguments={
+                "tool_name": "process_stdio_write",
+                "tool_arguments": {
+                    "pid": "123",
+                    "content": "sed -i 's/old/new/g' file.txt",
+                    "with_enter": True,
+                },
+                "with_secret": {"in_arguments": [], "in_result": []},
+            },
+            with_secret=None,
+            is_tool_failed_duplicated_error=False,
+        )
+        self.assertIsNotNone(result)
+        self.assertEqual(len(result.warnings), 1)
+        self.assertIn("connect_posix_shell_as_machine", result.warnings[0].message)
+
+    async def test_call_with_secret_other_tool_no_warn(self):
+        result = await self.plugin.after_toolcall(
+            tool_name="call_with_secret",
+            tool_index=0,
+            status="success",
+            message=None,
+            toolcall_arguments={
+                "tool_name": "write_file",
+                "tool_arguments": {"filepath": "/tmp/test", "content": "hello"},
+                "with_secret": {"in_arguments": [], "in_result": []},
+            },
+            with_secret=None,
+            is_tool_failed_duplicated_error=False,
+        )
+        self.assertIsNone(result)
+
 
 class TestPkillCheckerPlugin(unittest.IsolatedAsyncioTestCase):
     def setUp(self):
@@ -418,6 +461,31 @@ class TestPkillCheckerPlugin(unittest.IsolatedAsyncioTestCase):
         )
         self.assertIsInstance(result_unsafe, FailedToolResult)
         self.assertIn("禁止使用pkill", result_unsafe.content)
+
+    async def test_call_with_secret_block_pkill(self):
+        result = await self.plugin.before_tool_call(
+            tool_name="call_with_secret",
+            toolcall_arguments={
+                "tool_name": "process_create",
+                "tool_arguments": {"argv": ["pkill", "-f", "python"]},
+                "with_secret": {"in_arguments": [], "in_result": []},
+            },
+            with_secret=None,
+        )
+        self.assertIsInstance(result, FailedToolResult)
+        self.assertIn("禁止使用pkill", result.content)
+
+    async def test_call_with_secret_other_tool_allowed(self):
+        result = await self.plugin.before_tool_call(
+            tool_name="call_with_secret",
+            toolcall_arguments={
+                "tool_name": "write_file",
+                "tool_arguments": {"filepath": "/tmp/test", "content": "hello"},
+                "with_secret": {"in_arguments": [], "in_result": []},
+            },
+            with_secret=None,
+        )
+        self.assertIsNone(result)
 
 
 if __name__ == "__main__":

@@ -116,6 +116,43 @@ class TestSudoStdioCheckerPlugin(unittest.IsolatedAsyncioTestCase):
             self.plugin.before_tool_call
         )
 
+    async def test_call_with_secret_missing_S(self):
+        result = await self.plugin.before_tool_call(
+            tool_name="call_with_secret",
+            toolcall_arguments={
+                "tool_name": "process_create",
+                "tool_arguments": {"argv": ["sudo", "ls"]},
+                "with_secret": {"in_arguments": [], "in_result": []},
+            },
+            with_secret=None,
+        )
+        self.assertIsInstance(result, FailedToolResult)
+        self.assertIn("sudo命令必须使用-S标志", result.content)
+
+    async def test_call_with_secret_with_S_passes(self):
+        result = await self.plugin.before_tool_call(
+            tool_name="call_with_secret",
+            toolcall_arguments={
+                "tool_name": "process_create",
+                "tool_arguments": {"argv": ["sudo", "-S", "ls"]},
+                "with_secret": {"in_arguments": [], "in_result": []},
+            },
+            with_secret=None,
+        )
+        self.assertIsNone(result)
+
+    async def test_call_with_secret_other_tool_no_check(self):
+        result = await self.plugin.before_tool_call(
+            tool_name="call_with_secret",
+            toolcall_arguments={
+                "tool_name": "write_file",
+                "tool_arguments": {"filepath": "/tmp/test", "content": "hello"},
+                "with_secret": {"in_arguments": [], "in_result": []},
+            },
+            with_secret=None,
+        )
+        self.assertIsNone(result)
+
 
 if __name__ == "__main__":
     unittest.main()

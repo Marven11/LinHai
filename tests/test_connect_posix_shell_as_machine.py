@@ -125,6 +125,85 @@ class TestSudoBashHintPlugin(unittest.IsolatedAsyncioTestCase):
         )
         self.assertIsNone(result)
 
+    async def test_ssh_shows_hint(self):
+        mock_agent = Mock()
+        mock_agent.message_processor = Mock()
+        mock_agent.message_processor.add_new_message = AsyncMock()
+        self.registry.get_member_typechecked = Mock(return_value=mock_agent)
+
+        result = await self.plugin.after_toolcall(
+            tool_name="process_create",
+            tool_index=0,
+            status="success",
+            message=None,
+            toolcall_arguments={"argv": ["ssh", "user@host", "bash", "-i"]},
+            with_secret=None,
+            is_tool_failed_duplicated_error=False,
+        )
+        self.assertIsNotNone(result)
+        self.assertEqual(len(result.warnings), 1)
+        self.assertIn("ssh", result.warnings[0].message)
+        self.assertIn("connect_posix_shell_as_machine", result.warnings[0].message)
+
+    async def test_ssh_full_path_shows_hint(self):
+        mock_agent = Mock()
+        mock_agent.message_processor = Mock()
+        mock_agent.message_processor.add_new_message = AsyncMock()
+        self.registry.get_member_typechecked = Mock(return_value=mock_agent)
+
+        result = await self.plugin.after_toolcall(
+            tool_name="process_create",
+            tool_index=0,
+            status="success",
+            message=None,
+            toolcall_arguments={"argv": ["/usr/bin/ssh", "user@host"]},
+            with_secret=None,
+            is_tool_failed_duplicated_error=False,
+        )
+        self.assertIsNotNone(result)
+        self.assertEqual(len(result.warnings), 1)
+        self.assertIn("ssh", result.warnings[0].message)
+        self.assertIn("connect_posix_shell_as_machine", result.warnings[0].message)
+
+    async def test_call_with_secret_unwrap_shows_hint(self):
+        mock_agent = Mock()
+        mock_agent.message_processor = Mock()
+        mock_agent.message_processor.add_new_message = AsyncMock()
+        self.registry.get_member_typechecked = Mock(return_value=mock_agent)
+
+        result = await self.plugin.after_toolcall(
+            tool_name="call_with_secret",
+            tool_index=0,
+            status="success",
+            message=None,
+            toolcall_arguments={
+                "tool_name": "process_create",
+                "tool_arguments": {"argv": ["sudo", "apt", "install", "vim"]},
+                "with_secret": {"in_arguments": [], "in_result": []},
+            },
+            with_secret=None,
+            is_tool_failed_duplicated_error=False,
+        )
+        self.assertIsNotNone(result)
+        self.assertEqual(len(result.warnings), 1)
+        self.assertIn("connect_posix_shell_as_machine", result.warnings[0].message)
+
+    async def test_call_with_secret_other_tool_no_hint(self):
+        result = await self.plugin.after_toolcall(
+            tool_name="call_with_secret",
+            tool_index=0,
+            status="success",
+            message=None,
+            toolcall_arguments={
+                "tool_name": "write_file",
+                "tool_arguments": {"filepath": "/tmp/test", "content": "hello"},
+                "with_secret": {"in_arguments": [], "in_result": []},
+            },
+            with_secret=None,
+            is_tool_failed_duplicated_error=False,
+        )
+        self.assertIsNone(result)
+
 
 class TestAddBashMachine(unittest.IsolatedAsyncioTestCase):
     def setUp(self):

@@ -35,10 +35,16 @@ class SudoStdioCheckerPlugin(Plugin):
         with_secret: WithSecret | None,
     ) -> Union[SuccessfulToolResult, FailedToolResult, dict, None]:
         """在工具调用前检查sudo命令。"""
-        if tool_name != "process_create":
+        if tool_name == "call_with_secret":
+            actual_tool_name = toolcall_arguments.get("tool_name", "")
+            actual_arguments = toolcall_arguments.get("tool_arguments", {})
+        else:
+            actual_tool_name = tool_name
+            actual_arguments = toolcall_arguments
+        if actual_tool_name != "process_create":
             return None
 
-        argv = toolcall_arguments.get("argv")
+        argv = actual_arguments.get("argv")
         if not argv:
             return None
 
@@ -77,10 +83,16 @@ class SudoStdioCheckerPlugin(Plugin):
         is_tool_failed_duplicated_error: bool,
     ) -> AfterToolcallResult | None:
         """在工具调用后检查bash -c命令。"""
-        if tool_name != "process_create":
+        if tool_name == "call_with_secret":
+            actual_tool_name = toolcall_arguments.get("tool_name", "")
+            actual_arguments = toolcall_arguments.get("tool_arguments", {})
+        else:
+            actual_tool_name = tool_name
+            actual_arguments = toolcall_arguments
+        if actual_tool_name != "process_create":
             return None
 
-        argv = toolcall_arguments.get("argv")
+        argv = actual_arguments.get("argv")
         if not argv or not isinstance(argv, list) or len(argv) < 2:
             return None
 

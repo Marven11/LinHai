@@ -29,10 +29,16 @@ class SudoBashHintPlugin(Plugin):
         with_secret: WithSecret | None,
         is_tool_failed_duplicated_error: bool,
     ) -> AfterToolcallResult | None:
-        if tool_name != "process_create" or status != "success":
+        if tool_name == "call_with_secret":
+            actual_tool_name = toolcall_arguments.get("tool_name", "")
+            actual_arguments = toolcall_arguments.get("tool_arguments", {})
+        else:
+            actual_tool_name = tool_name
+            actual_arguments = toolcall_arguments
+        if actual_tool_name != "process_create" or status != "success":
             return None
 
-        argv = toolcall_arguments.get("argv")
+        argv = actual_arguments.get("argv")
         if not argv or not isinstance(argv, list) or len(argv) == 0:
             return None
 
@@ -81,6 +87,14 @@ class SudoBashHintPlugin(Plugin):
             return (
                 "提示：检测到你使用adb shell命令。"
                 "建议使用connect_posix_shell_as_machine工具将adb shell连接为机器"
+            )
+
+        if os.path.basename(first) == "ssh":
+            return (
+                "提示：检测到你使用了ssh命令。"
+                "你有考虑过使用connect_posix_shell_as_machine工具吗？"
+                "使用这个工具可以直接使用replace_file_content、process_create等工具直接修改文件、操控机器，"
+                "避免转义等带来的心智负担"
             )
 
         python_argv = _extract_python_argv(argv)
@@ -257,10 +271,16 @@ class StdioCommandCheckerPlugin(Plugin):
         with_secret: WithSecret | None,
         is_tool_failed_duplicated_error: bool,
     ) -> AfterToolcallResult | None:
-        if tool_name != "process_stdio_write":
+        if tool_name == "call_with_secret":
+            actual_tool_name = toolcall_arguments.get("tool_name", "")
+            actual_arguments = toolcall_arguments.get("tool_arguments", {})
+        else:
+            actual_tool_name = tool_name
+            actual_arguments = toolcall_arguments
+        if actual_tool_name != "process_stdio_write":
             return None
 
-        content = toolcall_arguments.get("content")
+        content = actual_arguments.get("content")
         if not content or not isinstance(content, str):
             return None
 
@@ -299,10 +319,16 @@ class PkillCheckerPlugin(Plugin):
         toolcall_arguments: dict,
         with_secret: WithSecret | None,
     ) -> SuccessfulToolResult | FailedToolResult | dict | None:
-        if tool_name != "process_create":
+        if tool_name == "call_with_secret":
+            actual_tool_name = toolcall_arguments.get("tool_name", "")
+            actual_arguments = toolcall_arguments.get("tool_arguments", {})
+        else:
+            actual_tool_name = tool_name
+            actual_arguments = toolcall_arguments
+        if actual_tool_name != "process_create":
             return None
 
-        argv = toolcall_arguments.get("argv")
+        argv = actual_arguments.get("argv")
         if not argv or not isinstance(argv, list) or len(argv) == 0:
             return None
 
