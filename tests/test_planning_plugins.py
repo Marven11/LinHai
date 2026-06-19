@@ -14,13 +14,14 @@ from linhai.plugin.planning import (
     PlanningChecklistPlugin,
     BANNED_DELETE_COMMANDS,
     TODOLIST_DELETE_BLOCK_MESSAGE,
+    PLANNING_CHECKLIST_BLOCK_MESSAGE,
 )
 from linhai.plugin.file_operations import Plugin
-from linhai.agent.lifecycle import Lifecycle
+from linhai.agent.lifecycle import Lifecycle, AfterToolcallResult
 from linhai.registry import Registry
 from linhai.agent.messages import RuntimeMessage
 from linhai.base import UserMessage, Answer
-from linhai.tool.base import FailedToolResult
+from linhai.tool.base import FailedToolResult, SuccessfulToolResult
 
 
 class TestPlanningStatusReminderPlugin(unittest.IsolatedAsyncioTestCase):
@@ -945,168 +946,218 @@ class TestPlanningChecklistPlugin(unittest.IsolatedAsyncioTestCase):
         )
         self.assertEqual(plugin.checklist_items, [])
 
+    async def _call_after_toolcall(self, tool_name, filepath, **kwargs):
+        return await self.plugin.after_toolcall(
+            tool_name=tool_name,
+            tool_index=1,
+            status=kwargs.get("status", "success"),
+            message=None,
+            toolcall_arguments={"filepath": filepath},
+            with_secret=None,
+            is_tool_failed_duplicated_error=False,
+        )
+
     async def test_no_action_when_no_checklist_items(self):
         plugin = PlanningChecklistPlugin(
             self.registry, self.temp_dir / "nonexistent.md"
         )
-        await plugin.after_message_generation(
-            parsed_answer=MagicMock(),
-            tool_calls=[
-                {
-                    "name": "write_file",
-                    "arguments": {
-                        "filepath": str(self.todolist_file),
-                        "content": "- [ ] test\n",
-                    },
-                },
-            ],
+        self.todolist_file.write_text("- [ ] test\n")
+        result = await plugin.after_toolcall(
+            tool_name="write_file",
+            tool_index=1,
+            status="success",
+            message=None,
+            toolcall_arguments={"filepath": str(self.todolist_file)},
+            with_secret=None,
+            is_tool_failed_duplicated_error=False,
         )
-        self.mock_agent.message_processor.add_new_message.assert_not_called()
+        self.assertIsNone(result)
 
     async def test_no_action_when_not_todolist_file(self):
-        await self.plugin.after_message_generation(
-            parsed_answer=MagicMock(),
-            tool_calls=[
-                {
-                    "name": "write_file",
-                    "arguments": {
-                        "filepath": str(self.planning_dir / "STATUS.md"),
-                        "content": "test",
-                    },
-                },
-            ],
+        result = await self.plugin.after_toolcall(
+            tool_name="write_file",
+            tool_index=1,
+            status="success",
+            message=None,
+            toolcall_arguments={"filepath": str(self.planning_dir / "STATUS.md")},
+            with_secret=None,
+            is_tool_failed_duplicated_error=False,
         )
-        self.mock_agent.message_processor.add_new_message.assert_not_called()
+        self.assertIsNone(result)
 
     async def test_no_warning_when_all_items_present(self):
-        await self.plugin.after_message_generation(
-            parsed_answer=MagicMock(),
-            tool_calls=[
-                {
-                    "name": "write_file",
-                    "arguments": {
-                        "filepath": str(self.todolist_file),
-                        "content": "- [ ] 本地检查通过\n- [ ] 所有unittest通过\n- [ ] pyright通过\n",
-                    },
-                },
-            ],
+        self.todolist_file.write_text(
+            "- [ ] 本地检查通过\n- [ ] 所有unittest通过\n- [ ] pyright通过\n"
         )
-        self.mock_agent.message_processor.add_new_message.assert_not_called()
+        result = await self._call_after_toolcall("write_file", str(self.todolist_file))
+        self.assertIsNone(result)
+        self.assertEqual(self.plugin.consecutive_errors, 0)
 
     async def test_warning_when_items_missing(self):
-        await self.plugin.after_message_generation(
-            parsed_answer=MagicMock(),
-            tool_calls=[
-                {
-                    "name": "write_file",
-                    "arguments": {
-                        "filepath": str(self.todolist_file),
-                        "content": "- [ ] 本地检查通过\n",
-                    },
-                },
-            ],
-        )
-        self.mock_agent.message_processor.add_new_message.assert_called_once()
-        call_args = self.mock_agent.message_processor.add_new_message.call_args[0][0]
-        self.assertIsInstance(call_args, RuntimeMessage)
-        self.assertIn("所有unittest通过", call_args.message)
-        self.assertIn("pyright通过", call_args.message)
-        self.assertIn("警告", call_args.message)
+        self.todolist_file.write_text("- [ ] 本地检查通过\n")
+        result = await self._call_after_toolcall("write_file", str(self.todolist_file))
+        self.assertIsNotNone(result)
+        self.assertEqual(len(result.warnings), 1)
+        self.assertIn("所有unittest通过", result.warnings[0].message)
+        self.assertIn("pyright通过", result.warnings[0].message)
+        self.assertIn("警告", result.warnings[0].message)
+        self.assertEqual(self.plugin.consecutive_errors, 1)
 
     async def test_substring_matching(self):
-        await self.plugin.after_message_generation(
-            parsed_answer=MagicMock(),
-            tool_calls=[
-                {
-                    "name": "write_file",
-                    "arguments": {
-                        "filepath": str(self.todolist_file),
-                        "content": "- [ ] 本地检查通过（必须）\n- [ ] 所有unittest通过很重要\n- [.] pyright通过检查\n",
-                    },
-                },
-            ],
+        self.todolist_file.write_text(
+            "- [ ] 本地检查通过（必须）\n- [ ] 所有unittest通过很重要\n- [.] pyright通过检查\n"
         )
-        self.mock_agent.message_processor.add_new_message.assert_not_called()
+        result = await self._call_after_toolcall("write_file", str(self.todolist_file))
+        self.assertIsNone(result)
 
     async def test_replace_file_content_detection(self):
-        await self.plugin.after_message_generation(
-            parsed_answer=MagicMock(),
-            tool_calls=[
-                {
-                    "name": "replace_file_content",
-                    "arguments": {
-                        "filepath": str(self.todolist_file),
-                        "old": "- [ ] 已有任务\n",
-                        "new": "- [ ] 已有任务\n- [ ] 本地检查通过\n",
-                    },
-                },
-            ],
+        self.todolist_file.write_text("- [ ] 已有任务\n- [ ] 本地检查通过\n")
+        result = await self.plugin.after_toolcall(
+            tool_name="replace_file_content",
+            tool_index=1,
+            status="success",
+            message=None,
+            toolcall_arguments={
+                "filepath": str(self.todolist_file),
+                "old": "- [ ] 已有任务\n",
+                "new": "- [ ] 已有任务\n- [ ] 本地检查通过\n",
+            },
+            with_secret=None,
+            is_tool_failed_duplicated_error=False,
         )
-        self.mock_agent.message_processor.add_new_message.assert_called_once()
-        call_args = self.mock_agent.message_processor.add_new_message.call_args[0][0]
-        self.assertIn("所有unittest通过", call_args.message)
-        self.assertIn("pyright通过", call_args.message)
+        self.assertIsNotNone(result)
+        self.assertIn("所有unittest通过", result.warnings[0].message)
+        self.assertIn("pyright通过", result.warnings[0].message)
 
-    async def test_multiple_tool_calls_sequential(self):
-        await self.plugin.after_message_generation(
-            parsed_answer=MagicMock(),
-            tool_calls=[
-                {
-                    "name": "replace_file_content",
-                    "arguments": {
-                        "filepath": str(self.todolist_file),
-                        "old": "- [ ] 已有任务\n",
-                        "new": "- [ ] 已有任务\n- [ ] 本地检查通过\n",
-                    },
-                },
-                {
-                    "name": "replace_file_content",
-                    "arguments": {
-                        "filepath": str(self.todolist_file),
-                        "old": "本地检查通过",
-                        "new": "本地检查通过\n- [.] 所有unittest通过",
-                    },
-                },
-            ],
+    async def test_consecutive_errors_increment_and_reset(self):
+        self.todolist_file.write_text("- [ ] 本地检查通过\n")
+        await self._call_after_toolcall("write_file", str(self.todolist_file))
+        self.assertEqual(self.plugin.consecutive_errors, 1)
+
+        self.todolist_file.write_text("- [ ] 本地检查通过\n- [.] 所有unittest通过\n")
+        await self._call_after_toolcall("write_file", str(self.todolist_file))
+        self.assertEqual(self.plugin.consecutive_errors, 2)
+
+        self.todolist_file.write_text(
+            "- [ ] 本地检查通过\n- [.] 所有unittest通过\n- [x] pyright通过\n"
         )
-        self.mock_agent.message_processor.add_new_message.assert_called_once()
-        call_args = self.mock_agent.message_processor.add_new_message.call_args[0][0]
-        self.assertIn("pyright通过", call_args.message)
+        await self._call_after_toolcall("write_file", str(self.todolist_file))
+        self.assertEqual(self.plugin.consecutive_errors, 0)
 
-    async def test_no_agent_scenario(self):
-        self.registry.get_member_typechecked.side_effect = lambda name, cls: None
-        await self.plugin.after_message_generation(
-            parsed_answer=MagicMock(),
-            tool_calls=[
-                {
-                    "name": "write_file",
-                    "arguments": {
-                        "filepath": str(self.todolist_file),
-                        "content": "empty\n",
-                    },
-                },
-            ],
+    async def test_no_action_when_status_failed(self):
+        self.todolist_file.write_text("- [ ] 本地检查通过\n")
+        result = await self.plugin.after_toolcall(
+            tool_name="write_file",
+            tool_index=1,
+            status="failed",
+            message=None,
+            toolcall_arguments={"filepath": str(self.todolist_file)},
+            with_secret=None,
+            is_tool_failed_duplicated_error=False,
         )
-        self.mock_agent.message_processor.add_new_message.assert_not_called()
+        self.assertIsNone(result)
 
-    async def test_no_conversation_folder_scenario(self):
+    async def test_no_action_when_not_write_tool(self):
+        self.todolist_file.write_text("- [ ] 本地检查通过\n")
+        result = await self.plugin.after_toolcall(
+            tool_name="read_file",
+            tool_index=1,
+            status="success",
+            message=None,
+            toolcall_arguments={"filepath": str(self.todolist_file)},
+            with_secret=None,
+            is_tool_failed_duplicated_error=False,
+        )
+        self.assertIsNone(result)
+
+    async def test_no_action_when_no_conversation_folder(self):
         def side_effect(name, cls):
             return None
 
         self.registry.get_member_typechecked.side_effect = side_effect
-        await self.plugin.after_message_generation(
-            parsed_answer=MagicMock(),
-            tool_calls=[
-                {
-                    "name": "write_file",
-                    "arguments": {
-                        "filepath": str(self.todolist_file),
-                        "content": "empty\n",
-                    },
-                },
-            ],
+        result = await self.plugin.after_toolcall(
+            tool_name="write_file",
+            tool_index=1,
+            status="success",
+            message=None,
+            toolcall_arguments={"filepath": str(self.todolist_file)},
+            with_secret=None,
+            is_tool_failed_duplicated_error=False,
         )
-        self.mock_agent.message_processor.add_new_message.assert_not_called()
+        self.assertIsNone(result)
+
+    async def test_before_tool_call_no_block_when_errors_below_threshold(self):
+        self.plugin.consecutive_errors = 2
+        result = await self.plugin.before_tool_call(
+            "process_create",
+            {"argv": ["ls"]},
+            None,
+        )
+        self.assertIsNone(result)
+
+    async def test_before_tool_call_blocks_non_planning_write_when_errors_reached(self):
+        self.plugin.consecutive_errors = 3
+        result = await self.plugin.before_tool_call(
+            "write_file",
+            {"filepath": "/tmp/other.txt", "content": "test"},
+            None,
+        )
+        self.assertIsInstance(result, FailedToolResult)
+        self.assertEqual(result.content, PLANNING_CHECKLIST_BLOCK_MESSAGE)
+
+    async def test_before_tool_call_allows_planning_write_when_errors_reached(self):
+        self.plugin.consecutive_errors = 3
+        result = await self.plugin.before_tool_call(
+            "write_file",
+            {"filepath": str(self.todolist_file), "content": "test"},
+            None,
+        )
+        self.assertIsNone(result)
+
+    async def test_before_tool_call_blocks_non_file_tools_when_errors_reached(self):
+        self.plugin.consecutive_errors = 3
+        result = await self.plugin.before_tool_call(
+            "process_create",
+            {"argv": ["ls"]},
+            None,
+        )
+        self.assertIsInstance(result, FailedToolResult)
+
+    async def test_before_tool_call_allows_file_tools_when_errors_reached(self):
+        self.plugin.consecutive_errors = 3
+        result = await self.plugin.before_tool_call(
+            "read_file",
+            {"filepath": str(self.todolist_file)},
+            None,
+        )
+        self.assertIsNone(result)
+
+    async def test_before_tool_call_allows_context_tools_when_errors_reached(self):
+        self.plugin.consecutive_errors = 3
+        result = await self.plugin.before_tool_call(
+            "context_forget_large_message",
+            {},
+            None,
+        )
+        self.assertIsNone(result)
+
+    async def test_before_tool_call_allows_replace_file_for_planning(self):
+        self.plugin.consecutive_errors = 3
+        result = await self.plugin.before_tool_call(
+            "replace_file_content",
+            {"filepath": str(self.todolist_file), "old": "a", "new": "b"},
+            None,
+        )
+        self.assertIsNone(result)
+
+    async def test_before_tool_call_blocks_replace_file_for_non_planning(self):
+        self.plugin.consecutive_errors = 3
+        result = await self.plugin.before_tool_call(
+            "replace_file_content",
+            {"filepath": "/tmp/other.txt", "old": "a", "new": "b"},
+            None,
+        )
+        self.assertIsInstance(result, FailedToolResult)
 
     async def test_before_waiting_user_warns_when_items_missing(self):
         self.todolist_file.write_text("- [ ] 本地检查通过\n")

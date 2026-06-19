@@ -1,12 +1,12 @@
 from pathlib import Path
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, Optional, Literal
 import re
 from os import access, R_OK
 
 from typing import Union
 
 from linhai.agent import Agent
-from linhai.agent.lifecycle import Lifecycle
+from linhai.agent.lifecycle import Lifecycle, AfterToolcallResult
 from linhai.agent.messages import RuntimeMessage
 from linhai.tool.base import (
     ToolCallResultMessage,
@@ -564,6 +564,13 @@ MISSING_CHECKLIST_WARNING = (
     "你是否需要添加？{items}；"
 )
 
+PLANNING_CHECKLIST_BLOCK_MESSAGE = (
+    "错误：TODOLIST.md连续多次缺少必要的checklist项！"
+    "你必须先修复TODOLIST.md中缺失的checklist项后才能继续其他操作！"
+    "当前只允许文件读写工具和上下文清理工具！"
+    "write_file和replace_file_content只能用于planning文件(STATUS.md/TODOLIST.md/DESIGN.md)！"
+)
+
 
 class PlanningChecklistPlugin(Plugin):
     """检查planning checklist项是否存在于TODOLIST.md中的插件。"""
@@ -573,6 +580,8 @@ class PlanningChecklistPlugin(Plugin):
         self.registry = registry
         self.checklist_path = checklist_path
         self.checklist_items: list[str] = []
+        self.consecutive_errors: int = 0
+        self.planning_folder: Optional[Path] = None
 
         if checklist_path.exists() and access(checklist_path, R_OK):
             content = checklist_path.read_text(encoding="utf-8")
@@ -580,13 +589,38 @@ class PlanningChecklistPlugin(Plugin):
                 m.group(1) for m in CHECKLIST_ITEM_PATTERN.finditer(content)
             ]
 
-    def _get_todolist_path(self) -> Optional[Path]:
+    def _get_planning_folder(self) -> Optional[Path]:
+        if self.planning_folder is not None:
+            return self.planning_folder
+
         conversation_folder = self.registry.get_member_typechecked(
             "conversation_folder", Path
         )
         if conversation_folder is None:
             return None
-        return (conversation_folder / "planning" / "TODOLIST.md").resolve()
+
+        self.planning_folder = conversation_folder / "planning"
+        return self.planning_folder
+
+    def _get_todolist_path(self) -> Optional[Path]:
+        planning_folder = self._get_planning_folder()
+        if planning_folder is None:
+            return None
+        return (planning_folder / "TODOLIST.md").resolve()
+
+    def _is_planning_file(self, filepath: str) -> bool:
+        planning_folder = self._get_planning_folder()
+        if planning_folder is None:
+            return False
+
+        planning_files = [
+            planning_folder / "STATUS.md",
+            planning_folder / "TODOLIST.md",
+            planning_folder / "DESIGN.md",
+        ]
+
+        abs_path = Path(filepath).resolve()
+        return any(abs_path == pf.resolve() for pf in planning_files)
 
     def _check_todolist_content(self, content: str) -> list[str]:
         todolist_task_lines = TODOLIST_TASK_PATTERN.findall(content)
@@ -597,60 +631,74 @@ class PlanningChecklistPlugin(Plugin):
                 missing_items.append(item)
         return missing_items
 
-    def _compute_final_content(
-        self, todolist_path: Path, tool_calls: list[dict]
-    ) -> Optional[str]:
-        content = None
-        for tool_call in tool_calls:
-            tool_name = tool_call.get("name")
-            tool_arguments = tool_call.get("arguments", {})
-            filepath = tool_arguments.get("filepath")
-            if not filepath:
-                continue
-            if Path(filepath).resolve() != todolist_path:
-                continue
-            if tool_name == "write_file":
-                content = tool_arguments.get("content")
-            elif tool_name == "replace_file_content":
-                if content is None:
-                    if not todolist_path.exists():
-                        return None
-                    content = todolist_path.read_text(encoding="utf-8")
-                old = tool_arguments.get("old", "")
-                new = tool_arguments.get("new", "")
-                times = tool_arguments.get("replace_times", 1)
-                if times == -1:
-                    content = content.replace(old, new)
-                else:
-                    content = content.replace(old, new, times)
-        return content
-
-    async def after_message_generation(
+    async def after_toolcall(
         self,
-        parsed_answer,
-        tool_calls: list[dict],
-    ) -> None:
+        tool_name: str,
+        tool_index: int,
+        status: Literal["skipped", "success", "failed"],
+        message: Message | None,
+        toolcall_arguments: dict,
+        with_secret: WithSecret | None,
+        is_tool_failed_duplicated_error: bool,
+    ) -> AfterToolcallResult | None:
         if not self.checklist_items:
-            return
+            return None
+
+        if status != "success":
+            return None
+
+        write_tools = {"write_file", "replace_file_content"}
+        if tool_name not in write_tools:
+            return None
+
+        filepath = toolcall_arguments.get("filepath")
+        if not filepath:
+            return None
 
         todolist_path = self._get_todolist_path()
         if todolist_path is None:
-            return
+            return None
 
-        content = self._compute_final_content(todolist_path, tool_calls)
-        if content is None:
-            return
+        if Path(filepath).resolve() != todolist_path:
+            return None
 
+        if not todolist_path.exists():
+            return None
+
+        content = todolist_path.read_text(encoding="utf-8")
         missing_items = self._check_todolist_content(content)
 
         if missing_items:
-            agent = self.registry.get_member_typechecked("agent", Agent)
-            if agent is None:
-                return
+            self.consecutive_errors += 1
             items_text = "\n".join(f"  - {item}" for item in missing_items)
-            await agent.message_processor.add_new_message(
-                RuntimeMessage(MISSING_CHECKLIST_WARNING.format(items=items_text))
+            return AfterToolcallResult(
+                warnings=[
+                    RuntimeMessage(MISSING_CHECKLIST_WARNING.format(items=items_text))
+                ]
             )
+
+        self.consecutive_errors = 0
+        return None
+
+    async def before_tool_call(
+        self,
+        tool_name: str,
+        toolcall_arguments: dict,
+        with_secret: WithSecret | None,
+    ) -> Union[SuccessfulToolResult, FailedToolResult, dict, None]:
+        if self.consecutive_errors < 3:
+            return None
+
+        write_tools = {"write_file", "replace_file_content"}
+        if tool_name in write_tools:
+            filepath = toolcall_arguments.get("filepath")
+            if filepath and not self._is_planning_file(filepath):
+                return FailedToolResult(content=PLANNING_CHECKLIST_BLOCK_MESSAGE)
+
+        if "file" not in tool_name and "context" not in tool_name:
+            return FailedToolResult(content=PLANNING_CHECKLIST_BLOCK_MESSAGE)
+
+        return None
 
     async def before_waiting_user(self, agent: "linhai_agent") -> None:
         if not self.checklist_items:
@@ -677,5 +725,6 @@ class PlanningChecklistPlugin(Plugin):
             state_machine.transition_to_working()
 
     def register(self, lifecycle: Lifecycle):
-        lifecycle.after_message_generation.register(self.after_message_generation)
+        lifecycle.after_toolcall.register(self.after_toolcall)
+        lifecycle.before_tool_call.register(self.before_tool_call)
         lifecycle.before_waiting_user.register(self.before_waiting_user)
