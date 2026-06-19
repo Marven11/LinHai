@@ -625,14 +625,13 @@ class OpenAi:
             raise ValueError("history is empty")
         messages = [msg.to_llm_message() for msg in history]
 
-        if self.compatibility == "deepseek":
-            for msg in messages:
-                if (
-                    msg.get("role") == "assistant"
-                    and "content" not in msg
-                    and "tool_calls" not in msg
-                ):
-                    msg["content"] = ""
+        for msg in messages:
+            if (
+                msg.get("role") == "assistant"
+                and "content" not in msg
+                and "tool_calls" not in msg
+            ):
+                msg["content"] = "I"
 
         if self.compatibility == "baizhi":
             from linhai.utils.baizhi_compat import fix_baizhi_messages

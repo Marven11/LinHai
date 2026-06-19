@@ -38,7 +38,7 @@ class TestDeepseekEmptyAssistantFix(unittest.IsolatedAsyncioTestCase):
         messages = args.kwargs["messages"]
         assistant_msgs = [m for m in messages if m["role"] == "assistant"]
         self.assertEqual(len(assistant_msgs), 1)
-        self.assertEqual(assistant_msgs[0]["content"], "")
+        self.assertEqual(assistant_msgs[0]["content"], "I")
 
     async def test_assistant_with_content_not_affected(self):
         llm = _make_openai(compatibility="deepseek")
@@ -71,7 +71,7 @@ class TestDeepseekEmptyAssistantFix(unittest.IsolatedAsyncioTestCase):
         self.assertNotIn("content", assistant_msgs[0])
         self.assertIn("tool_calls", assistant_msgs[0])
 
-    async def test_non_deepseek_not_affected(self):
+    async def test_non_deepseek_also_filled(self):
         llm = _make_openai(compatibility="kimi")
         history = [
             UserMessage("hello"),
@@ -82,7 +82,7 @@ class TestDeepseekEmptyAssistantFix(unittest.IsolatedAsyncioTestCase):
         args = llm.openai.chat.completions.create.call_args
         messages = args.kwargs["messages"]
         assistant_msgs = [m for m in messages if m["role"] == "assistant"]
-        self.assertNotIn("content", assistant_msgs[0])
+        self.assertEqual(assistant_msgs[0]["content"], "I")
 
 
 if __name__ == "__main__":
