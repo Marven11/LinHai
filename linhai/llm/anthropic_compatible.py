@@ -582,7 +582,8 @@ class AnthropicLanguageModel:
                     )
                 params["tools"] = anthropic_tools
 
-        stream = await self.client.messages.create(**params)
+        stream_params = {k: v for k, v in params.items() if k != "stream"}
+        stream = await self.client.messages.stream(**stream_params).__aenter__()
         answer = AnthropicAnswer(
             stream,
             registry=self.registry,

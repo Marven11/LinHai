@@ -36,6 +36,11 @@ class TestAnthropicAnswerMessageDelta(unittest.IsolatedAsyncioTestCase):
         mock_content_delta.delta.type = "text_delta"
         mock_content_delta.delta.text = "hello"
 
+        mock_text_event = MagicMock()
+        mock_text_event.type = "text"
+        mock_text_event.text = "hello"
+        mock_text_event.snapshot = "hello"
+
         mock_msg_delta = MagicMock()
         mock_msg_delta.type = "message_delta"
         mock_msg_delta.usage = MagicMock(
@@ -51,11 +56,13 @@ class TestAnthropicAnswerMessageDelta(unittest.IsolatedAsyncioTestCase):
         mock_stream.__anext__.side_effect = [
             mock_msg_start,
             mock_content_delta,
+            mock_text_event,
             mock_msg_delta,
             mock_msg_stop,
             None,
         ]
 
+        await answer.update_toyield()
         await answer.update_toyield()
         await answer.update_toyield()
         await answer.update_toyield()

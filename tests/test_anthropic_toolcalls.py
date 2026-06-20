@@ -31,6 +31,10 @@ class MockEvent:
     index: int = 0
     content_block: MockContentBlock | None = None
     delta: MockDelta | None = None
+    text: str | None = None
+    thinking: str | None = None
+    partial_json: str | None = None
+    snapshot: object = None
 
 
 def _make_stream(events):
@@ -78,6 +82,7 @@ class TestAnthropicAnswerToolUse(unittest.IsolatedAsyncioTestCase):
                 index=0,
                 delta=MockDelta(type="input_json_delta", partial_json='{"file'),
             ),
+            MockEvent(type="input_json", partial_json='{"file'),
             MockEvent(
                 type="content_block_delta",
                 index=0,
@@ -85,6 +90,7 @@ class TestAnthropicAnswerToolUse(unittest.IsolatedAsyncioTestCase):
                     type="input_json_delta", partial_json='path": "/tmp/test.txt"}'
                 ),
             ),
+            MockEvent(type="input_json", partial_json='path": "/tmp/test.txt"}'),
             MockEvent(type="content_block_stop", index=0),
             MockEvent(type="message_stop"),
         ]
@@ -127,6 +133,7 @@ class TestAnthropicAnswerToolUse(unittest.IsolatedAsyncioTestCase):
                 index=0,
                 delta=MockDelta(type="input_json_delta", partial_json='{"invalid'),
             ),
+            MockEvent(type="input_json", partial_json='{"invalid'),
             MockEvent(type="content_block_stop", index=0),
             MockEvent(type="message_stop"),
         ]
