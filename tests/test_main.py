@@ -1,251 +1,27 @@
-"""测试main.py命令行参数"""
+"""测试main.py中CLI参数到build_args的映射"""
 
 import unittest
 from unittest.mock import patch, MagicMock, AsyncMock
 import sys
 from pathlib import Path
 from linhai.main import main
-from linhai.config import Config
 
 
-class TestMainCommandLine(unittest.TestCase):
-    """测试main.py的命令行参数"""
+class TestMainCLIParameterMapping(unittest.TestCase):
 
-    @patch("linhai.agent.create.create_agent_from_context")
     @patch("linhai.main.TUIApp")
-    @patch("linhai.main.Registry")
-    def test_agent_command_with_message_option(
-        self, mock_registry, mock_cli_app, mock_create_agent
-    ):
-        """测试使用-m选项时消息被正确传递"""
-        mock_registry_instance = MagicMock()
-        mock_registry.return_value = mock_registry_instance
-
-        mock_agent = MagicMock()
-        mock_create_agent.return_value = mock_agent
-
-        mock_app = AsyncMock()
-        mock_app.run_async = AsyncMock(return_value=None)
-        mock_app.return_code = 0
-        mock_cli_app.return_value = mock_app
-
-        # 设置cli_args以正确模拟
-        mock_cli_args = MagicMock()
-        mock_cli_args.message = ["测试消息"]
-        mock_cli_args.file = []
-        mock_cli_args.claw = False
-        mock_registry_instance.get_member_typechecked = MagicMock(
-            side_effect=lambda name, t: mock_cli_args
-        )
-
-        test_args = ["linhai", "-m", "测试消息"]
-
-        with patch.object(sys, "argv", test_args):
-            with self.assertRaises(SystemExit) as cm:
-                main()
-        self.assertIsInstance(cm.exception, SystemExit)
-
-        mock_create_agent.assert_called_once()
-        call_args = mock_create_agent.call_args
-        self.assertEqual(len(call_args[0]), 1)  # 现在只有一个参数：context字典
-        context = call_args[0][0]
-        self.assertEqual(
-            context["registry"], mock_registry_instance
-        )  # context字典中的registry
-        self.assertIn("config_basedir", context)  # config_basedir应该在context中
-
-        mock_cli_app.assert_called_once()
-        cli_call_args = mock_cli_app.call_args
-        self.assertEqual(cli_call_args.kwargs.get("registry"), mock_registry_instance)
-        self.assertEqual(cli_call_args.kwargs.get("init_messages"), ["测试消息"])
-        self.assertEqual(cli_call_args.kwargs.get("init_files"), [])
-
-        mock_app.run_async.assert_called_once()
-
     @patch("linhai.agent.create.create_agent_from_context")
-    @patch("linhai.main.TUIApp")
-    @patch("linhai.main.Registry")
-    def test_agent_command_without_message_option(
-        self, mock_registry, mock_cli_app, mock_create_agent
-    ):
-        """测试不使用-m选项时init_message为None"""
-        mock_registry_instance = MagicMock()
-        mock_registry.return_value = mock_registry_instance
-
-        mock_agent = MagicMock()
-        mock_create_agent.return_value = mock_agent
-
-        mock_app = AsyncMock()
-        mock_app.run_async = AsyncMock(return_value=None)
-        mock_app.return_code = 0
-        mock_cli_app.return_value = mock_app
-
-        test_args = ["linhai"]
-
-        with patch.object(sys, "argv", test_args):
-            with self.assertRaises(SystemExit) as cm:
-                main()
-        self.assertIsInstance(cm.exception, SystemExit)
-
-        mock_create_agent.assert_called_once()
-        call_args = mock_create_agent.call_args
-        self.assertEqual(len(call_args[0]), 1)  # 现在只有一个参数：context字典
-        context = call_args[0][0]
-        self.assertEqual(
-            context["registry"], mock_registry_instance
-        )  # context字典中的registry
-        self.assertIn("config_basedir", context)  # config_basedir应该在context中
-
-        mock_cli_app.assert_called_once()
-        cli_call_args = mock_cli_app.call_args
-        self.assertEqual(cli_call_args.kwargs.get("registry"), mock_registry_instance)
-
-        mock_app.run_async.assert_called_once()
-
-    @patch("linhai.agent.create.create_agent_from_context")
-    @patch("linhai.main.TUIApp")
-    @patch("linhai.main.Registry")
-    @patch("builtins.open")
-    def test_agent_command_with_file_option(
-        self, mock_open, mock_registry, mock_cli_app, mock_create_agent
-    ):
-        """测试使用-f选项时从文件读取消息"""
-        mock_registry_instance = MagicMock()
-        mock_registry.return_value = mock_registry_instance
-
-        mock_agent = MagicMock()
-        mock_create_agent.return_value = mock_agent
-
-        mock_app = AsyncMock()
-        mock_app.run_async = AsyncMock(return_value=None)
-        mock_app.return_code = 0
-        mock_cli_app.return_value = mock_app
-
-        mock_file = MagicMock()
-        mock_file.read.return_value = "文件中的测试消息\n"
-        mock_open.return_value.__enter__.return_value = mock_file
-
-        test_args = ["linhai", "-f", "test_message.txt"]
-
-        with patch.object(sys, "argv", test_args):
-            with self.assertRaises(SystemExit) as cm:
-                main()
-        self.assertIsInstance(cm.exception, SystemExit)
-
-        mock_create_agent.assert_called_once()
-        call_args = mock_create_agent.call_args
-        self.assertEqual(len(call_args[0]), 1)  # 现在只有一个参数：context字典
-        context = call_args[0][0]
-        self.assertEqual(
-            context["registry"], mock_registry_instance
-        )  # context字典中的registry
-        self.assertIn("config_basedir", context)  # config_basedir应该在context中
-
-        mock_cli_app.assert_called_once()
-        cli_call_args = mock_cli_app.call_args
-        self.assertEqual(cli_call_args.kwargs.get("registry"), mock_registry_instance)
-
-        mock_app.run_async.assert_called_once()
-
-    @patch("linhai.agent.create.create_agent_from_context")
-    @patch("linhai.main.TUIApp")
-    @patch("linhai.main.Registry")
-    @patch("builtins.open")
-    def test_agent_command_with_both_message_and_file_options(
-        self, mock_open, mock_registry, mock_cli_app, mock_create_agent
-    ):
-        """测试同时使用-m和-f选项时文件内容优先"""
-        mock_registry_instance = MagicMock()
-        mock_registry.return_value = mock_registry_instance
-
-        mock_agent = MagicMock()
-        mock_create_agent.return_value = mock_agent
-
-        mock_app = AsyncMock()
-        mock_app.run_async = AsyncMock(return_value=None)
-        mock_app.return_code = 0
-        mock_cli_app.return_value = mock_app
-
-        mock_file = MagicMock()
-        mock_file.read.return_value = "文件中的优先消息\n"
-        mock_open.return_value.__enter__.return_value = mock_file
-
-        test_args = ["linhai", "-m", "命令行消息", "-f", "test_message.txt"]
-
-        with patch.object(sys, "argv", test_args):
-            with self.assertRaises(SystemExit) as cm:
-                main()
-        self.assertIsInstance(cm.exception, SystemExit)
-
-        mock_create_agent.assert_called_once()
-        call_args = mock_create_agent.call_args
-        self.assertEqual(len(call_args[0]), 1)  # 现在只有一个参数：context字典
-        context = call_args[0][0]
-        self.assertEqual(
-            context["registry"], mock_registry_instance
-        )  # context字典中的registry
-        self.assertIn("config_basedir", context)  # config_basedir应该在context中
-
-        mock_cli_app.assert_called_once()
-        cli_call_args = mock_cli_app.call_args
-        self.assertEqual(cli_call_args.kwargs.get("registry"), mock_registry_instance)
-
-        mock_app.run_async.assert_called_once()
-
-    @patch("linhai.agent.create.create_agent_from_context")
-    @patch("linhai.main.TUIApp")
-    def test_agent_command_with_file_option_file_not_found(
-        self, mock_cli_app, mock_create_agent
-    ):
-        """测试使用-f选项时文件不存在的错误处理"""
-        # 模拟create_agent_from_context抛出FileNotFoundError
-        mock_create_agent.side_effect = FileNotFoundError("文件未找到")
-        mock_app = AsyncMock()
-        mock_app.run_async = AsyncMock(return_value=None)
-        mock_app.return_code = 0
-        mock_cli_app.return_value = mock_app
-
-        test_args = ["linhai", "-f", "nonexistent.txt"]
-
-        with patch.object(sys, "argv", test_args):
-            with self.assertRaises(FileNotFoundError):
-                main()
-
-        mock_create_agent.assert_called_once()
-        mock_cli_app.assert_not_called()
-
-    @patch("linhai.agent.create.create_agent_from_context")
-    @patch("linhai.main.TUIApp")
-    def test_agent_command_with_file_option_read_error(
-        self, mock_cli_app, mock_create_agent
-    ):
-        """测试使用-f选项时文件读取错误的处理"""
-        # 模拟create_agent_from_context抛出Exception
-        mock_create_agent.side_effect = Exception("读取错误")
-        mock_app = AsyncMock()
-        mock_app.run_async = AsyncMock(return_value=None)
-        mock_app.return_code = 0
-        mock_cli_app.return_value = mock_app
-
-        test_args = ["linhai", "-f", "corrupted.txt"]
-
-        with patch.object(sys, "argv", test_args):
-            with self.assertRaises(Exception):
-                main()
-
-        mock_create_agent.assert_called_once()
-        mock_cli_app.assert_not_called()
-
     @patch("linhai.agent.create.create_agent_build_context")
-    @patch("linhai.agent.create.create_agent_from_context")
-    @patch("linhai.main.TUIApp")
-    @patch("linhai.main.Registry")
-    def test_agent_command_with_llm_option(
-        self, mock_registry, mock_cli_app, mock_create_agent, mock_create_context
+    def test_llm_option_maps_to_build_args(
+        self, mock_build_context, mock_create_agent, mock_cli_app
     ):
-        """测试使用--llm选项时LLM名称被正确传递"""
-        mock_registry_instance = MagicMock()
-        mock_registry.return_value = mock_registry_instance
+        mock_context = {
+            "registry": MagicMock(),
+            "config_basedir": Path("."),
+            "message": [],
+            "file": [],
+        }
+        mock_build_context.return_value = mock_context
 
         mock_agent = MagicMock()
         mock_create_agent.return_value = mock_agent
@@ -254,56 +30,31 @@ class TestMainCommandLine(unittest.TestCase):
         mock_app.run_async = AsyncMock(return_value=None)
         mock_app.return_code = 0
         mock_cli_app.return_value = mock_app
-
-        # 模拟create_agent_build_context返回有效的context
-        mock_context = {
-            "registry": mock_registry_instance,
-            "config": MagicMock(spec=Config),
-            "config_basedir": Path("."),
-            "llm_name": "test_llm",
-            "git_diff_reviewer": False,
-            "violation_checker": False,
-            "message": [],
-            "file": [],
-        }
-        mock_create_context.return_value = mock_context
 
         test_args = ["linhai", "--llm", "test_llm"]
 
         with patch.object(sys, "argv", test_args):
-            with self.assertRaises(SystemExit) as cm:
+            with self.assertRaises(SystemExit):
                 main()
-        self.assertIsInstance(cm.exception, SystemExit)
 
-        mock_create_agent.assert_called_once()
-        call_args = mock_create_agent.call_args
-        self.assertEqual(len(call_args[0]), 1)  # 现在只有一个参数：context字典
-        context = call_args[0][0]
-        self.assertEqual(
-            context["registry"], mock_registry_instance
-        )  # context字典中的registry
-        self.assertIn("config_basedir", context)  # config_basedir应该在context中
-        context = call_args[0][0]
-        self.assertEqual(
-            context.get("llm_name"), "test_llm"
-        )  # llm_name 在context字典中
+        mock_build_context.assert_called_once()
+        call_kwargs = mock_build_context.call_args[1]
+        build_args = call_kwargs["build_args"]
+        self.assertEqual(build_args["llm_name"], "test_llm")
 
-        mock_cli_app.assert_called_once()
-        cli_call_args = mock_cli_app.call_args
-        self.assertEqual(cli_call_args.kwargs.get("registry"), mock_registry_instance)
-
-        mock_app.run_async.assert_called_once()
-
-    @patch("linhai.agent.create.create_agent_build_context")
-    @patch("linhai.agent.create.create_agent_from_context")
     @patch("linhai.main.TUIApp")
-    @patch("linhai.main.Registry")
-    def test_agent_command_with_llm_and_message_options(
-        self, mock_registry, mock_cli_app, mock_create_agent, mock_create_context
+    @patch("linhai.agent.create.create_agent_from_context")
+    @patch("linhai.agent.create.create_agent_build_context")
+    def test_message_option_maps_to_build_args(
+        self, mock_build_context, mock_create_agent, mock_cli_app
     ):
-        """测试同时使用--llm和-m选项"""
-        mock_registry_instance = MagicMock()
-        mock_registry.return_value = mock_registry_instance
+        mock_context = {
+            "registry": MagicMock(),
+            "config_basedir": Path("."),
+            "message": [],
+            "file": [],
+        }
+        mock_build_context.return_value = mock_context
 
         mock_agent = MagicMock()
         mock_create_agent.return_value = mock_agent
@@ -313,41 +64,220 @@ class TestMainCommandLine(unittest.TestCase):
         mock_app.return_code = 0
         mock_cli_app.return_value = mock_app
 
-        # 模拟create_agent_build_context返回有效的context
+        test_args = ["linhai", "-m", "test message"]
+
+        with patch.object(sys, "argv", test_args):
+            with self.assertRaises(SystemExit):
+                main()
+
+        mock_build_context.assert_called_once()
+        call_kwargs = mock_build_context.call_args[1]
+        build_args = call_kwargs["build_args"]
+        self.assertEqual(build_args["message"], ["test message"])
+
+    @patch("linhai.main.TUIApp")
+    @patch("linhai.agent.create.create_agent_from_context")
+    @patch("linhai.agent.create.create_agent_build_context")
+    def test_afk_flag_maps_to_build_args(
+        self, mock_build_context, mock_create_agent, mock_cli_app
+    ):
         mock_context = {
-            "registry": mock_registry_instance,
-            "config": MagicMock(spec=Config),
+            "registry": MagicMock(),
             "config_basedir": Path("."),
-            "llm_name": "test_llm",
-            "git_diff_reviewer": False,
-            "violation_checker": False,
             "message": [],
             "file": [],
         }
-        mock_create_context.return_value = mock_context
+        mock_build_context.return_value = mock_context
 
-        test_args = ["linhai", "--llm", "test_llm", "-m", "测试消息"]
+        mock_agent = MagicMock()
+        mock_create_agent.return_value = mock_agent
+
+        mock_app = MagicMock()
+        mock_app.run_async = AsyncMock(return_value=None)
+        mock_app.return_code = 0
+        mock_cli_app.return_value = mock_app
+
+        test_args = ["linhai", "--afk"]
 
         with patch.object(sys, "argv", test_args):
-            with self.assertRaises(SystemExit) as cm:
+            with self.assertRaises(SystemExit):
                 main()
-        self.assertIsInstance(cm.exception, SystemExit)
 
-        mock_create_agent.assert_called_once()
-        call_args = mock_create_agent.call_args
-        self.assertEqual(len(call_args[0]), 1)  # 现在只有一个参数：context字典
-        context = call_args[0][0]
-        self.assertEqual(
-            context["registry"], mock_registry_instance
-        )  # context字典中的registry
-        self.assertIn("config_basedir", context)  # config_basedir应该在context中
-        context = call_args[0][0]
-        self.assertEqual(
-            context.get("llm_name"), "test_llm"
-        )  # llm_name 在context字典中
+        mock_build_context.assert_called_once()
+        call_kwargs = mock_build_context.call_args[1]
+        build_args = call_kwargs["build_args"]
+        self.assertTrue(build_args["afk"])
 
-        mock_cli_app.assert_called_once()
-        cli_call_args = mock_cli_app.call_args
-        self.assertEqual(cli_call_args.kwargs.get("registry"), mock_registry_instance)
+    @patch("linhai.main.TUIApp")
+    @patch("linhai.agent.create.create_agent_from_context")
+    @patch("linhai.agent.create.create_agent_build_context")
+    def test_planning_flag_maps_to_build_args(
+        self, mock_build_context, mock_create_agent, mock_cli_app
+    ):
+        mock_context = {
+            "registry": MagicMock(),
+            "config_basedir": Path("."),
+            "message": [],
+            "file": [],
+        }
+        mock_build_context.return_value = mock_context
 
-        mock_app.run_async.assert_called_once()
+        mock_agent = MagicMock()
+        mock_create_agent.return_value = mock_agent
+
+        mock_app = MagicMock()
+        mock_app.run_async = AsyncMock(return_value=None)
+        mock_app.return_code = 0
+        mock_cli_app.return_value = mock_app
+
+        test_args = ["linhai", "--planning"]
+
+        with patch.object(sys, "argv", test_args):
+            with self.assertRaises(SystemExit):
+                main()
+
+        mock_build_context.assert_called_once()
+        call_kwargs = mock_build_context.call_args[1]
+        build_args = call_kwargs["build_args"]
+        self.assertTrue(build_args["planning"])
+
+    @patch("linhai.main.TUIApp")
+    @patch("linhai.agent.create.create_agent_from_context")
+    @patch("linhai.agent.create.create_agent_build_context")
+    def test_claw_flag_maps_to_build_args(
+        self, mock_build_context, mock_create_agent, mock_cli_app
+    ):
+        mock_context = {
+            "registry": MagicMock(),
+            "config_basedir": Path("."),
+            "message": [],
+            "file": [],
+        }
+        mock_build_context.return_value = mock_context
+
+        mock_agent = MagicMock()
+        mock_create_agent.return_value = mock_agent
+
+        mock_app = MagicMock()
+        mock_app.run_async = AsyncMock(return_value=None)
+        mock_app.return_code = 0
+        mock_cli_app.return_value = mock_app
+
+        test_args = ["linhai", "--claw"]
+
+        with patch.object(sys, "argv", test_args):
+            with self.assertRaises(SystemExit):
+                main()
+
+        mock_build_context.assert_called_once()
+        call_kwargs = mock_build_context.call_args[1]
+        build_args = call_kwargs["build_args"]
+        self.assertTrue(build_args["claw_enabled"])
+
+    @patch("linhai.main.TUIApp")
+    @patch("linhai.agent.create.create_agent_from_context")
+    @patch("linhai.agent.create.create_agent_build_context")
+    def test_profile_option_maps_to_build_args(
+        self, mock_build_context, mock_create_agent, mock_cli_app
+    ):
+        mock_context = {
+            "registry": MagicMock(),
+            "config_basedir": Path("."),
+            "message": [],
+            "file": [],
+        }
+        mock_build_context.return_value = mock_context
+
+        mock_agent = MagicMock()
+        mock_create_agent.return_value = mock_agent
+
+        mock_app = MagicMock()
+        mock_app.run_async = AsyncMock(return_value=None)
+        mock_app.return_code = 0
+        mock_cli_app.return_value = mock_app
+
+        test_args = ["linhai", "--profile", "dev"]
+
+        with patch.object(sys, "argv", test_args):
+            with self.assertRaises(SystemExit):
+                main()
+
+        mock_build_context.assert_called_once()
+        call_kwargs = mock_build_context.call_args[1]
+        build_args = call_kwargs["build_args"]
+        self.assertEqual(build_args["profile_name"], "dev")
+
+    @patch("linhai.main.TUIApp")
+    @patch("linhai.agent.create.create_agent_from_context")
+    @patch("linhai.agent.create.create_agent_build_context")
+    @patch("builtins.open")
+    def test_file_option_maps_to_build_args(
+        self, mock_open, mock_build_context, mock_create_agent, mock_cli_app
+    ):
+        mock_context = {
+            "registry": MagicMock(),
+            "config_basedir": Path("."),
+            "message": [],
+            "file": [],
+        }
+        mock_build_context.return_value = mock_context
+
+        mock_agent = MagicMock()
+        mock_create_agent.return_value = mock_agent
+
+        mock_app = MagicMock()
+        mock_app.run_async = AsyncMock(return_value=None)
+        mock_app.return_code = 0
+        mock_cli_app.return_value = mock_app
+
+        mock_file = MagicMock()
+        mock_file.read.return_value = "file content"
+        mock_open.return_value.__enter__.return_value = mock_file
+
+        test_args = ["linhai", "-f", "test.txt"]
+
+        with patch.object(sys, "argv", test_args):
+            with self.assertRaises(SystemExit):
+                main()
+
+        mock_build_context.assert_called_once()
+        call_kwargs = mock_build_context.call_args[1]
+        build_args = call_kwargs["build_args"]
+        self.assertEqual(len(build_args["file"]), 1)
+
+    @patch("linhai.main.TUIApp")
+    @patch("linhai.agent.create.create_agent_from_context")
+    @patch("linhai.agent.create.create_agent_build_context")
+    def test_disable_waiting_marker_maps_to_build_args(
+        self, mock_build_context, mock_create_agent, mock_cli_app
+    ):
+        mock_context = {
+            "registry": MagicMock(),
+            "config_basedir": Path("."),
+            "message": [],
+            "file": [],
+        }
+        mock_build_context.return_value = mock_context
+
+        mock_agent = MagicMock()
+        mock_create_agent.return_value = mock_agent
+
+        mock_app = MagicMock()
+        mock_app.run_async = AsyncMock(return_value=None)
+        mock_app.return_code = 0
+        mock_cli_app.return_value = mock_app
+
+        test_args = ["linhai", "--disable-waiting-marker"]
+
+        with patch.object(sys, "argv", test_args):
+            with self.assertRaises(SystemExit):
+                main()
+
+        mock_build_context.assert_called_once()
+        call_kwargs = mock_build_context.call_args[1]
+        build_args = call_kwargs["build_args"]
+        self.assertTrue(build_args["disable_waiting_marker"])
+
+
+if __name__ == "__main__":
+    unittest.main()

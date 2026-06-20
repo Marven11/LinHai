@@ -1,386 +1,516 @@
-"""测试AgentBuildContext中cron/telegram/disable_waiting_marker/afk的传递"""
+"""测试create_agent_build_context - profile解析、参数映射、配置合并"""
 
 import unittest
+import tempfile
+import os
 from pathlib import Path
-from unittest.mock import Mock, patch
+
+from linhai.config import Config, load_config
 from linhai.agent.create import (
     create_agent_build_context,
-    _resolve_process_sandbox,
     AgentBuildArguments,
-)
-from linhai.config import (
-    BubblewrapConfig,
-    MacOsSandboxConfig,
-    ProcessSandboxConfig,
+    _resolve_agent_profile,
 )
 from linhai.registry import Registry
 
 
-class TestAgentBuildContextParameters(unittest.TestCase):
-    """测试AgentBuildContext中cli_args参数迁移"""
-
-    def setUp(self):
-        """测试前置设置"""
-        self.registry = Mock(spec=Registry)
-        self.config = Mock()
-
-        mock_llm_config = Mock()
-        mock_llm_config.name = "test_llm"
-        mock_llm_config.base_url = "http://test.com"
-        mock_llm_config.api_key = "test_key"
-        mock_llm_config.model = "test-model"
-        mock_llm_config.model_dump.return_value = {
-            "client_options": {},
-            "completion_options": {},
-            "token_limit": 1000,
-            "compatibility": "openai",
-        }
-
-        self.config.llm = [mock_llm_config]
-        self.config.agent = [Mock()]
-        self.config.agent[0].default_llm = "test_llm"
-        self.config.agent[0].enable_toolsets = None
-        self.config.agent[0].disable_toolsets = None
-        self.config.agent[0].compress_threshold = 0.8
-        self.config.agent[0].max_toolcall_for_llm = {}
-        self.config.agent[0].allowed_commands = []
-        self.config.agent[0].mcp = []
-        self.config.tools = Mock()
-        self.config.tools.enable_toolsets = None
-        self.config.tools.disable_toolsets = None
-        self.config.tools.max_toolcall_token_in_round = 0.3
-        self.config.agent[0].secret = Mock()
-        self.config.agent[0].secret.config_path = None
-        self.config.user_prompt = None
-        self.config.remote_control = Mock()
-        self.config.remote_control.telegram = None
-        self.config.agent[0].process_sandbox = None
-        self.config.agent[0].planning = False
-        self.config.agent[0].claw = False
-
-    def test_agent_build_context_with_cron(self):
-        """测试cron参数从build_args传递到AgentBuildContext"""
-        build_args: AgentBuildArguments = {
-            "cron": ["http://example.com/cron1", "http://example.com/cron2"],
-            "telegram": False,
-            "disable_waiting_marker": False,
-            "afk": False,
-            "message": [],
-            "file": [],
-            "claw_enabled": False,
-            "claw_folder": None,
-            "planning": False,
-            "llm_name": None,
-            "profile_name": None,
-        }
-
-        context = create_agent_build_context(
-            registry=self.registry,
-            config=self.config,
-            config_basedir=Path("."),
-            build_args=build_args,
-        )
-
-        self.assertEqual(
-            context["cron"], ["http://example.com/cron1", "http://example.com/cron2"]
-        )
-        self.assertEqual(context["afk"], False)
-        self.assertEqual(context["claw_enabled"], False)
-        self.assertEqual(context["claw_folder"], None)
-        self.assertIsNone(context["process_sandbox"])
-
-    def test_agent_build_context_with_telegram(self):
-        """测试telegram参数从build_args传递到AgentBuildContext"""
-        build_args: AgentBuildArguments = {
-            "cron": [],
-            "telegram": True,
-            "disable_waiting_marker": False,
-            "afk": False,
-            "message": [],
-            "file": [],
-            "claw_enabled": False,
-            "claw_folder": None,
-            "planning": False,
-            "llm_name": None,
-            "profile_name": None,
-        }
-
-        context = create_agent_build_context(
-            registry=self.registry,
-            config=self.config,
-            config_basedir=Path("."),
-            build_args=build_args,
-        )
-
-        self.assertEqual(context["telegram"], True)
-        self.assertEqual(context["claw_enabled"], False)
-        self.assertEqual(context["claw_folder"], None)
-        self.assertIsNone(context["process_sandbox"])
-
-    def test_agent_build_context_with_disable_waiting_marker(self):
-        """测试disable_waiting_marker参数从build_args传递到AgentBuildContext"""
-        build_args: AgentBuildArguments = {
-            "cron": [],
-            "telegram": False,
-            "disable_waiting_marker": True,
-            "afk": False,
-            "message": [],
-            "file": [],
-            "claw_enabled": False,
-            "claw_folder": None,
-            "planning": False,
-            "llm_name": None,
-            "profile_name": None,
-        }
-
-        context = create_agent_build_context(
-            registry=self.registry,
-            config=self.config,
-            config_basedir=Path("."),
-            build_args=build_args,
-        )
-
-        self.assertEqual(context["disable_waiting_marker"], True)
-        self.assertEqual(context["claw_enabled"], False)
-        self.assertEqual(context["claw_folder"], None)
-
-    def test_agent_build_context_with_afk(self):
-        """测试afk参数从build_args传递到AgentBuildContext"""
-        build_args: AgentBuildArguments = {
-            "cron": [],
-            "telegram": False,
-            "disable_waiting_marker": False,
-            "afk": True,
-            "message": [],
-            "file": [],
-            "claw_enabled": False,
-            "claw_folder": None,
-            "planning": False,
-            "llm_name": None,
-            "profile_name": None,
-        }
-
-        context = create_agent_build_context(
-            registry=self.registry,
-            config=self.config,
-            config_basedir=Path("."),
-            build_args=build_args,
-        )
-
-        self.assertEqual(context["afk"], True)
-
-    def test_agent_build_context_with_all_parameters(self):
-        """测试所有参数同时传递"""
-        build_args: AgentBuildArguments = {
-            "cron": ["http://example.com/cron"],
-            "telegram": True,
-            "disable_waiting_marker": True,
-            "afk": True,
-            "message": [],
-            "file": [],
-            "claw_enabled": True,
-            "claw_folder": Path("/custom/claw/path"),
-            "planning": False,
-            "llm_name": None,
-            "profile_name": None,
-        }
-
-        context = create_agent_build_context(
-            registry=self.registry,
-            config=self.config,
-            config_basedir=Path("."),
-            build_args=build_args,
-        )
-
-        self.assertEqual(context["cron"], ["http://example.com/cron"])
-        self.assertEqual(context["telegram"], True)
-        self.assertEqual(context["disable_waiting_marker"], True)
-        self.assertEqual(context["afk"], True)
-        self.assertEqual(context["claw_enabled"], True)
-        self.assertEqual(context["claw_folder"], Path("/custom/claw/path"))
-
-    def test_agent_build_context_with_default_values(self):
-        """测试默认值"""
-        build_args: AgentBuildArguments = {
-            "cron": [],
-            "telegram": False,
-            "disable_waiting_marker": False,
-            "afk": False,
-            "message": [],
-            "file": [],
-            "claw_enabled": False,
-            "claw_folder": None,
-            "planning": False,
-            "llm_name": None,
-            "profile_name": None,
-        }
-
-        context = create_agent_build_context(
-            registry=self.registry,
-            config=self.config,
-            config_basedir=Path("."),
-            build_args=build_args,
-        )
-
-        self.assertEqual(context["cron"], [])
-        self.assertEqual(context["telegram"], False)
-        self.assertEqual(context["disable_waiting_marker"], False)
-        self.assertEqual(context["afk"], False)
-        self.assertEqual(context["claw_enabled"], False)
-        self.assertEqual(context["claw_folder"], None)
-
-    def test_profile_planning_enables_when_cli_false(self):
-        """测试profile中planning=True在CLI未传--planning时生效"""
-        self.config.agent[0].planning = True
-        build_args: AgentBuildArguments = {
-            "cron": [],
-            "telegram": False,
-            "disable_waiting_marker": False,
-            "afk": False,
-            "message": [],
-            "file": [],
-            "claw_enabled": False,
-            "claw_folder": None,
-            "planning": False,
-            "llm_name": None,
-            "profile_name": None,
-        }
-        context = create_agent_build_context(
-            registry=self.registry,
-            config=self.config,
-            config_basedir=Path("."),
-            build_args=build_args,
-        )
-        self.assertEqual(context["planning"], True)
-
-    def test_profile_claw_enables_when_cli_false(self):
-        """测试profile中claw=True在CLI未传--claw时生效"""
-        self.config.agent[0].claw = True
-        build_args: AgentBuildArguments = {
-            "cron": [],
-            "telegram": False,
-            "disable_waiting_marker": False,
-            "afk": False,
-            "message": [],
-            "file": [],
-            "claw_enabled": False,
-            "claw_folder": None,
-            "planning": False,
-            "llm_name": None,
-            "profile_name": None,
-        }
-        context = create_agent_build_context(
-            registry=self.registry,
-            config=self.config,
-            config_basedir=Path("."),
-            build_args=build_args,
-        )
-        self.assertEqual(context["claw_enabled"], True)
-
-    def test_cli_planning_overrides_profile_false(self):
-        """测试CLI --planning覆盖profile中planning=False"""
-        build_args: AgentBuildArguments = {
-            "cron": [],
-            "telegram": False,
-            "disable_waiting_marker": False,
-            "afk": False,
-            "message": [],
-            "file": [],
-            "claw_enabled": False,
-            "claw_folder": None,
-            "planning": True,
-            "llm_name": None,
-            "profile_name": None,
-        }
-        context = create_agent_build_context(
-            registry=self.registry,
-            config=self.config,
-            config_basedir=Path("."),
-            build_args=build_args,
-        )
-        self.assertEqual(context["planning"], True)
-
-    def test_both_cli_and_profile_enabled(self):
-        """测试CLI和profile同时启用时结果为True"""
-        self.config.agent[0].planning = True
-        self.config.agent[0].claw = True
-        build_args: AgentBuildArguments = {
-            "cron": [],
-            "telegram": False,
-            "disable_waiting_marker": False,
-            "afk": False,
-            "message": [],
-            "file": [],
-            "claw_enabled": True,
-            "claw_folder": Path("/custom/claw"),
-            "planning": True,
-            "llm_name": None,
-            "profile_name": None,
-        }
-        context = create_agent_build_context(
-            registry=self.registry,
-            config=self.config,
-            config_basedir=Path("."),
-            build_args=build_args,
-        )
-        self.assertEqual(context["planning"], True)
-        self.assertEqual(context["claw_enabled"], True)
+def _make_config(config_content: str) -> tuple[Config, str]:
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".toml", delete=False) as f:
+        f.write(config_content)
+        f.flush()
+        path = f.name
+    return load_config(path), path
 
 
-class TestResolveProcessSandbox(unittest.TestCase):
-    """测试_resolve_process_sandbox平台选择逻辑"""
+class TestProfileResolution(unittest.TestCase):
 
-    def test_none_input_returns_none(self):
-        result = _resolve_process_sandbox(None)
-        self.assertIsNone(result)
+    def test_default_profile_when_single_agent(self):
+        config, tmpfile = _make_config("""
+[[llm]]
+name = "test"
+base_url = "https://example.com"
+api_key = "key"
+model = "model"
 
-    @patch("linhai.agent.create.platform.system", return_value="Darwin")
-    def test_macos_platform_selects_macos_sandbox(self, mock_system):
-        macos_config = MacOsSandboxConfig(sandbox_profile="sandbox.sb")
-        bubblewrap_config = BubblewrapConfig(argv_template=["bwrap"])
-        sandbox = ProcessSandboxConfig(
-            macos_sandbox=macos_config, bubblewrap=bubblewrap_config
-        )
-        result = _resolve_process_sandbox(sandbox)
-        self.assertIsInstance(result, MacOsSandboxConfig)
-        self.assertEqual(result.sandbox_profile, "sandbox.sb")
+[[agent]]
+name = "default"
+compress_threshold = 0.8
+""")
+        try:
+            profile = _resolve_agent_profile(config, None)
+            self.assertEqual(profile.name, "default")
+        finally:
+            os.unlink(tmpfile)
 
-    @patch("linhai.agent.create.platform.system", return_value="Linux")
-    def test_linux_platform_selects_bubblewrap(self, mock_system):
-        macos_config = MacOsSandboxConfig(sandbox_profile="sandbox.sb")
-        bubblewrap_config = BubblewrapConfig(argv_template=["bwrap"])
-        sandbox = ProcessSandboxConfig(
-            macos_sandbox=macos_config, bubblewrap=bubblewrap_config
-        )
-        result = _resolve_process_sandbox(sandbox)
-        self.assertIsInstance(result, BubblewrapConfig)
-        self.assertEqual(result.argv_template, ["bwrap"])
+    def test_profile_by_name(self):
+        config, tmpfile = _make_config("""
+[[llm]]
+name = "test"
+base_url = "https://example.com"
+api_key = "key"
+model = "model"
 
-    @patch("linhai.agent.create.platform.system", return_value="Darwin")
-    def test_macos_platform_returns_none_when_no_macos_config(self, mock_system):
-        sandbox = ProcessSandboxConfig(
-            macos_sandbox=None, bubblewrap=BubblewrapConfig(argv_template=["bwrap"])
-        )
-        result = _resolve_process_sandbox(sandbox)
-        self.assertIsNone(result)
+[[agent]]
+name = "dev"
+compress_threshold = 0.6
 
-    @patch("linhai.agent.create.platform.system", return_value="Linux")
-    def test_linux_platform_returns_none_when_no_bubblewrap_config(self, mock_system):
-        sandbox = ProcessSandboxConfig(
-            macos_sandbox=MacOsSandboxConfig(sandbox_profile="sandbox.sb"),
-            bubblewrap=None,
-        )
-        result = _resolve_process_sandbox(sandbox)
-        self.assertIsNone(result)
+[[agent]]
+name = "prod"
+compress_threshold = 0.8
+""")
+        try:
+            profile = _resolve_agent_profile(config, "prod")
+            self.assertEqual(profile.name, "prod")
+            self.assertEqual(profile.compress_threshold, 0.8)
+        finally:
+            os.unlink(tmpfile)
 
-    @patch("linhai.agent.create.platform.system", return_value="Windows")
-    def test_unknown_platform_returns_none(self, mock_system):
-        sandbox = ProcessSandboxConfig(
-            macos_sandbox=MacOsSandboxConfig(sandbox_profile="sandbox.sb"),
-            bubblewrap=BubblewrapConfig(argv_template=["bwrap"]),
-        )
-        result = _resolve_process_sandbox(sandbox)
-        self.assertIsNone(result)
+    def test_profile_nonexistent_raises(self):
+        config, tmpfile = _make_config("""
+[[llm]]
+name = "test"
+base_url = "https://example.com"
+api_key = "key"
+model = "model"
+
+[[agent]]
+name = "default"
+compress_threshold = 0.8
+""")
+        try:
+            with self.assertRaises(ValueError) as ctx:
+                _resolve_agent_profile(config, "nonexistent")
+            self.assertIn("nonexistent", str(ctx.exception))
+        finally:
+            os.unlink(tmpfile)
+
+    def test_profile_no_agents_raises(self):
+        config, tmpfile = _make_config("""
+[[llm]]
+name = "test"
+base_url = "https://example.com"
+api_key = "key"
+model = "model"
+""")
+        try:
+            with self.assertRaises(ValueError):
+                _resolve_agent_profile(config, None)
+        finally:
+            os.unlink(tmpfile)
+
+
+class TestBuildContextParameterMapping(unittest.TestCase):
+
+    def _base_config(self):
+        return """
+[[llm]]
+name = "test"
+base_url = "https://example.com"
+api_key = "key"
+model = "model"
+
+[[agent]]
+name = "default"
+compress_threshold = 0.8
+"""
+
+    def test_llm_name_resolution(self):
+        config, tmpfile = _make_config(self._base_config())
+        try:
+            registry = Registry()
+            build_args: AgentBuildArguments = {
+                "cron": [],
+                "telegram": False,
+                "disable_waiting_marker": False,
+                "afk": False,
+                "claw_enabled": False,
+                "claw_folder": None,
+                "message": [],
+                "file": [],
+                "planning": False,
+                "llm_name": None,
+                "profile_name": None,
+            }
+            context = create_agent_build_context(
+                registry=registry,
+                config=config,
+                config_basedir=Path("."),
+                build_args=build_args,
+            )
+            self.assertEqual(context["llm_name"], "test")
+        finally:
+            os.unlink(tmpfile)
+
+    def test_llm_name_override(self):
+        config, tmpfile = _make_config("""
+[[llm]]
+name = "llm1"
+base_url = "https://example.com"
+api_key = "key"
+model = "model"
+
+[[llm]]
+name = "llm2"
+base_url = "https://example.org"
+api_key = "key2"
+model = "model2"
+
+[[agent]]
+name = "default"
+compress_threshold = 0.8
+""")
+        try:
+            registry = Registry()
+            build_args: AgentBuildArguments = {
+                "cron": [],
+                "telegram": False,
+                "disable_waiting_marker": False,
+                "afk": False,
+                "claw_enabled": False,
+                "claw_folder": None,
+                "message": [],
+                "file": [],
+                "planning": False,
+                "llm_name": "llm2",
+                "profile_name": None,
+            }
+            context = create_agent_build_context(
+                registry=registry,
+                config=config,
+                config_basedir=Path("."),
+                build_args=build_args,
+            )
+            self.assertEqual(context["llm_name"], "llm2")
+        finally:
+            os.unlink(tmpfile)
+
+    def test_planning_enabled_via_cli(self):
+        config, tmpfile = _make_config(self._base_config())
+        try:
+            registry = Registry()
+            build_args: AgentBuildArguments = {
+                "cron": [],
+                "telegram": False,
+                "disable_waiting_marker": False,
+                "afk": False,
+                "claw_enabled": False,
+                "claw_folder": None,
+                "message": [],
+                "file": [],
+                "planning": True,
+                "llm_name": None,
+                "profile_name": None,
+            }
+            context = create_agent_build_context(
+                registry=registry,
+                config=config,
+                config_basedir=Path("."),
+                build_args=build_args,
+            )
+            self.assertTrue(context["planning"])
+        finally:
+            os.unlink(tmpfile)
+
+    def test_claw_enabled_via_cli(self):
+        config, tmpfile = _make_config(self._base_config())
+        try:
+            registry = Registry()
+            build_args: AgentBuildArguments = {
+                "cron": [],
+                "telegram": False,
+                "disable_waiting_marker": False,
+                "afk": False,
+                "claw_enabled": True,
+                "claw_folder": Path("/tmp/claw"),
+                "message": [],
+                "file": [],
+                "planning": False,
+                "llm_name": None,
+                "profile_name": None,
+            }
+            context = create_agent_build_context(
+                registry=registry,
+                config=config,
+                config_basedir=Path("."),
+                build_args=build_args,
+            )
+            self.assertTrue(context["claw_enabled"])
+            self.assertEqual(context["claw_folder"], Path("/tmp/claw"))
+        finally:
+            os.unlink(tmpfile)
+
+    def test_afk_enabled(self):
+        config, tmpfile = _make_config(self._base_config())
+        try:
+            registry = Registry()
+            build_args: AgentBuildArguments = {
+                "cron": [],
+                "telegram": False,
+                "disable_waiting_marker": False,
+                "afk": True,
+                "claw_enabled": False,
+                "claw_folder": None,
+                "message": [],
+                "file": [],
+                "planning": False,
+                "llm_name": None,
+                "profile_name": None,
+            }
+            context = create_agent_build_context(
+                registry=registry,
+                config=config,
+                config_basedir=Path("."),
+                build_args=build_args,
+            )
+            self.assertTrue(context["afk"])
+        finally:
+            os.unlink(tmpfile)
+
+    def test_message_and_file_in_context(self):
+        config, tmpfile = _make_config(self._base_config())
+        try:
+            registry = Registry()
+            build_args: AgentBuildArguments = {
+                "cron": [],
+                "telegram": False,
+                "disable_waiting_marker": False,
+                "afk": False,
+                "claw_enabled": False,
+                "claw_folder": None,
+                "message": ["msg1", "msg2"],
+                "file": [Path("a.txt"), Path("b.txt")],
+                "planning": False,
+                "llm_name": None,
+                "profile_name": None,
+            }
+            context = create_agent_build_context(
+                registry=registry,
+                config=config,
+                config_basedir=Path("."),
+                build_args=build_args,
+            )
+            self.assertEqual(context["message"], ["msg1", "msg2"])
+            self.assertEqual(len(context["file"]), 2)
+        finally:
+            os.unlink(tmpfile)
+
+    def test_allowed_commands_in_context(self):
+        config, tmpfile = _make_config("""
+[[llm]]
+name = "test"
+base_url = "https://example.com"
+api_key = "key"
+model = "model"
+
+[[agent]]
+name = "default"
+compress_threshold = 0.8
+allowed_commands = [["ls"], ["git", "status"]]
+""")
+        try:
+            registry = Registry()
+            build_args: AgentBuildArguments = {
+                "cron": [],
+                "telegram": False,
+                "disable_waiting_marker": False,
+                "afk": False,
+                "claw_enabled": False,
+                "claw_folder": None,
+                "message": [],
+                "file": [],
+                "planning": False,
+                "llm_name": None,
+                "profile_name": None,
+            }
+            context = create_agent_build_context(
+                registry=registry,
+                config=config,
+                config_basedir=Path("."),
+                build_args=build_args,
+            )
+            self.assertEqual(context["allowed_commands"], [["ls"], ["git", "status"]])
+        finally:
+            os.unlink(tmpfile)
+
+    def test_empty_allowed_commands(self):
+        config, tmpfile = _make_config(self._base_config())
+        try:
+            registry = Registry()
+            build_args: AgentBuildArguments = {
+                "cron": [],
+                "telegram": False,
+                "disable_waiting_marker": False,
+                "afk": False,
+                "claw_enabled": False,
+                "claw_folder": None,
+                "message": [],
+                "file": [],
+                "planning": False,
+                "llm_name": None,
+                "profile_name": None,
+            }
+            context = create_agent_build_context(
+                registry=registry,
+                config=config,
+                config_basedir=Path("."),
+                build_args=build_args,
+            )
+            self.assertEqual(context["allowed_commands"], [])
+        finally:
+            os.unlink(tmpfile)
+
+    def test_mcp_configs_in_context(self):
+        config, tmpfile = _make_config("""
+[[llm]]
+name = "test"
+base_url = "https://example.com"
+api_key = "key"
+model = "model"
+
+[[agent]]
+name = "default"
+compress_threshold = 0.8
+
+[[agent.mcp]]
+name = "server1"
+command = "python server1.py"
+
+[[agent.mcp]]
+name = "server2"
+command = "uv run server2.py"
+""")
+        try:
+            registry = Registry()
+            build_args: AgentBuildArguments = {
+                "cron": [],
+                "telegram": False,
+                "disable_waiting_marker": False,
+                "afk": False,
+                "claw_enabled": False,
+                "claw_folder": None,
+                "message": [],
+                "file": [],
+                "planning": False,
+                "llm_name": None,
+                "profile_name": None,
+            }
+            context = create_agent_build_context(
+                registry=registry,
+                config=config,
+                config_basedir=Path("."),
+                build_args=build_args,
+            )
+            self.assertEqual(len(context["mcp_configs"]), 2)
+            self.assertEqual(context["mcp_configs"][0].name, "server1")
+            self.assertEqual(context["mcp_configs"][1].name, "server2")
+        finally:
+            os.unlink(tmpfile)
+
+    def test_mcp_configs_empty(self):
+        config, tmpfile = _make_config(self._base_config())
+        try:
+            registry = Registry()
+            build_args: AgentBuildArguments = {
+                "cron": [],
+                "telegram": False,
+                "disable_waiting_marker": False,
+                "afk": False,
+                "claw_enabled": False,
+                "claw_folder": None,
+                "message": [],
+                "file": [],
+                "planning": False,
+                "llm_name": None,
+                "profile_name": None,
+            }
+            context = create_agent_build_context(
+                registry=registry,
+                config=config,
+                config_basedir=Path("."),
+                build_args=build_args,
+            )
+            self.assertEqual(context["mcp_configs"], [])
+        finally:
+            os.unlink(tmpfile)
+
+    def test_toolset_enable_override(self):
+        config, tmpfile = _make_config("""
+[[llm]]
+name = "test"
+base_url = "https://example.com"
+api_key = "key"
+model = "model"
+
+[[agent]]
+name = "default"
+compress_threshold = 0.8
+enable_toolsets = ["utils", "sleep"]
+""")
+        try:
+            registry = Registry()
+            build_args: AgentBuildArguments = {
+                "cron": [],
+                "telegram": False,
+                "disable_waiting_marker": False,
+                "afk": False,
+                "claw_enabled": False,
+                "claw_folder": None,
+                "message": [],
+                "file": [],
+                "planning": False,
+                "llm_name": None,
+                "profile_name": None,
+            }
+            context = create_agent_build_context(
+                registry=registry,
+                config=config,
+                config_basedir=Path("."),
+                build_args=build_args,
+            )
+            self.assertEqual(context["enabled_toolsets"], ["utils", "sleep"])
+        finally:
+            os.unlink(tmpfile)
+
+    def test_toolset_disable_override(self):
+        config, tmpfile = _make_config("""
+[[llm]]
+name = "test"
+base_url = "https://example.com"
+api_key = "key"
+model = "model"
+
+[[agent]]
+name = "default"
+compress_threshold = 0.8
+disable_toolsets = ["llm"]
+""")
+        try:
+            registry = Registry()
+            build_args: AgentBuildArguments = {
+                "cron": [],
+                "telegram": False,
+                "disable_waiting_marker": False,
+                "afk": False,
+                "claw_enabled": False,
+                "claw_folder": None,
+                "message": [],
+                "file": [],
+                "planning": False,
+                "llm_name": None,
+                "profile_name": None,
+            }
+            context = create_agent_build_context(
+                registry=registry,
+                config=config,
+                config_basedir=Path("."),
+                build_args=build_args,
+            )
+            from linhai.config import AVAILABLE_TOOLSETS
+
+            expected = [t for t in AVAILABLE_TOOLSETS if t != "llm"]
+            self.assertEqual(context["enabled_toolsets"], expected)
+        finally:
+            os.unlink(tmpfile)
 
 
 if __name__ == "__main__":

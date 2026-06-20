@@ -1,4 +1,4 @@
-"""测试create_agent函数中的MCP配置功能"""
+"""测试create_agent函数中MCP配置的行为"""
 
 import unittest
 import sys
@@ -10,22 +10,23 @@ from pathlib import Path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from linhai.registry import Registry
-from linhai.agent.create import create_agent_from_context
+from linhai.agent.create import (
+    create_agent_from_context,
+    create_agent_build_context,
+    AgentBuildArguments,
+)
 from linhai.agent import Agent
-from linhai.config import load_config, AVAILABLE_TOOLSETS
+from linhai.config import load_config
 
 
 class TestCreateAgentMCP(unittest.TestCase):
-    """测试create_agent函数中的MCP配置功能"""
 
     def setUp(self):
-        """设置测试fixtures"""
         self.temp_dir = tempfile.mkdtemp()
         self.registry = Registry()
         import argparse
 
         self.cli_args = argparse.Namespace()
-
         self.cli_args.message = []
         self.cli_args.file = []
         self.cli_args.claw = False
@@ -36,29 +37,19 @@ class TestCreateAgentMCP(unittest.TestCase):
         self.cli_args.telegram = False
         self.registry.register_member("cli_args", self.cli_args)
 
-        project_root = os.path.dirname(os.path.abspath(__file__))
-        source_file = os.path.join(project_root, "real_mcp_server.py")
-        dest_file = os.path.join(self.temp_dir, "real_mcp_server.py")
-        import shutil
-
-        shutil.copy2(source_file, dest_file)
-        os.chmod(dest_file, 0o755)
-
     def tearDown(self):
-        """清理测试fixtures"""
         import shutil
 
         shutil.rmtree(self.temp_dir)
 
     def create_test_config(self, config_content):
-        """创建临时配置文件"""
         config_path = Path(self.temp_dir) / "test_config.toml"
         config_path.write_text(config_content, encoding="utf-8")
         return config_path
 
     def test_create_agent_with_real_mcp_server(self):
-        """测试create_agent函数与真实MCP服务器的集成"""
-        server_script_path = os.path.join(self.temp_dir, "real_mcp_server.py")
+        project_root = os.path.dirname(os.path.abspath(__file__))
+        server_script_path = os.path.join(project_root, "real_mcp_server.py")
         config_content = f"""
 [[llm]]
 name = "test"
@@ -76,26 +67,7 @@ command = "python {server_script_path}"
         config_path = self.create_test_config(config_content)
 
         config = load_config(config_path)
-        from pathlib import Path
-
-        context = {
-            "registry": self.registry,
-            "config_basedir": Path("."),
-            "llms": config.llm,
-            "llm_name": None,
-            "max_toolcall_token_in_round": 30000,
-            "user_prompt": None,
-            "planning": False,
-            "enabled_toolsets": list(AVAILABLE_TOOLSETS),
-            "compress_threshold": config.agent[0].compress_threshold,
-            "max_toolcall_for_llm": config.agent[0].max_toolcall_for_llm,
-            "allowed_commands": config.agent[0].allowed_commands,
-            "telegram_config": None,
-            "mcp_configs": config.agent[0].mcp,
-            "tool_config": config.tools,
-            "secret_config_path": (
-                config.agent[0].secret.config_path if config.agent[0].secret else None
-            ),
+        build_args: AgentBuildArguments = {
             "cron": [],
             "telegram": False,
             "disable_waiting_marker": False,
@@ -104,20 +76,24 @@ command = "python {server_script_path}"
             "claw_folder": None,
             "message": [],
             "file": [],
-            "process_sandbox": None,
-            "config": config,
-            "git_worktree": False,
+            "planning": False,
+            "llm_name": None,
+            "profile_name": None,
         }
+        context = create_agent_build_context(
+            registry=self.registry,
+            config=config,
+            config_basedir=Path("."),
+            build_args=build_args,
+        )
         result = asyncio.run(create_agent_from_context(context))
-
         self.assertIsInstance(result, Agent)
 
-        self.assertIsInstance(result, Agent)
-
-        self.assertIsInstance(result, Agent)
+        agent = self.registry.get_member_typechecked("agent", Agent)
+        self.assertIsNotNone(agent)
+        self.assertTrue(self.registry.has_member("mcp_connector"))
 
     def test_create_agent_without_mcp_config(self):
-        """测试没有MCP配置时create_agent函数正常工作"""
         config_content = """
 [[llm]]
 name = "test"
@@ -131,26 +107,7 @@ compress_threshold = 80000
         config_path = self.create_test_config(config_content)
 
         config = load_config(config_path)
-        from pathlib import Path
-
-        context = {
-            "registry": self.registry,
-            "config_basedir": Path("."),
-            "llms": config.llm,
-            "llm_name": None,
-            "max_toolcall_token_in_round": 30000,
-            "user_prompt": None,
-            "planning": False,
-            "enabled_toolsets": list(AVAILABLE_TOOLSETS),
-            "compress_threshold": config.agent[0].compress_threshold,
-            "max_toolcall_for_llm": config.agent[0].max_toolcall_for_llm,
-            "allowed_commands": config.agent[0].allowed_commands,
-            "telegram_config": None,
-            "mcp_configs": config.agent[0].mcp,
-            "tool_config": config.tools,
-            "secret_config_path": (
-                config.agent[0].secret.config_path if config.agent[0].secret else None
-            ),
+        build_args: AgentBuildArguments = {
             "cron": [],
             "telegram": False,
             "disable_waiting_marker": False,
@@ -159,16 +116,69 @@ compress_threshold = 80000
             "claw_folder": None,
             "message": [],
             "file": [],
-            "process_sandbox": None,
-            "config": config,
-            "git_worktree": False,
+            "planning": False,
+            "llm_name": None,
+            "profile_name": None,
         }
+        context = create_agent_build_context(
+            registry=self.registry,
+            config=config,
+            config_basedir=Path("."),
+            build_args=build_args,
+        )
         result = asyncio.run(create_agent_from_context(context))
-
         self.assertIsInstance(result, Agent)
 
         agent = self.registry.get_member_typechecked("agent", Agent)
         self.assertIsNotNone(agent)
+
+    def test_create_agent_with_multiple_mcp_servers(self):
+        project_root = os.path.dirname(os.path.abspath(__file__))
+        server_script = os.path.join(project_root, "real_mcp_server.py")
+        config_content = f"""
+[[llm]]
+name = "test"
+base_url = "https://example.com"
+api_key = "test-key"
+model = "test-model"
+
+[[agent]]
+compress_threshold = 80000
+
+[[agent.mcp]]
+name = "calc1"
+command = "python {server_script}"
+
+[[agent.mcp]]
+name = "calc2"
+command = "python {server_script}"
+"""
+        config_path = self.create_test_config(config_content)
+
+        config = load_config(config_path)
+        build_args: AgentBuildArguments = {
+            "cron": [],
+            "telegram": False,
+            "disable_waiting_marker": False,
+            "afk": False,
+            "claw_enabled": False,
+            "claw_folder": None,
+            "message": [],
+            "file": [],
+            "planning": False,
+            "llm_name": None,
+            "profile_name": None,
+        }
+        context = create_agent_build_context(
+            registry=self.registry,
+            config=config,
+            config_basedir=Path("."),
+            build_args=build_args,
+        )
+        result = asyncio.run(create_agent_from_context(context))
+        self.assertIsInstance(result, Agent)
+
+        self.assertTrue(self.registry.has_member("mcp_connector"))
 
 
 if __name__ == "__main__":

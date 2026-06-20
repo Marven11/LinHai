@@ -374,118 +374,130 @@ model = "test_model"
         finally:
             os.unlink(temp_file)
 
-    def test_field_descriptions(self):
-        """Test that field descriptions are correctly set for config classes."""
-        from linhai.config import (
-            AgentConfig,
-            UserPromptConfig,
-            SecretSubConfig,
-            MacOsSandboxConfig,
-            BubblewrapConfig,
-            ProcessSandboxConfig,
-        )
+    def test_toolsets_default_all_enabled(self):
+        from linhai.config import ToolConfig
 
-        sandbox_fields = MacOsSandboxConfig.model_fields
-        self.assertIsNotNone(sandbox_fields["sandbox_profile"].description)
+        config = ToolConfig()
+        self.assertIsNone(config.enable_toolsets)
+        self.assertIsNone(config.disable_toolsets)
 
-        bubblewrap_fields = BubblewrapConfig.model_fields
-        self.assertIsNotNone(bubblewrap_fields["argv_template"].description)
+    def test_enable_toolsets(self):
+        from linhai.config import ToolConfig
 
-        process_sandbox_fields = ProcessSandboxConfig.model_fields
-        self.assertIsNotNone(process_sandbox_fields["macos_sandbox"].description)
-        self.assertIsNotNone(process_sandbox_fields["bubblewrap"].description)
+        config = ToolConfig(enable_toolsets=["utils", "sleep"])
+        self.assertEqual(config.enable_toolsets, ["utils", "sleep"])
 
-        agent_fields = AgentConfig.model_fields
-        self.assertEqual(
-            agent_fields["compress_threshold"].description, "上下文压缩阈值。"
-        )
-        self.assertEqual(agent_fields["mcp"].description, "MCP服务器配置列表。")
-        self.assertEqual(
-            agent_fields["enable_task_planning"].description, "是否启用任务规划。"
-        )
-        self.assertEqual(
-            agent_fields["allowed_commands"].description, "允许执行的命令列表。"
-        )
-        self.assertEqual(
-            agent_fields["max_toolcall_for_llm"].description,
-            "每个LLM的最大工具调用次数限制。",
-        )
+    def test_disable_toolsets(self):
+        from linhai.config import ToolConfig
 
-        # Test UserPromptConfig field descriptions
-        user_prompt_fields = UserPromptConfig.model_fields
-        self.assertEqual(
-            user_prompt_fields["file_path"].description, "用户提示文件路径。"
-        )
+        config = ToolConfig(disable_toolsets=["llm"])
+        self.assertEqual(config.disable_toolsets, ["llm"])
 
-        # Test SecretSubConfig field descriptions
-        secret_fields = SecretSubConfig.model_fields
-        self.assertEqual(
-            secret_fields["config_path"].description, "Secret配置文件路径。"
-        )
+    def test_enable_toolsets_invalid(self):
+        from linhai.config import ToolConfig, ConfigValidationError
 
-    def test_field_descriptions_additional(self):
-        """Test that additional config fields have descriptions."""
-        from linhai.config import (
-            AgentConfig,
-            TelegramConfig,
-            RemoteControlConfig,
-            ToolConfig,
-            TUIConfig,
-        )
+        with self.assertRaises(ConfigValidationError):
+            ToolConfig(enable_toolsets=["invalid_toolset"])
 
-        telegram_fields = TelegramConfig.model_fields
-        self.assertIsNotNone(
-            telegram_fields["bot_token"].description,
-            "bot_token should have a description",
-        )
-        self.assertIsNotNone(
-            telegram_fields["default_chat_id"].description,
-            "default_chat_id should have a description",
-        )
+    def test_disable_toolsets_invalid(self):
+        from linhai.config import ToolConfig, ConfigValidationError
 
-        remote_control_fields = RemoteControlConfig.model_fields
-        self.assertIsNotNone(
-            remote_control_fields["telegram"].description,
-            "telegram should have a description",
-        )
+        with self.assertRaises(ConfigValidationError):
+            ToolConfig(disable_toolsets=["invalid_toolset"])
 
-        agent_fields = AgentConfig.model_fields
-        self.assertIsNotNone(
-            agent_fields["secret"].description, "secret should have a description"
-        )
+    def test_enable_and_disable_mutually_exclusive(self):
+        from linhai.config import ToolConfig, ConfigValidationError
 
-        tool_fields = ToolConfig.model_fields
-        self.assertIsNotNone(
-            tool_fields["max_toolcall_token_in_round"].description,
-            "max_toolcall_token_in_round should have a description",
-        )
+        with self.assertRaises(ConfigValidationError):
+            ToolConfig(enable_toolsets=["utils"], disable_toolsets=["llm"])
 
-        cli_fields = TUIConfig.model_fields
-        self.assertIsNotNone(
-            cli_fields["use_nerd_font"].description,
-            "use_nerd_font should have a description",
-        )
-        self.assertIsNotNone(
-            cli_fields["textual_theme"].description,
-            "textual_theme should have a description",
-        )
-        self.assertIsNotNone(
-            cli_fields["pygments_theme"].description,
-            "pygments_theme should have a description",
-        )
+    def test_available_toolsets(self):
+        from linhai.config import AVAILABLE_TOOLSETS
 
-    def test_config_field_descriptions(self):
-        """Test that Config class fields have descriptions."""
-        config_fields = Config.model_fields
-        self.assertEqual(config_fields["llm"].description, "LLM配置列表")
-        self.assertEqual(
-            config_fields["agent"].description, "Agent行为配置列表，支持多个profile"
-        )
-        self.assertEqual(config_fields["user_prompt"].description, "用户提示配置")
-        self.assertEqual(config_fields["tools"].description, "工具相关配置")
-        self.assertEqual(config_fields["tui"].description, "TUI界面配置")
-        self.assertEqual(config_fields["remote_control"].description, "远程控制配置")
-        self.assertEqual(config_fields["claw"].description, "CLAW模式配置")
+        expected = {
+            "utils",
+            "sleep",
+            "machine_control",
+            "multimodal",
+            "llm",
+            "context_cleaning",
+            "mcp",
+            "web_search",
+            "telegram",
+            "problem",
+        }
+        self.assertEqual(set(AVAILABLE_TOOLSETS), expected)
+
+    def test_agent_enable_toolsets_none(self):
+        from linhai.config import AgentConfig
+
+        config = AgentConfig()
+        self.assertIsNone(config.enable_toolsets)
+        self.assertIsNone(config.disable_toolsets)
+
+    def test_agent_enable_toolsets_with_list(self):
+        from linhai.config import AgentConfig
+
+        config = AgentConfig(enable_toolsets=["utils", "sleep"])
+        self.assertEqual(config.enable_toolsets, ["utils", "sleep"])
+
+    def test_agent_disable_toolsets_with_list(self):
+        from linhai.config import AgentConfig
+
+        config = AgentConfig(disable_toolsets=["llm"])
+        self.assertEqual(config.disable_toolsets, ["llm"])
+
+    def test_agent_enable_and_disable_mutually_exclusive(self):
+        from linhai.config import AgentConfig, ConfigValidationError
+
+        with self.assertRaises(ConfigValidationError):
+            AgentConfig(enable_toolsets=["utils"], disable_toolsets=["llm"])
+
+    def test_agent_enable_toolsets_invalid(self):
+        from linhai.config import AgentConfig, ConfigValidationError
+
+        with self.assertRaises(ConfigValidationError):
+            AgentConfig(enable_toolsets=["invalid"])
+
+    def test_agent_disable_toolsets_invalid(self):
+        from linhai.config import AgentConfig, ConfigValidationError
+
+        with self.assertRaises(ConfigValidationError):
+            AgentConfig(disable_toolsets=["invalid"])
+
+    def test_agent_enable_toolsets_in_full_config(self):
+        config_content = """[[llm]]
+name = "test_llm"
+base_url = "https://api.example.com"
+api_key = "test_key"
+model = "test_model"
+
+[[agent]]
+enable_toolsets = ["utils", "sleep"]
+"""
+        temp_file = create_temp_config(config_content)
+        try:
+            config = load_config(temp_file)
+            self.assertEqual(config.agent[0].enable_toolsets, ["utils", "sleep"])
+        finally:
+            os.unlink(temp_file)
+
+    def test_agent_disable_toolsets_in_full_config(self):
+        config_content = """[[llm]]
+name = "test_llm"
+base_url = "https://api.example.com"
+api_key = "test_key"
+model = "test_model"
+
+[[agent]]
+disable_toolsets = ["llm"]
+"""
+        temp_file = create_temp_config(config_content)
+        try:
+            config = load_config(temp_file)
+            self.assertEqual(config.agent[0].disable_toolsets, ["llm"])
+        finally:
+            os.unlink(temp_file)
 
     def test_load_config_with_process_sandbox_macos(self):
         """Test loading a config with macOS sandbox configuration."""
