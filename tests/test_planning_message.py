@@ -1,57 +1,39 @@
 import unittest
 from pathlib import Path
-from unittest.mock import Mock, patch
 
 from linhai.agent.planning import PlanningPromptMessage
+from linhai.agent.messages.runtime import RuntimeMessage
 
 
-class TestPlanningPromptMessage(unittest.TestCase):
-    def setUp(self):
-        self.test_folder = Path("/tmp/test_planning")
+class TestPlanningPromptMessageContent(unittest.TestCase):
+    def test_content_includes_all_file_paths(self):
+        folder = Path("/tmp/my_planning_test")
+        msg = PlanningPromptMessage(folder)
+        content = msg.message
+        self.assertIn(str(folder / "STATUS.md"), content)
+        self.assertIn(str(folder / "TODOLIST.md"), content)
+        self.assertIn(str(folder / "DESIGN.md"), content)
 
-    def test_init_creates_file_paths(self):
-        message = PlanningPromptMessage(self.test_folder)
+    def test_inherits_runtime_message(self):
+        msg = PlanningPromptMessage(Path("/tmp/test"))
+        self.assertIsInstance(msg, RuntimeMessage)
 
-        self.assertEqual(message.planning_folder, self.test_folder)
-        self.assertEqual(message.status_file, self.test_folder / "STATUS.md")
-        self.assertEqual(message.todolist_file, self.test_folder / "TODOLIST.md")
-        self.assertEqual(message.design_file, self.test_folder / "DESIGN.md")
+    def test_get_file_paths(self):
+        folder = Path("/tmp/planning_abc")
+        msg = PlanningPromptMessage(folder)
+        paths = msg.get_file_paths()
+        self.assertEqual(paths["status"], folder / "STATUS.md")
+        self.assertEqual(paths["todolist"], folder / "TODOLIST.md")
+        self.assertEqual(paths["design"], folder / "DESIGN.md")
 
-    def test_get_file_paths_returns_correct_dict(self):
-        message = PlanningPromptMessage(self.test_folder)
-        file_paths = message.get_file_paths()
+    def test_different_folders_produce_different_content(self):
+        msg1 = PlanningPromptMessage(Path("/tmp/planning_one"))
+        msg2 = PlanningPromptMessage(Path("/tmp/planning_two"))
+        self.assertNotEqual(msg1.message, msg2.message)
 
-        expected = {
-            "status": self.test_folder / "STATUS.md",
-            "todolist": self.test_folder / "TODOLIST.md",
-            "design": self.test_folder / "DESIGN.md",
-        }
-
-        self.assertEqual(file_paths, expected)
-
-    def test_content_contains_placeholders(self):
-        message = PlanningPromptMessage(self.test_folder)
-        content = message.message  # 访问父类的message属性
-
-        # 应该包含规划文件夹路径
-        self.assertIn(str(self.test_folder), content)
-        # 应该包含文件路径
-        self.assertIn(str(self.test_folder / "STATUS.md"), content)
-        self.assertIn(str(self.test_folder / "TODOLIST.md"), content)
-        self.assertIn(str(self.test_folder / "DESIGN.md"), content)
-        # 应该包含全局指导文件夹占位符
-        # 占位符应该在PLANNING_MODE_PROMPT中被替换
-        # 所以不应该在content中找到原始占位符
-        # 但应该包含实际的文件夹路径
-        self.assertIn("/tmp/test_planning", content)
-
-    def test_inherits_from_runtime_message(self):
-        from linhai.agent.messages import RuntimeMessage
-
-        message = PlanningPromptMessage(self.test_folder)
-
-        self.assertIsInstance(message, RuntimeMessage)
-
-
-if __name__ == "__main__":
-    unittest.main()
+    def test_serialization_preserves_content(self):
+        folder = Path("/tmp/test_planning_serial")
+        msg = PlanningPromptMessage(folder)
+        json_str = msg.to_json()
+        restored = RuntimeMessage.from_json(json_str, None)
+        self.assertEqual(restored.message, msg.message)

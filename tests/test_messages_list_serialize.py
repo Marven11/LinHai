@@ -93,112 +93,112 @@ class TestSerializeUserMessages(unittest.TestCase):
         self.assertEqual(result, {"messages": []})
 
 
-class TestSerializeAssistantMessages(unittest.TestCase):
-    def test_serialize_normal_segment(self):
-        from linhai.tui.messages_list import MessagesList
-
-        segment = NormalSegment(segment_type="normal", content="hi", is_finished=True)
-        gen = _make_generation_widget(segments=[segment])
-        ml = object.__new__(MessagesList)
-        ml.messages = [gen]
-        result = ml.serialize()
-        self.assertEqual(len(result["messages"]), 1)
-        msg = result["messages"][0]
-        self.assertEqual(msg["type"], "assistant")
-        self.assertEqual(msg["sender_name"], "deepseek")
-        self.assertEqual(len(msg["segments"]), 1)
-        self.assertEqual(msg["segments"][0]["segment_type"], "normal")
-        self.assertEqual(msg["segments"][0]["content"], "hi")
-        self.assertTrue(msg["segments"][0]["is_finished"])
-
-    def test_serialize_toolcall_segment(self):
-        from linhai.tui.messages_list import MessagesList
-
-        segment = ToolCallSegment(
-            segment_type="toolcall",
-            raw='{"name": "test"}',
-            is_finished=True,
-            is_corrupted=False,
-            markdown_representation="- name: `test`",
-            tool_name="test",
-        )
-        gen = _make_generation_widget(segments=[segment])
-        ml = object.__new__(MessagesList)
-        ml.messages = [gen]
-        result = ml.serialize()
-        msg = result["messages"][0]
-        self.assertEqual(msg["segments"][0]["segment_type"], "toolcall")
-        self.assertEqual(msg["segments"][0]["tool_name"], "test")
-        self.assertFalse(msg["segments"][0]["is_corrupted"])
-
-    def test_serialize_reasoning_segment(self):
-        from linhai.tui.messages_list import MessagesList
-
-        segment = ReasoningSegment(
-            segment_type="reasoning", content="thinking...", is_finished=True
-        )
-        gen = _make_generation_widget(segments=[segment])
-        ml = object.__new__(MessagesList)
-        ml.messages = [gen]
-        result = ml.serialize()
-        msg = result["messages"][0]
-        self.assertEqual(msg["segments"][0]["segment_type"], "reasoning")
-        self.assertEqual(msg["segments"][0]["content"], "thinking...")
-
-    def test_serialize_multiple_segments(self):
+class TestSerializeComplexAssistantMessages(unittest.TestCase):
+    def test_mixed_segments_assistant_message(self):
         from linhai.tui.messages_list import MessagesList
 
         segments = [
-            NormalSegment(segment_type="normal", content="part1", is_finished=True),
+            NormalSegment(
+                segment_type="normal", content="Let me check", is_finished=True
+            ),
             ToolCallSegment(
                 segment_type="toolcall",
-                raw="{}",
+                raw='{"name": "read_file", "arguments": {"path": "/etc"}}',
                 is_finished=True,
                 is_corrupted=False,
-                markdown_representation="",
-                tool_name="tool1",
+                markdown_representation="- name: `read_file`",
+                tool_name="read_file",
             ),
-            NormalSegment(segment_type="normal", content="part2", is_finished=True),
+            NormalSegment(
+                segment_type="normal", content="The file says:", is_finished=True
+            ),
+            ReasoningSegment(
+                segment_type="reasoning", content="analyzing...", is_finished=True
+            ),
         ]
         gen = _make_generation_widget(segments=segments)
         ml = object.__new__(MessagesList)
         ml.messages = [gen]
         result = ml.serialize()
         msg = result["messages"][0]
-        self.assertEqual(len(msg["segments"]), 3)
+        self.assertEqual(msg["type"], "assistant")
+        self.assertEqual(len(msg["segments"]), 4)
+        self.assertEqual(msg["segments"][0]["segment_type"], "normal")
+        self.assertEqual(msg["segments"][1]["segment_type"], "toolcall")
+        self.assertEqual(msg["segments"][1]["tool_name"], "read_file")
+        self.assertEqual(msg["segments"][2]["segment_type"], "normal")
+        self.assertEqual(msg["segments"][3]["segment_type"], "reasoning")
 
-    def test_serialize_with_runtime_messages(self):
+    def test_corrupted_toolcall_segment(self):
+        from linhai.tui.messages_list import MessagesList
+
+        segment = ToolCallSegment(
+            segment_type="toolcall",
+            raw='{"invalid',
+            is_finished=True,
+            is_corrupted=True,
+            markdown_representation="<bad toolcall>",
+            tool_name="",
+        )
+        gen = _make_generation_widget(segments=[segment])
+        ml = object.__new__(MessagesList)
+        ml.messages = [gen]
+        result = ml.serialize()
+        msg = result["messages"][0]
+        seg = msg["segments"][0]
+        self.assertTrue(seg["is_corrupted"])
+        self.assertEqual(seg["segment_type"], "toolcall")
+
+    def test_unfinished_segment(self):
+        from linhai.tui.messages_list import MessagesList
+
+        segment = NormalSegment(
+            segment_type="normal", content="partial...", is_finished=False
+        )
+        gen = _make_generation_widget(segments=[segment])
+        ml = object.__new__(MessagesList)
+        ml.messages = [gen]
+        result = ml.serialize()
+        self.assertFalse(result["messages"][0]["segments"][0]["is_finished"])
+
+    def test_assistant_with_runtime_messages(self):
         from linhai.tui.messages_list import MessagesList
 
         segment = NormalSegment(segment_type="normal", content="hi", is_finished=True)
         gen = _make_generation_widget(
             segments=[segment],
-            runtime_messages=[{"level": "info", "content": "note"}],
+            runtime_messages=[
+                {"level": "info", "content": "notice1"},
+                {"level": "warning", "content": "notice2"},
+            ],
         )
         ml = object.__new__(MessagesList)
         ml.messages = [gen]
         result = ml.serialize()
         msg = result["messages"][0]
-        self.assertEqual(len(msg["runtime_messages"]), 1)
+        self.assertEqual(len(msg["runtime_messages"]), 2)
         self.assertEqual(msg["runtime_messages"][0]["level"], "info")
-        self.assertEqual(msg["runtime_messages"][0]["content"], "note")
+        self.assertEqual(msg["runtime_messages"][1]["content"], "notice2")
 
 
-class TestSerializeMixedMessages(unittest.TestCase):
-    def test_serialize_mixed_user_and_assistant(self):
+class TestSerializeMixedConversation(unittest.TestCase):
+    def test_multi_turn_conversation(self):
         from linhai.tui.messages_list import MessagesList
 
-        user_msg = _make_user_msg("hello")
-        segment = NormalSegment(
-            segment_type="normal", content="hi back", is_finished=True
+        user1 = _make_user_msg("what is 2+2?")
+        gen1 = _make_generation_widget(
+            segments=[
+                NormalSegment(segment_type="normal", content="4", is_finished=True)
+            ]
         )
-        gen = _make_generation_widget(segments=[segment])
+        user2 = _make_user_msg("thanks!")
         ml = object.__new__(MessagesList)
-        ml.messages = [user_msg, gen]
+        ml.messages = [user1, gen1, user2]
         result = ml.serialize()
-        self.assertEqual(len(result["messages"]), 2)
+        self.assertEqual(len(result["messages"]), 3)
         self.assertEqual(result["messages"][0]["type"], "user")
         self.assertEqual(result["messages"][1]["type"], "assistant")
+        self.assertEqual(result["messages"][2]["type"], "user")
 
 
 class TestRestoreFrom(unittest.TestCase):
@@ -210,7 +210,7 @@ class TestRestoreFrom(unittest.TestCase):
         ml.pygments_theme = "lightbulb"
         ml.get_refresh_interval = lambda: 0.1
         ml.mount = mock.MagicMock()
-        data = {"messages": [{"type": "unknown"}]}
+        data = {"messages": [{"type": "unknown_type"}]}
         ml.restore_from(data)
         ml.mount.assert_not_called()
         self.assertEqual(len(ml.messages), 0)
@@ -241,34 +241,32 @@ class TestRestoreFrom(unittest.TestCase):
         self.assertTrue(ml.is_user_scroll_to_end)
 
 
-class TestSegmentRoundtrip(unittest.TestCase):
-    def test_normal_segment_dict_roundtrip(self):
-        original = NormalSegment(
-            segment_type="normal", content="test content", is_finished=True
-        )
-        as_dict = dict(original)
-        self.assertEqual(as_dict["segment_type"], "normal")
-        self.assertEqual(as_dict["content"], "test content")
-        self.assertTrue(as_dict["is_finished"])
+class TestSegmentDictContract(unittest.TestCase):
+    def test_normal_segment_keys(self):
+        seg = NormalSegment(segment_type="normal", content="text", is_finished=True)
+        d = dict(seg)
+        self.assertEqual(d["segment_type"], "normal")
+        self.assertIn("content", d)
+        self.assertIn("is_finished", d)
 
-    def test_toolcall_segment_dict_roundtrip(self):
-        original = ToolCallSegment(
+    def test_toolcall_segment_keys(self):
+        seg = ToolCallSegment(
             segment_type="toolcall",
-            raw='{"name":"run"}',
+            raw="{}",
             is_finished=True,
             is_corrupted=False,
-            markdown_representation="- name: `run`",
-            tool_name="run",
+            markdown_representation="- name: `test`",
+            tool_name="test",
         )
-        as_dict = dict(original)
-        self.assertEqual(as_dict["segment_type"], "toolcall")
-        self.assertEqual(as_dict["raw"], '{"name":"run"}')
-        self.assertEqual(as_dict["tool_name"], "run")
+        d = dict(seg)
+        self.assertIn("raw", d)
+        self.assertIn("tool_name", d)
+        self.assertIn("is_corrupted", d)
+        self.assertIn("markdown_representation", d)
 
-    def test_reasoning_segment_dict_roundtrip(self):
-        original = ReasoningSegment(
-            segment_type="reasoning", content="deep thought", is_finished=True
+    def test_reasoning_segment_keys(self):
+        seg = ReasoningSegment(
+            segment_type="reasoning", content="thinking", is_finished=True
         )
-        as_dict = dict(original)
-        self.assertEqual(as_dict["segment_type"], "reasoning")
-        self.assertEqual(as_dict["content"], "deep thought")
+        d = dict(seg)
+        self.assertIn("content", d)

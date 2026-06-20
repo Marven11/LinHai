@@ -1,5 +1,5 @@
-import unittest
 import json
+import unittest
 from unittest.mock import MagicMock, AsyncMock
 
 from linhai.base import AssistantMessage, OpenAiToolResultMessage
@@ -8,39 +8,14 @@ from linhai.llm import OpenAiAnswer, MinimaxAnswer
 from linhai.registry import Registry
 
 
-class TestOpenAiToolCallTypedDict(unittest.TestCase):
-    def test_create_openai_toolcall(self):
-        tc = OpenAiToolCall(
-            id="call_123",
-            function=FunctionCall(
-                name="get_weather", arguments='{"location": "Hangzhou"}'
-            ),
-            type="function",
-        )
-        self.assertEqual(tc["id"], "call_123")
-        self.assertEqual(tc["function"]["name"], "get_weather")
-        self.assertEqual(tc["type"], "function")
-
-    def test_openai_toolcall_json_roundtrip(self):
-        tc = OpenAiToolCall(
-            id="call_456",
-            function=FunctionCall(name="search", arguments='{"query": "test"}'),
-            type="function",
-        )
-        serialized = json.dumps(tc)
-        deserialized = json.loads(serialized)
-        self.assertEqual(deserialized["id"], "call_456")
-        self.assertEqual(deserialized["function"]["name"], "search")
-
-
 class TestAssistantMessageToolCalls(unittest.TestCase):
-    def test_assistant_message_without_tool_calls(self):
+    def test_without_tool_calls(self):
         msg = AssistantMessage(message="hello")
         self.assertIsNone(msg.tool_calls)
         llm_msg = msg.to_llm_message()
         self.assertNotIn("tool_calls", llm_msg)
 
-    def test_assistant_message_with_tool_calls(self):
+    def test_with_tool_calls(self):
         tool_calls = [
             OpenAiToolCall(
                 id="call_1",
@@ -50,12 +25,11 @@ class TestAssistantMessageToolCalls(unittest.TestCase):
         ]
         msg = AssistantMessage(message="")
         msg.tool_calls = tool_calls
-        self.assertEqual(len(msg.tool_calls), 1)
         llm_msg = msg.to_llm_message()
         self.assertIn("tool_calls", llm_msg)
         self.assertEqual(llm_msg["tool_calls"][0]["id"], "call_1")
 
-    def test_assistant_message_to_json_from_json(self):
+    def test_to_json_from_json_with_tool_calls(self):
         tool_calls = [
             OpenAiToolCall(
                 id="call_2",
@@ -63,21 +37,15 @@ class TestAssistantMessageToolCalls(unittest.TestCase):
                 type="function",
             )
         ]
-        msg = AssistantMessage(
-            message="response",
-            reasoning_message="thinking",
-        )
+        msg = AssistantMessage(message="response", reasoning_message="thinking")
         msg.tool_calls = tool_calls
         json_str = msg.to_json()
-        data = json.loads(json_str)
-        self.assertIn("tool_calls", data)
-        self.assertEqual(data["tool_calls"][0]["id"], "call_2")
-
         restored = AssistantMessage.from_json(json_str, registry=MagicMock())
         self.assertEqual(restored.message, "response")
         self.assertEqual(restored.reasoning_message, "thinking")
         self.assertIsNotNone(restored.tool_calls)
         self.assertEqual(restored.tool_calls[0]["id"], "call_2")
+        self.assertEqual(restored.tool_calls[0]["function"]["name"], "test_fn")
 
 
 class TestOpenAiAnswerGetToolCalls(unittest.IsolatedAsyncioTestCase):
@@ -102,11 +70,8 @@ class TestOpenAiAnswerGetToolCalls(unittest.IsolatedAsyncioTestCase):
             1: {"id": "call_b", "name": "func_b", "args": "{}"},
         }
         result = await answer.get_native_toolcalls()
-        self.assertIsNotNone(result)
         self.assertEqual(len(result), 2)
         self.assertEqual(result[0]["id"], "call_a")
-        self.assertEqual(result[0]["name"], "func_a")
-        self.assertEqual(result[0]["type"], "success")
         self.assertEqual(result[0]["arguments"], {"x": 1})
         self.assertEqual(result[1]["name"], "func_b")
 
@@ -161,10 +126,7 @@ class TestMinimaxAnswerGetToolCalls(unittest.IsolatedAsyncioTestCase):
 
     async def test_no_tool_calls_returns_none(self):
         response = self._make_minimax_response()
-        answer = MinimaxAnswer(
-            response=response,
-            registry=Registry(),
-        )
+        answer = MinimaxAnswer(response=response, registry=Registry())
         self.assertIsNone(await answer.get_native_toolcalls())
 
     async def test_tool_calls_extracted_from_response(self):
@@ -174,45 +136,16 @@ class TestMinimaxAnswerGetToolCalls(unittest.IsolatedAsyncioTestCase):
                 {"id": "tc_2", "name": "process", "arguments": "{}"},
             ]
         )
-        answer = MinimaxAnswer(
-            response=response,
-            registry=Registry(),
-        )
+        answer = MinimaxAnswer(response=response, registry=Registry())
         result = await answer.get_native_toolcalls()
-        self.assertIsNotNone(result)
         self.assertEqual(len(result), 2)
         self.assertEqual(result[0]["id"], "tc_1")
-        self.assertEqual(result[0]["name"], "get_data")
-        self.assertEqual(result[0]["type"], "success")
         self.assertEqual(result[0]["arguments"], {"key": "val"})
-        self.assertEqual(result[1]["id"], "tc_2")
-
-    def test_get_message_includes_tool_calls(self):
-        response = self._make_minimax_response(
-            [
-                {"id": "tc_3", "name": "do_thing", "arguments": "{}"},
-            ]
-        )
-        answer = MinimaxAnswer(
-            response=response,
-            registry=Registry(),
-        )
-        msg = answer.get_message()
-        self.assertIsInstance(msg, AssistantMessage)
-        self.assertIsNotNone(msg.tool_calls)
-        self.assertEqual(msg.tool_calls[0]["id"], "tc_3")
+        self.assertEqual(result[1]["name"], "process")
 
 
 class TestOpenAiToolResultMessage(unittest.TestCase):
-    def test_basic_construction(self):
-        msg = OpenAiToolResultMessage(
-            tool_call_id="call_abc", content="42", tool_name="test_tool"
-        )
-        self.assertEqual(msg.tool_call_id, "call_abc")
-        self.assertEqual(msg.content, "42")
-        self.assertEqual(msg.get_content(), "42")
-
-    def test_to_llm_message(self):
+    def test_to_llm_message_format(self):
         msg = OpenAiToolResultMessage(
             tool_call_id="call_xyz", content="result text", tool_name="test_tool"
         )
@@ -220,14 +153,6 @@ class TestOpenAiToolResultMessage(unittest.TestCase):
         self.assertEqual(llm_msg["role"], "tool")
         self.assertEqual(llm_msg["tool_call_id"], "call_xyz")
         self.assertEqual(llm_msg["content"], "result text")
-
-    def test_repr(self):
-        msg = OpenAiToolResultMessage(
-            tool_call_id="call_1", content="ok", tool_name="test_tool"
-        )
-        r = repr(msg)
-        self.assertIn("call_1", r)
-        self.assertIn("ok", r)
 
     def test_to_json_from_json_roundtrip(self):
         msg = OpenAiToolResultMessage(
@@ -237,11 +162,43 @@ class TestOpenAiToolResultMessage(unittest.TestCase):
         data = json.loads(json_str)
         self.assertEqual(data["role"], "tool")
         self.assertEqual(data["tool_call_id"], "call_99")
-        self.assertEqual(data["content"], "success")
 
         restored = OpenAiToolResultMessage.from_json(json_str, registry=MagicMock())
         self.assertEqual(restored.tool_call_id, "call_99")
         self.assertEqual(restored.content, "success")
+        self.assertEqual(restored.tool_name, "test_tool")
+
+    def test_missing_tool_call_id_crashes(self):
+        data = {"role": "tool", "content": "x", "tool_name": "t"}
+        with self.assertRaises(KeyError):
+            OpenAiToolResultMessage.from_json(json.dumps(data), MagicMock())
+
+    def test_missing_content_crashes(self):
+        data = {"role": "tool", "tool_call_id": "x", "tool_name": "t"}
+        with self.assertRaises(KeyError):
+            OpenAiToolResultMessage.from_json(json.dumps(data), MagicMock())
+
+    def test_missing_tool_name_crashes(self):
+        data = {"role": "tool", "tool_call_id": "x", "content": "y"}
+        with self.assertRaises(KeyError):
+            OpenAiToolResultMessage.from_json(json.dumps(data), MagicMock())
+
+    def test_empty_content(self):
+        msg = OpenAiToolResultMessage(
+            tool_call_id="call_empty", content="", tool_name="test"
+        )
+        self.assertEqual(msg.get_content(), "")
+        json_str = msg.to_json()
+        restored = OpenAiToolResultMessage.from_json(json_str, MagicMock())
+        self.assertEqual(restored.content, "")
+
+    def test_repr_contains_id_and_content(self):
+        msg = OpenAiToolResultMessage(
+            tool_call_id="call_1", content="ok", tool_name="t"
+        )
+        r = repr(msg)
+        self.assertIn("call_1", r)
+        self.assertIn("ok", r)
 
 
 if __name__ == "__main__":

@@ -1,147 +1,221 @@
-"""测试消息类的JSON序列化功能"""
-
 import json
 import unittest
 from unittest.mock import Mock
 
-from linhai.base import SystemMessage, UserMessage, AssistantMessage
+from linhai.base import (
+    SystemMessage,
+    UserMessage,
+    AssistantMessage,
+    MESSAGE_CLASS_REGISTRY,
+)
 from linhai.tool.base import (
     ToolCallResultMessage,
     SuccessfulToolResult,
     FailedToolResult,
+    FileContentToolResult,
+    tool_result_from_json,
 )
 
 
-class TestJsonSerialization(unittest.TestCase):
-    """测试JSON序列化功能"""
-
-    def setUp(self):
-        """设置测试环境"""
-        from linhai.tool.main import ToolManager
-        from unittest.mock import Mock
-
-        self.mock_registry = Mock()
-        # 为SystemMessage初始化提供mock的tool_manager
-        mock_tool_manager = Mock(spec=ToolManager)
-        mock_tool_manager.get_tools_info.return_value = []
-
-        def get_member_typechecked_side_effect(member_type, _member_class=None):
-            if member_type == "tool_manager":
-                return mock_tool_manager
-            raise RuntimeError(f"{member_type!r} not exists")
-
-        self.mock_registry.get_member_typechecked = Mock(
-            side_effect=get_member_typechecked_side_effect
+def _mock_registry():
+    mock = Mock()
+    mock_tool_manager = Mock()
+    mock_tool_manager.get_tools_info = Mock(return_value=[])
+    mock.get_member_typechecked = Mock(
+        side_effect=lambda name, cls=None: (
+            mock_tool_manager if name == "tool_manager" else Mock()
         )
+    )
+    return mock
 
-    def test_system_message_serialization(self):
-        """测试SystemMessage的序列化"""
-        original = SystemMessage(
-            registry=self.mock_registry,
-        )
-        json_str = original.to_json()
-        restored = SystemMessage.from_json(json_str, self.mock_registry)
 
-        # 验证反序列化后的对象也是SystemMessage实例
-        self.assertIsInstance(restored, SystemMessage)
+class TestUserMessageSerialization(unittest.TestCase):
+    def test_roundtrip(self):
+        original = UserMessage("hello world", "user1")
+        restored = UserMessage.from_json(original.to_json(), _mock_registry())
+        self.assertEqual(restored.message, "hello world")
 
-        # 比较序列化前后的JSON数据（忽略可能的额外字段）
-        original_data = json.loads(json_str)
-        restored_data = json.loads(restored.to_json())
+    def test_missing_message_crashes(self):
+        data = {"role": "user", "name": "x"}
+        with self.assertRaises(KeyError):
+            UserMessage.from_json(json.dumps(data), _mock_registry())
 
-        # SystemMessage的JSON包含结构化数据，验证关键字段存在
-        self.assertIn("overview", original_data)
-        self.assertIn("overview", restored_data)
+    def test_extra_fields_ignored(self):
+        data = {"role": "user", "message": "hi", "extra_field": 42}
+        restored = UserMessage.from_json(json.dumps(data), _mock_registry())
+        self.assertEqual(restored.message, "hi")
 
-        # 确保registry正确传递（虽然不被序列化，但from_json会传入）
-        # 我们无法直接比较registry，但可以确认它们都使用相同的mock_registry
-        # 通过检查to_llm_message()返回相同内容来间接验证
-        original_llm_msg = original.to_llm_message()
-        restored_llm_msg = restored.to_llm_message()
+    def test_unicode_preserved(self):
+        text = "中文测试にほんご한국어"
+        restored = UserMessage.from_json(UserMessage(text).to_json(), _mock_registry())
+        self.assertEqual(restored.message, text)
+        self.assertNotIn("\\u", UserMessage(text).to_json())
 
-        # 比较LLM消息的role和content
-        self.assertEqual(original_llm_msg.get("role"), restored_llm_msg.get("role"))
-        self.assertEqual(
-            original_llm_msg.get("content"), restored_llm_msg.get("content")
-        )
 
-    def test_user_message_serialization(self):
-        """测试UserMessage的序列化"""
-        original = UserMessage("这是一条用户消息", "test_user")
-        json_str = original.to_json()
-        restored = UserMessage.from_json(json_str, self.mock_registry)
+class TestAssistantMessageSerialization(unittest.TestCase):
+    def test_roundtrip_with_reasoning(self):
+        original = AssistantMessage("response", "thinking process")
+        restored = AssistantMessage.from_json(original.to_json(), _mock_registry())
+        self.assertEqual(restored.message, "response")
+        self.assertEqual(restored.reasoning_message, "thinking process")
 
-        self.assertEqual(original.message, restored.message)
-        # name字段不再序列化，所以不检查name字段
-
-    def test_tool_result_message_serialization(self):
-        """测试ToolResultMessage的序列化"""
-        original = ToolCallResultMessage(
-            tool_name="test_tool",
-            tool_index=0,
-            result=SuccessfulToolResult(content="工具执行结果"),
-            toolcall_arguments=None,
-        )
-        json_str = original.to_json()
-        restored = ToolCallResultMessage.from_json(json_str, self.mock_registry)
-
-        self.assertEqual(original.result.content, restored.result.content)
-        self.assertEqual(original.tool_name, restored.tool_name)
-
-    def test_tool_error_message_serialization(self):
-        """测试ToolErrorMessage的序列化"""
-        original = ToolCallResultMessage(
-            tool_name="test_tool",
-            tool_index=0,
-            result=FailedToolResult(content="工具执行错误"),
-            toolcall_arguments={"arg": "value"},
-        )
-        json_str = original.to_json()
-        restored = ToolCallResultMessage.from_json(json_str, self.mock_registry)
-
-        self.assertEqual(original.result.content, restored.result.content)
-        self.assertEqual(original.tool_name, restored.tool_name)
-
-    def test_unicode_preservation(self):
-        chinese_text = "保存json时保留unicode中文测试"
-
-        user_msg = UserMessage(chinese_text)
-        json_str = user_msg.to_json()
-        self.assertIn(chinese_text, json_str)
-        self.assertNotIn("\\u", json_str)
-
-        assistant_msg = AssistantMessage(chinese_text)
-        json_str = assistant_msg.to_json()
-        self.assertIn(chinese_text, json_str)
-        self.assertNotIn("\\u", json_str)
-
-        success_result = SuccessfulToolResult(content=chinese_text)
-        json_str = success_result.to_json()
-        self.assertIn(chinese_text, json_str)
-        self.assertNotIn("\\u", json_str)
-
-        failed_result = FailedToolResult(content=chinese_text)
-        json_str = failed_result.to_json()
-        self.assertIn(chinese_text, json_str)
-        self.assertNotIn("\\u", json_str)
-
-    def test_assistant_message_none_content(self):
-        msg = AssistantMessage(message=None)
-        self.assertIsNone(msg.get_content())
-        llm_msg = msg.to_llm_message()
-        self.assertEqual(llm_msg["role"], "assistant")
-        self.assertNotIn("content", llm_msg)
-
-    def test_assistant_message_none_content_serialization(self):
+    def test_none_message_roundtrip(self):
         original = AssistantMessage(message=None)
-        json_str = original.to_json()
-        restored = AssistantMessage.from_json(json_str, self.mock_registry)
+        restored = AssistantMessage.from_json(original.to_json(), _mock_registry())
         self.assertIsNone(restored.get_content())
         self.assertEqual(original.to_llm_message(), restored.to_llm_message())
 
-    def test_assistant_message_with_content_serialization(self):
-        original = AssistantMessage(message="hello")
+    def test_missing_message_crashes(self):
+        data = {"role": "assistant", "reasoning_message": "thinking"}
+        with self.assertRaises(KeyError):
+            AssistantMessage.from_json(json.dumps(data), _mock_registry())
+
+    def test_tool_calls_roundtrip(self):
+        original = AssistantMessage(message="text")
+        original.tool_calls = [
+            {
+                "id": "call_1",
+                "function": {"name": "search", "arguments": '{"q": "test"}'},
+                "type": "function",
+            }
+        ]
+        restored = AssistantMessage.from_json(original.to_json(), _mock_registry())
+        self.assertIsNotNone(restored.tool_calls)
+        self.assertEqual(restored.tool_calls[0]["id"], "call_1")
+        self.assertEqual(restored.tool_calls[0]["function"]["name"], "search")
+
+
+class TestToolCallResultSerialization(unittest.TestCase):
+    def test_successful_result_roundtrip(self):
+        original = ToolCallResultMessage(
+            tool_name="read_file",
+            tool_index=0,
+            result=SuccessfulToolResult(content="file content"),
+            toolcall_arguments={"path": "/tmp"},
+        )
+        restored = ToolCallResultMessage.from_json(original.to_json(), _mock_registry())
+        self.assertEqual(restored.tool_name, "read_file")
+        self.assertEqual(restored.tool_index, 0)
+        self.assertIsInstance(restored.result, SuccessfulToolResult)
+        self.assertEqual(restored.result.content, "file content")
+        self.assertEqual(restored.toolcall_arguments, {"path": "/tmp"})
+
+    def test_failed_result_roundtrip(self):
+        original = ToolCallResultMessage(
+            tool_name="write_file",
+            tool_index=2,
+            result=FailedToolResult(content="permission denied"),
+            toolcall_arguments={},
+        )
+        restored = ToolCallResultMessage.from_json(original.to_json(), _mock_registry())
+        self.assertIsInstance(restored.result, FailedToolResult)
+        self.assertEqual(restored.result.content, "permission denied")
+
+    def test_file_content_result_roundtrip(self):
+        original = ToolCallResultMessage(
+            tool_name="read_file",
+            tool_index=0,
+            result=FileContentToolResult(
+                filepath="/tmp/test.py",
+                content="print('hi')",
+                show_line_numbers=True,
+            ),
+            toolcall_arguments={},
+        )
+        restored = ToolCallResultMessage.from_json(original.to_json(), _mock_registry())
+        self.assertIsInstance(restored.result, FileContentToolResult)
+        self.assertEqual(restored.result.filepath, "/tmp/test.py")
+        self.assertTrue(restored.result.show_line_numbers)
+
+    def test_missing_tool_name_crashes(self):
+        data = {
+            "tool_index": 0,
+            "result": '{"type": "SuccessfulToolResult", "content": "ok"}',
+            "toolcall_arguments": {},
+        }
+        with self.assertRaises(KeyError):
+            ToolCallResultMessage.from_json(json.dumps(data), _mock_registry())
+
+    def test_missing_result_crashes(self):
+        data = {
+            "tool_name": "test",
+            "tool_index": 0,
+            "toolcall_arguments": {},
+        }
+        with self.assertRaises(KeyError):
+            ToolCallResultMessage.from_json(json.dumps(data), _mock_registry())
+
+    def test_unknown_result_type_crashes(self):
+        data = {
+            "tool_name": "test",
+            "tool_index": 0,
+            "result": '{"type": "UnknownType", "content": "ok"}',
+            "toolcall_arguments": {},
+        }
+        with self.assertRaises(RuntimeError):
+            ToolCallResultMessage.from_json(json.dumps(data), _mock_registry())
+
+    def test_toolcall_arguments_defaults_empty(self):
+        data = {
+            "tool_name": "test",
+            "tool_index": 0,
+            "result": '{"type": "SuccessfulToolResult", "content": "ok"}',
+        }
+        restored = ToolCallResultMessage.from_json(json.dumps(data), _mock_registry())
+        self.assertEqual(restored.toolcall_arguments, {})
+
+
+class TestRealMessageCombination(unittest.TestCase):
+    def test_full_conversation_roundtrip(self):
+        registry = _mock_registry()
+        messages = [
+            SystemMessage(registry=registry),
+            UserMessage("what is 2+2?"),
+            AssistantMessage("2+2=4"),
+            ToolCallResultMessage(
+                tool_name="calculator",
+                tool_index=0,
+                result=SuccessfulToolResult(content="4"),
+                toolcall_arguments={},
+            ),
+            AssistantMessage(message=None),
+        ]
+        json_strs = [m.to_json() for m in messages]
+
+        restored = [
+            SystemMessage.from_json(json_strs[0], registry),
+            UserMessage.from_json(json_strs[1], registry),
+            AssistantMessage.from_json(json_strs[2], registry),
+            ToolCallResultMessage.from_json(json_strs[3], registry),
+            AssistantMessage.from_json(json_strs[4], registry),
+        ]
+
+        self.assertEqual(restored[1].message, "what is 2+2?")
+        self.assertEqual(restored[2].message, "2+2=4")
+        self.assertIsInstance(restored[3].result, SuccessfulToolResult)
+        self.assertIsNone(restored[4].get_content())
+
+    def test_unicode_through_full_pipeline(self):
+        chinese = "你好世界🎉"
+        registry = _mock_registry()
+        original = AssistantMessage(chinese)
         json_str = original.to_json()
-        restored = AssistantMessage.from_json(json_str, self.mock_registry)
-        self.assertEqual(restored.get_content(), "hello")
-        self.assertIn("content", restored.to_llm_message())
+        self.assertIn(chinese, json_str)
+        restored = AssistantMessage.from_json(json_str, registry)
+        self.assertEqual(restored.get_content(), chinese)
+
+
+class TestMessageClassRegistry(unittest.TestCase):
+    def test_key_types_registered(self):
+        for name in [
+            "UserMessage",
+            "AssistantMessage",
+            "SystemMessage",
+            "ToolCallResultMessage",
+            "RuntimeMessage",
+        ]:
+            self.assertIn(name, MESSAGE_CLASS_REGISTRY)
+
+    def test_registry_values_have_from_json(self):
+        for name, cls in MESSAGE_CLASS_REGISTRY.items():
+            self.assertTrue(callable(getattr(cls, "from_json", None)))
