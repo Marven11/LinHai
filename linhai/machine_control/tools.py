@@ -451,6 +451,15 @@ def register_machine_control_tools(machine_control: "MachineControl") -> ToolSet
         with_stdin: Optional[str] = None,
     ) -> SuccessfulToolResult | FailedToolResult:
         host_control = machine_control.machines[machine_control.target_machine]
+        if (
+            machine_control.target_machine != "master_host"
+            and wait_second is not None
+            and wait_second > 45
+        ):
+            return FailedToolResult(
+                content="错误：远程机器控制不支持超过45秒的超时，如果你确实需要等待"
+                "（如等待一个进程完成），请使用sleep工具等进行等待"
+            )
         result = await host_control.create_process(
             argv, wait_second, override_env=override_env
         )
@@ -566,6 +575,11 @@ def register_machine_control_tools(machine_control: "MachineControl") -> ToolSet
         pid: str, timeout: float = 60.0
     ) -> SuccessfulToolResult | FailedToolResult:
         host_control = machine_control.machines[machine_control.target_machine]
+        if machine_control.target_machine != "master_host" and timeout > 45:
+            return FailedToolResult(
+                content="错误：远程机器控制不支持超过45秒的超时，如果你确实需要等待"
+                "（如等待一个进程完成），请使用sleep工具等进行等待"
+            )
         proc = host_control.get_process(pid)
         if proc is None:
             return FailedToolResult(content=f"进程不存在: {pid}")
@@ -605,6 +619,11 @@ def register_machine_control_tools(machine_control: "MachineControl") -> ToolSet
         pid: str, timeout: float
     ) -> SuccessfulToolResult | FailedToolResult:
         host_control = machine_control.machines[machine_control.target_machine]
+        if machine_control.target_machine != "master_host" and timeout > 45:
+            return FailedToolResult(
+                content="错误：远程机器控制不支持超过45秒的超时，如果你确实需要等待"
+                "（如等待一个进程完成），请使用sleep工具等进行等待"
+            )
         proc = host_control.get_process(pid)
         if proc is None:
             return FailedToolResult(content=f"进程不存在: {pid}")

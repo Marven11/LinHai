@@ -201,6 +201,98 @@ class TestProcessTools(unittest.IsolatedAsyncioTestCase):
         self.assertIsInstance(result, SuccessfulToolResult)
         self.assertIn("进程仍在运行", result.content)
 
+    async def test_process_create_remote_timeout_exceeds_limit(self):
+        mock_mc = Mock()
+        mock_mc.machines = {"remote1": Mock()}
+        mock_mc.target_machine = "remote1"
+        toolset = register_machine_control_tools(mock_mc)
+        tool_func = toolset.get_tool("process_create")
+        result = await tool_func(argv=["sleep", "100"], wait_second=50)
+        self.assertIsInstance(result, FailedToolResult)
+        self.assertIn("不支持超过45秒的超时", result.content)
+
+    async def test_process_create_remote_timeout_within_limit(self):
+        mock_host = Mock()
+        mock_host.create_process = AsyncMock(
+            return_value=Mock(
+                pid="123", success=True, returncode=0, stdout="", stderr=""
+            )
+        )
+        mock_mc = Mock()
+        mock_mc.machines = {"remote1": mock_host}
+        mock_mc.target_machine = "remote1"
+        toolset = register_machine_control_tools(mock_mc)
+        tool_func = toolset.get_tool("process_create")
+        result = await tool_func(argv=["echo", "hello"], wait_second=30)
+        self.assertIsInstance(result, SuccessfulToolResult)
+
+    async def test_process_stdio_read_remote_timeout_exceeds_limit(self):
+        mock_mc = Mock()
+        mock_mc.machines = {"remote1": Mock()}
+        mock_mc.target_machine = "remote1"
+        toolset = register_machine_control_tools(mock_mc)
+        tool_func = toolset.get_tool("process_stdio_read")
+        result = await tool_func(pid="123", timeout=60)
+        self.assertIsInstance(result, FailedToolResult)
+        self.assertIn("不支持超过45秒的超时", result.content)
+
+    async def test_process_stdio_read_remote_timeout_within_limit(self):
+        mock_proc = AsyncMock()
+        mock_proc.stdio_read.return_value = Mock(
+            success=True, stdout=b"hello", stderr=b"", exit_note=None
+        )
+        mock_host = Mock()
+        mock_host.get_process.return_value = mock_proc
+        mock_mc = Mock()
+        mock_mc.machines = {"remote1": mock_host}
+        mock_mc.target_machine = "remote1"
+        toolset = register_machine_control_tools(mock_mc)
+        tool_func = toolset.get_tool("process_stdio_read")
+        result = await tool_func(pid="123", timeout=30)
+        self.assertIsInstance(result, SuccessfulToolResult)
+
+    async def test_process_wait_remote_timeout_exceeds_limit(self):
+        mock_mc = Mock()
+        mock_mc.machines = {"remote1": Mock()}
+        mock_mc.target_machine = "remote1"
+        toolset = register_machine_control_tools(mock_mc)
+        tool_func = toolset.get_tool("process_wait")
+        result = await tool_func(pid="123", timeout=60)
+        self.assertIsInstance(result, FailedToolResult)
+        self.assertIn("不支持超过45秒的超时", result.content)
+
+    async def test_process_wait_remote_timeout_within_limit(self):
+        from linhai.machine_control.process import ProcessWaitResult
+
+        mock_proc = AsyncMock()
+        mock_proc.wait.return_value = ProcessWaitResult(
+            pid="123", success=True, returncode=0, stdout="", stderr=""
+        )
+        mock_host = Mock()
+        mock_host.get_process.return_value = mock_proc
+        mock_mc = Mock()
+        mock_mc.machines = {"remote1": mock_host}
+        mock_mc.target_machine = "remote1"
+        toolset = register_machine_control_tools(mock_mc)
+        tool_func = toolset.get_tool("process_wait")
+        result = await tool_func(pid="123", timeout=30)
+        self.assertIsInstance(result, SuccessfulToolResult)
+
+    async def test_process_create_master_host_no_timeout_limit(self):
+        mock_host = Mock()
+        mock_host.create_process = AsyncMock(
+            return_value=Mock(
+                pid="123", success=True, returncode=0, stdout="", stderr=""
+            )
+        )
+        mock_mc = Mock()
+        mock_mc.machines = {"master_host": mock_host}
+        mock_mc.target_machine = "master_host"
+        toolset = register_machine_control_tools(mock_mc)
+        tool_func = toolset.get_tool("process_create")
+        result = await tool_func(argv=["sleep", "100"], wait_second=100)
+        self.assertIsInstance(result, SuccessfulToolResult)
+
 
 if __name__ == "__main__":
     unittest.main()
