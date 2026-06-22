@@ -165,6 +165,8 @@ class Trojan:
         return {"message": "pong"}
 
     async def process_create(self, argv, wait_second=1.0, override_env=None):
+        if wait_second > 10:
+            raise ValueError(f"wait_second不能超过10秒: {wait_second}")
         effective_env = None
         if override_env is not None:
             effective_env = {**os.environ, **override_env}
@@ -266,6 +268,8 @@ class Trojan:
         return {"message": f"已向进程 {pid} 写入 {len(content)} 字节"}
 
     async def process_stdio_read(self, pid, timeout=60.0):
+        if timeout > 10:
+            raise ValueError(f"timeout不能超过10秒: {timeout}")
         assert pid in self._processes, f"进程不存在: {pid}"
         process = self._processes[pid]
         stdout_str, stderr_str, timeout_msg, exit_note = await self._read_process_stdio(
@@ -284,6 +288,8 @@ class Trojan:
         return {"message": json.dumps(result_data)}
 
     async def process_wait(self, pid, timeout):
+        if timeout > 10:
+            raise ValueError(f"timeout不能超过10秒: {timeout}")
         assert pid in self._processes, f"进程不存在: {pid}"
         process = self._processes[pid]
         try:

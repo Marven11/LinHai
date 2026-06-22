@@ -8,7 +8,7 @@ from linhai.tool.base import SuccessfulToolResult, FailedToolResult
 from ..trojan.transport import TrojanTransport
 from ..trojan.shell_transport import setup_trojan_in_shell
 from .process import RemoteProcess
-from ..process import Process, ProcessCreateResult
+from ..process import Process, ProcessCreateResult, ProcessIOError
 
 
 class PosixShellControl:
@@ -124,7 +124,8 @@ class PosixShellControl:
     ) -> ProcessCreateResult:
         if wait_second is None:
             wait_second = 1.0
-        args: Dict[str, object] = {"argv": argv, "wait_second": wait_second}
+        effective_wait = min(5.0, wait_second)
+        args: Dict[str, object] = {"argv": argv, "wait_second": effective_wait}
         if override_env is not None:
             args["override_env"] = override_env
         result = await self.call_tool("process_create", args)
@@ -147,6 +148,23 @@ class PosixShellControl:
 
         rp = RemoteProcess(pid, self)
         self._processes[pid] = rp
+
+        if wait_second > 5.0:
+            remaining = wait_second - effective_wait
+            poll_result = await rp.wait(remaining)
+            if isinstance(poll_result, ProcessIOError):
+                return ProcessCreateResult(
+                    pid="", success=False, error=poll_result.error
+                )
+            if poll_result.returncode is not None:
+                return ProcessCreateResult(
+                    pid=pid,
+                    success=True,
+                    returncode=poll_result.returncode,
+                    stdout=poll_result.stdout,
+                    stderr=poll_result.stderr,
+                )
+
         return ProcessCreateResult(
             pid=pid, success=True, returncode=None, message=data.get("message", "")
         )

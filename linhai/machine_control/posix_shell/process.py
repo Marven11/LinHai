@@ -47,46 +47,63 @@ class RemoteProcess:
     async def stdio_read(
         self, wait_seconds: float
     ) -> ProcessReadResult | ProcessIOError:
-        result = await self._shell_control.call_tool(
-            "process_stdio_read",
-            {
-                "pid": self._pid,
-                "timeout": wait_seconds,
-            },
-        )
-        if isinstance(result, FailedToolResult):
-            return ProcessIOError(error=result.content)
-        data = json.loads(result.content)
+        chunk_size = min(5.0, wait_seconds)
+        remaining = wait_seconds
+        all_stdout = b""
+        all_stderr = b""
+        exit_note = None
+        while remaining > 0:
+            poll_timeout = min(chunk_size, remaining)
+            result = await self._shell_control.call_tool(
+                "process_stdio_read",
+                {
+                    "pid": self._pid,
+                    "timeout": poll_timeout,
+                },
+            )
+            if isinstance(result, FailedToolResult):
+                return ProcessIOError(error=result.content)
+            data = json.loads(result.content)
+            all_stdout += data.get("stdout", "").encode("utf-8")
+            all_stderr += data.get("stderr", "").encode("utf-8")
+            if data.get("exit_note"):
+                exit_note = data["exit_note"]
+            remaining -= poll_timeout
         return ProcessReadResult(
             pid=self._pid,
-            success=data.get("success", True),
-            stdout=data.get("stdout", "").encode("utf-8"),
-            stderr=data.get("stderr", "").encode("utf-8"),
-            exit_note=data.get("exit_note"),
-            error=data.get("error"),
+            success=True,
+            stdout=all_stdout,
+            stderr=all_stderr,
+            exit_note=exit_note,
         )
 
     async def wait(self, timeout: float) -> ProcessWaitResult | ProcessIOError:
-        result = await self._shell_control.call_tool(
-            "process_wait", {"pid": self._pid, "timeout": timeout}
-        )
-        if isinstance(result, FailedToolResult):
-            return ProcessIOError(error=result.content)
-        data = json.loads(result.content)
-        if data.get("returncode") is None:
+        chunk_size = 5.0
+        remaining = timeout
+        while remaining > 0:
+            poll_timeout = min(chunk_size, remaining)
+            result = await self._shell_control.call_tool(
+                "process_wait", {"pid": self._pid, "timeout": poll_timeout}
+            )
+            if isinstance(result, FailedToolResult):
+                return ProcessIOError(error=result.content)
+            data = json.loads(result.content)
+            if data.get("timeout"):
+                remaining -= poll_timeout
+                continue
             return ProcessWaitResult(
                 pid=self._pid,
                 success=True,
-                returncode=None,
-                stdout="",
-                stderr="",
+                returncode=data.get("returncode"),
+                stdout=data.get("stdout", ""),
+                stderr=data.get("stderr", ""),
             )
         return ProcessWaitResult(
             pid=self._pid,
             success=True,
-            returncode=data.get("returncode"),
-            stdout=data.get("stdout", ""),
-            stderr=data.get("stderr", ""),
+            returncode=None,
+            stdout="",
+            stderr="",
         )
 
     async def kill(self, graceful: bool = True) -> ProcessKillResult | ProcessIOError:

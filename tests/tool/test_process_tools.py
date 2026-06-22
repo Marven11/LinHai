@@ -201,17 +201,7 @@ class TestProcessTools(unittest.IsolatedAsyncioTestCase):
         self.assertIsInstance(result, SuccessfulToolResult)
         self.assertIn("进程仍在运行", result.content)
 
-    async def test_process_create_remote_timeout_exceeds_limit(self):
-        mock_mc = Mock()
-        mock_mc.machines = {"remote1": Mock()}
-        mock_mc.target_machine = "remote1"
-        toolset = register_machine_control_tools(mock_mc)
-        tool_func = toolset.get_tool("process_create")
-        result = await tool_func(argv=["sleep", "100"], wait_second=50)
-        self.assertIsInstance(result, FailedToolResult)
-        self.assertIn("不支持超过45秒的超时", result.content)
-
-    async def test_process_create_remote_timeout_within_limit(self):
+    async def test_process_create_remote_no_timeout_limit(self):
         mock_host = Mock()
         mock_host.create_process = AsyncMock(
             return_value=Mock(
@@ -223,20 +213,10 @@ class TestProcessTools(unittest.IsolatedAsyncioTestCase):
         mock_mc.target_machine = "remote1"
         toolset = register_machine_control_tools(mock_mc)
         tool_func = toolset.get_tool("process_create")
-        result = await tool_func(argv=["echo", "hello"], wait_second=30)
+        result = await tool_func(argv=["echo", "hello"], wait_second=120)
         self.assertIsInstance(result, SuccessfulToolResult)
 
-    async def test_process_stdio_read_remote_timeout_exceeds_limit(self):
-        mock_mc = Mock()
-        mock_mc.machines = {"remote1": Mock()}
-        mock_mc.target_machine = "remote1"
-        toolset = register_machine_control_tools(mock_mc)
-        tool_func = toolset.get_tool("process_stdio_read")
-        result = await tool_func(pid="123", timeout=60)
-        self.assertIsInstance(result, FailedToolResult)
-        self.assertIn("不支持超过45秒的超时", result.content)
-
-    async def test_process_stdio_read_remote_timeout_within_limit(self):
+    async def test_process_stdio_read_remote_no_timeout_limit(self):
         mock_proc = AsyncMock()
         mock_proc.stdio_read.return_value = Mock(
             success=True, stdout=b"hello", stderr=b"", exit_note=None
@@ -248,20 +228,10 @@ class TestProcessTools(unittest.IsolatedAsyncioTestCase):
         mock_mc.target_machine = "remote1"
         toolset = register_machine_control_tools(mock_mc)
         tool_func = toolset.get_tool("process_stdio_read")
-        result = await tool_func(pid="123", timeout=30)
+        result = await tool_func(pid="123", timeout=120)
         self.assertIsInstance(result, SuccessfulToolResult)
 
-    async def test_process_wait_remote_timeout_exceeds_limit(self):
-        mock_mc = Mock()
-        mock_mc.machines = {"remote1": Mock()}
-        mock_mc.target_machine = "remote1"
-        toolset = register_machine_control_tools(mock_mc)
-        tool_func = toolset.get_tool("process_wait")
-        result = await tool_func(pid="123", timeout=60)
-        self.assertIsInstance(result, FailedToolResult)
-        self.assertIn("不支持超过45秒的超时", result.content)
-
-    async def test_process_wait_remote_timeout_within_limit(self):
+    async def test_process_wait_remote_no_timeout_limit(self):
         from linhai.machine_control.process import ProcessWaitResult
 
         mock_proc = AsyncMock()
@@ -275,7 +245,7 @@ class TestProcessTools(unittest.IsolatedAsyncioTestCase):
         mock_mc.target_machine = "remote1"
         toolset = register_machine_control_tools(mock_mc)
         tool_func = toolset.get_tool("process_wait")
-        result = await tool_func(pid="123", timeout=30)
+        result = await tool_func(pid="123", timeout=120)
         self.assertIsInstance(result, SuccessfulToolResult)
 
     async def test_process_create_master_host_no_timeout_limit(self):
