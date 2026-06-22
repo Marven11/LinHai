@@ -64,7 +64,7 @@ def wrapped_json_loads(s: str):
     try:
         return json.loads(s)
     except json.decoder.JSONDecodeError as e:
-        raise RuntimeError(f"JSON decode error for: {s!r}") from e
+        raise RuntimeError("decode error") from e
 
 
 class StreamJsonStringParser:
@@ -323,6 +323,9 @@ class StreamJsonParser:
 
     def feed_string(self, s: str):
         if self._corrupted:
+            return
+        if self.state == ParserState.STRING_VALUE and all(c not in '"\\' for c in s):
+            self.feed_token_string_value(s)
             return
         for c in s:
             try:
