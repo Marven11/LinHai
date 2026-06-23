@@ -17,7 +17,11 @@ class SkillConfig(TypedDict):
     context: NotRequired[str]
     agent: NotRequired[str]
     hooks: NotRequired[str]
+    license: NotRequired[str]
+    compatibility: NotRequired[str]
+    metadata: NotRequired[dict[str, str]]
     body: str
+    location: NotRequired[str]
 
 
 _FRONTMATTER_RE = re.compile(r"^---\s*\n(.*?)\n---\s*\n?(.*)", re.DOTALL)
@@ -33,6 +37,9 @@ _KEY_MAP = {
     "context": "context",
     "agent": "agent",
     "hooks": "hooks",
+    "license": "license",
+    "compatibility": "compatibility",
+    "metadata": "metadata",
 }
 
 
@@ -64,27 +71,37 @@ from pathlib import Path
 
 
 class SkillsManager:
-    def __init__(self, skills_dir: Path) -> None:
-        self._skills_dir = skills_dir
+    def __init__(self, skills_dirs: list[Path]) -> None:
+        self._skills_dirs = skills_dirs
         self._skills: dict[str, SkillConfig] = {}
 
     def load(self) -> None:
-        if not self._skills_dir.is_dir():
-            return
-        for child in sorted(self._skills_dir.iterdir()):
-            skill_md = child / "SKILL.md"
-            if child.is_dir() and skill_md.is_file():
-                content = skill_md.read_text(encoding="utf-8")
-                config = parse_skill_md(content, default_name=child.name)
-                name = config.get("name", child.name)
-                self._skills[name] = config
+        for skills_dir in self._skills_dirs:
+            if not skills_dir.is_dir():
+                continue
+            for child in sorted(skills_dir.iterdir()):
+                skill_md = child / "SKILL.md"
+                if child.is_dir() and skill_md.is_file():
+                    content = skill_md.read_text(encoding="utf-8")
+                    config = parse_skill_md(content, default_name=child.name)
+                    name = config.get("name", child.name)
+                    if name in self._skills:
+                        continue
+                    config["location"] = str(skill_md.absolute())
+                    self._skills[name] = config
 
     @property
     def skills(self) -> dict[str, SkillConfig]:
         return self._skills
 
     def get_introduction(self) -> str | None:
-        if not self._skills:
+        visible_skills = {
+            name: config
+            for name, config in self._skills.items()
+            if not config.get("disable_model_invocation", False)
+            and config.get("description")
+        }
+        if not visible_skills:
             return None
         lines = [
             "Skills是用户自定义的skill文件。"
@@ -92,8 +109,8 @@ class SkillsManager:
             "触发skill时，将`/<skill_name> <args>`消息本身和对应的SKILL.md"
             "加入消息列表，打断agent。\n\n## 可用Skills:\n"
         ]
-        for name, config in sorted(self._skills.items()):
+        for name, config in sorted(visible_skills.items()):
             desc = config.get("description", "")
-            skill_path = str(self._skills_dir / name / "SKILL.md")
+            skill_path = config.get("location", "")
             lines.append(f"[{name}]({skill_path}): {desc}")
         return "\n".join(lines)

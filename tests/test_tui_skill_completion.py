@@ -71,7 +71,7 @@ def test_skill_completion_integration(tmp_path: Path):
     skills_dir = _make_skills_dir(
         tmp_path, {"weather": "# Weather Skill\nCheck weather"}
     )
-    manager = SkillsManager(skills_dir)
+    manager = SkillsManager([skills_dir])
     manager.load()
 
     registry = Registry()
@@ -92,7 +92,7 @@ def test_skill_completion_multiple_skills(tmp_path: Path):
             "wiki": "wiki skill",
         },
     )
-    manager = SkillsManager(skills_dir)
+    manager = SkillsManager([skills_dir])
     manager.load()
 
     registry = Registry()

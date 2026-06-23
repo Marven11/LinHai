@@ -369,8 +369,9 @@ async def create_agent_from_context(
 
     from linhai.skills import SkillsManager
 
-    skills_dir = Path.home() / ".config" / "linhai" / "skills"
-    skills_manager = SkillsManager(skills_dir)
+    project_skills_dir = Path.cwd() / ".agent" / "skills"
+    user_skills_dir = Path.home() / ".config" / "linhai" / "skills"
+    skills_manager = SkillsManager([project_skills_dir, user_skills_dir])
     skills_manager.load()
     context["registry"].register_member("skills_manager", skills_manager)
     intro = skills_manager.get_introduction()
