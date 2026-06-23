@@ -159,3 +159,49 @@ class TestStreamJsonNumberSupport(unittest.TestCase):
             expected_values,
             f"混合数字解析失败，期望{expected_values}，实际得到{actual_values}",
         )
+
+
+class TestStreamJsonDecodeErrorHandling(unittest.TestCase):
+    """测试JSON解码错误处理 - 畸形输入应设置_corrupted不崩溃"""
+
+    def test_bareword_value(self):
+        """测试裸词值(非引号非原子)时设置_corrupted"""
+        parser = StreamJsonParser()
+        corrupt = '{"key": bareword}'
+        parser.feed_string(corrupt)
+        self.assertTrue(parser.is_corrupted)
+
+    def test_mismatched_brackets(self):
+        """测试括号不匹配时设置_corrupted"""
+        parser = StreamJsonParser()
+        corrupt = '{"key": [1, 2}}'
+        parser.feed_string(corrupt)
+        self.assertTrue(parser.is_corrupted)
+
+    def test_unquoted_key(self):
+        """测试未加引号的key设置_corrupted"""
+        parser = StreamJsonParser()
+        corrupt = '{badkey: "value"}'
+        parser.feed_string(corrupt)
+        self.assertTrue(parser.is_corrupted)
+
+    def test_normal_json_not_corrupted(self):
+        """测试正常JSON不会设置_corrupted"""
+        parser = StreamJsonParser()
+        normal = '{"name": "test", "value": 42}'
+        parser.feed_string(normal)
+        self.assertFalse(parser.is_corrupted)
+
+    def test_newline_in_string_value(self):
+        """测试字符串值中包含原始换行符(JSON非法)时设置_corrupted"""
+        parser = StreamJsonParser()
+        corrupt = '{"key": "line1\nline2"}'
+        parser.feed_string(corrupt)
+        self.assertTrue(parser.is_corrupted)
+
+    def test_single_quote_string(self):
+        """测试使用单引号字符串时设置_corrupted"""
+        parser = StreamJsonParser()
+        corrupt = "{'key': 'value'}"
+        parser.feed_string(corrupt)
+        self.assertTrue(parser.is_corrupted)

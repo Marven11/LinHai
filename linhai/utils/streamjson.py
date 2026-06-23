@@ -64,7 +64,7 @@ def wrapped_json_loads(s: str):
     try:
         return json.loads(s)
     except json.decoder.JSONDecodeError as e:
-        raise RuntimeError("decode error") from e
+        return RuntimeError("decode error")
 
 
 class StreamJsonStringParser:
@@ -253,7 +253,11 @@ class StreamJsonParser:
 
         if c == '"' and backslash_count % 2 == 0:
             payload = self.payload + c
-            self.stack.append(wrapped_json_loads(payload))
+            key_value = wrapped_json_loads(payload)
+            if isinstance(key_value, RuntimeError):
+                self._corrupted = True
+                return
+            self.stack.append(key_value)
             self.payload = ""
             self.state = ParserState.OUTSIDE
         else:
@@ -267,6 +271,9 @@ class StreamJsonParser:
 
         if not is_atomic_value_char(c):
             value = wrapped_json_loads(self.payload)
+            if isinstance(value, RuntimeError):
+                self._corrupted = True
+                return
             self.payload = ""
             self.toyield.append(Value(index_key=index_key, value=value))
             key = self.stack.pop()
@@ -296,6 +303,9 @@ class StreamJsonParser:
         is_string_ended: bool = parsed
         if is_string_ended:
             value = wrapped_json_loads(self.payload)
+            if isinstance(value, RuntimeError):
+                self._corrupted = True
+                return
             self.toyield.append(Value(index_key=index_key, value=value))
             key = self.stack.pop()
             if isinstance(key, int):
