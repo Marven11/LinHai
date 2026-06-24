@@ -5,6 +5,7 @@ from unittest.mock import MagicMock
 from linhai.problem_manager import (
     ProblemManagerProtocol,
     PlainProblemManager,
+    _display_width,
 )
 
 
@@ -51,6 +52,35 @@ class TestCreateProblem(unittest.TestCase):
         mgr = PlainProblemManager(_make_registry())
         with self.assertRaises(ValueError):
             mgr.create_problem("q", ["line1\nline2"])
+
+    def test_create_problem_newline_in_content_raises(self):
+        mgr = PlainProblemManager(_make_registry())
+        with self.assertRaises(ValueError):
+            mgr.create_problem("line1\nline2", ["a"])
+
+    def test_create_problem_content_too_wide_raises(self):
+        mgr = PlainProblemManager(_make_registry())
+        long_content = "a" * 241
+        with self.assertRaises(ValueError):
+            mgr.create_problem(long_content, ["a"])
+
+    def test_create_problem_content_exactly_240_ok(self):
+        mgr = PlainProblemManager(_make_registry())
+        content = "a" * 240
+        pid = mgr.create_problem(content, ["a"])
+        self.assertTrue(pid.startswith("problem_"))
+
+    def test_create_problem_chinese_content(self):
+        mgr = PlainProblemManager(_make_registry())
+        chinese_120 = "中" * 120
+        pid = mgr.create_problem(chinese_120, ["a"])
+        self.assertTrue(pid.startswith("problem_"))
+
+    def test_create_problem_chinese_too_wide_raises(self):
+        mgr = PlainProblemManager(_make_registry())
+        chinese_121 = "中" * 121
+        with self.assertRaises(ValueError):
+            mgr.create_problem(chinese_121, ["a"])
 
     def test_create_problem_unique_ids(self):
         mgr = PlainProblemManager(_make_registry())
@@ -155,6 +185,20 @@ class TestCreateToolset(unittest.IsolatedAsyncioTestCase):
         asyncio.create_task(answer_later())
         result = await wait_tool["func"](problem_id=pid, timeout=1.0)
         self.assertEqual(result.content, "a")
+
+
+class TestDisplayWidth(unittest.TestCase):
+    def test_ascii(self):
+        self.assertEqual(_display_width("hello"), 5)
+
+    def test_chinese(self):
+        self.assertEqual(_display_width("你好"), 4)
+
+    def test_mixed(self):
+        self.assertEqual(_display_width("hello你好"), 9)
+
+    def test_empty(self):
+        self.assertEqual(_display_width(""), 0)
 
 
 if __name__ == "__main__":

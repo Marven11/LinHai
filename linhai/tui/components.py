@@ -12,6 +12,7 @@ from textual import work, events
 from textual.app import ComposeResult
 from textual.timer import Timer
 from textual.widgets import Markdown, Static, TextArea, RadioSet, RadioButton, Button
+from textual.containers import Horizontal
 from textual.widgets._markdown import MarkdownStream
 from textual.widgets.markdown import MarkdownBlock
 
@@ -1155,8 +1156,7 @@ class ProblemWidget(Static):
     ProblemWidget .problem-options {
         margin-bottom: 1;
     }
-    ProblemWidget .problem-submit {
-        margin-top: 1;
+    ProblemWidget .problem-actions {
     }
     """
 
@@ -1169,10 +1169,11 @@ class ProblemWidget(Static):
 
     def compose(self) -> ComposeResult:
         yield Static(classes="problem-content")
-        yield RadioSet(classes="problem-options")
-        yield Button(
-            t({"zh_CN": "\u63d0\u4ea4", "en": "Submit"}), classes="problem-submit"
-        )
+        with Horizontal(classes="problem-actions"):
+            yield RadioSet(classes="problem-options")
+            yield Button(
+                t({"zh_CN": "\u63d0\u4ea4", "en": "Submit"}), classes="problem-submit"
+            )
 
     def on_mount(self) -> None:
         self._timer = self.set_interval(0.5, self._check_problems)

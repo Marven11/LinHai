@@ -2,10 +2,20 @@ from __future__ import annotations
 
 import asyncio
 import time
+import unicodedata
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Protocol, runtime_checkable
 
 from linhai.utils.common import generate_id
+
+
+def _display_width(text: str) -> int:
+    width = 0
+    for ch in text:
+        ea = unicodedata.east_asian_width(ch)
+        width += 2 if ea in ("W", "F") else 1
+    return width
+
 
 if TYPE_CHECKING:
     from linhai.registry import Registry
@@ -37,6 +47,12 @@ class PlainProblemManager:
     def create_problem(self, content: str, options: list[str]) -> str:
         if not options:
             raise ValueError("options cannot be empty")
+        if "\n" in content:
+            raise ValueError("content cannot contain newlines")
+        if _display_width(content) > 240:
+            raise ValueError(
+                f"content display width {_display_width(content)} exceeds 240 (3 lines * 80 chars)"
+            )
         for option in options:
             if "\n" in option:
                 raise ValueError(f"option contains newline: {option!r}")
