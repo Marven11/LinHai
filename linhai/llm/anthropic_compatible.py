@@ -432,7 +432,9 @@ class AnthropicLanguageModel:
                 if tool_calls:
                     blocks: list[dict] = []
                     if reasoning:
-                        blocks.append({"type": "thinking", "thinking": reasoning})
+                        blocks.append(
+                            {"type": "thinking", "thinking": reasoning, "signature": ""}
+                        )
                     if assistant_content:
                         blocks.append({"type": "text", "text": str(assistant_content)})
                     for tc in tool_calls:
@@ -464,7 +466,9 @@ class AnthropicLanguageModel:
                     raw_messages.append({"role": "assistant", "content": blocks})
                 elif reasoning:
                     blocks2: list[dict] = []
-                    blocks2.append({"type": "thinking", "thinking": reasoning})
+                    blocks2.append(
+                        {"type": "thinking", "thinking": reasoning, "signature": ""}
+                    )
                     if assistant_content:
                         blocks2.append({"type": "text", "text": str(assistant_content)})
                     raw_messages.append({"role": "assistant", "content": blocks2})
