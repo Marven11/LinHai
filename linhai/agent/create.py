@@ -369,7 +369,7 @@ async def create_agent_from_context(
 
     from linhai.skills import SkillsManager
 
-    project_skills_dir = Path.cwd() / ".agent" / "skills"
+    project_skills_dir = Path.cwd() / ".agents" / "skills"
     user_skills_dir = Path.home() / ".config" / "linhai" / "skills"
     skills_manager = SkillsManager([project_skills_dir, user_skills_dir])
     skills_manager.load()
