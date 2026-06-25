@@ -192,9 +192,9 @@ class Trojan:
         if process.returncode is not None:
             stdout_data, stderr_data = b"", b""
             if process.stdout:
-                stdout_data = await process.stdout.read()
+                stdout_data = await asyncio.wait_for(process.stdout.read(), timeout=5.0)
             if process.stderr:
-                stderr_data = await process.stderr.read()
+                stderr_data = await asyncio.wait_for(process.stderr.read(), timeout=5.0)
 
             stdout_str = stdout_data.decode("utf-8", errors="replace")
             stderr_str = stderr_data.decode("utf-8", errors="replace")
@@ -298,9 +298,9 @@ class Trojan:
             return {"message": json.dumps({"pid": pid, "timeout": True})}
         stdout_data, stderr_data = b"", b""
         if process.stdout:
-            stdout_data = await process.stdout.read()
+            stdout_data = await asyncio.wait_for(process.stdout.read(), timeout=5.0)
         if process.stderr:
-            stderr_data = await process.stderr.read()
+            stderr_data = await asyncio.wait_for(process.stderr.read(), timeout=5.0)
         stdout_str = stdout_data.decode("utf-8", errors="replace")
         stderr_str = stderr_data.decode("utf-8", errors="replace")
         return {
