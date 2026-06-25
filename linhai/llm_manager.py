@@ -197,7 +197,12 @@ class LlmManager:
                 error_str = str(e).lower()
                 fallback_llm = self._get_fallback_llm(llm_name)
 
-                if "rate limit" in error_str or "429" in error_str:
+                if (
+                    "rate limit" in error_str
+                    or "rate_limit" in error_str
+                    or "429" in error_str
+                    or "502" in error_str
+                ):
                     element["retry_count"] += 1
                     self._record_error(llm_name, "rate_limit")
                     await current_llm.reconnect()
