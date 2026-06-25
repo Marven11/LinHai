@@ -60,6 +60,7 @@ class TokenManager:
         lifecycle.after_message_generation.register(self._on_answer_generated)
 
     async def _on_answer_generated(self, parsed_answer, tool_calls) -> None:
+        self.generation_count += 1
         if self._dirty_in_this_round:
             self._dirty_in_this_round = False
             self._current_token_usage = None
