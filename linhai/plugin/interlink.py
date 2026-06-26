@@ -76,12 +76,13 @@ class InterlinkPlugin(Plugin):
 
         old_lines = self._old_content.splitlines(keepends=True)
         new_lines = new_content.splitlines(keepends=True)
+        abs_path = str(self.interlink_file.resolve())
         diff_lines = list(
             difflib.unified_diff(
                 old_lines,
                 new_lines,
-                fromfile="INTERLINK.txt (old)",
-                tofile="INTERLINK.txt (new)",
+                fromfile=f"{abs_path} (old)",
+                tofile=f"{abs_path} (new)",
                 lineterm="",
             )
         )
