@@ -29,7 +29,7 @@ dependencies = [
     "ether-ghost>=0.2.5",
     "croniter",
     "python-telegram-bot>=22.7",
-    "quickjs-ng",
+    "python-quickjs-ng",
     "rich",
     "pathspec",
     "websockets",

@@ -52,14 +52,13 @@
         };
 
         quickjs-ng' = pkgs.python3Packages.buildPythonPackage rec {
-          pname = "quickjs-ng";
+          pname = "python-quickjs-ng";
           version = "0.12.1.1";
           pyproject = true;
 
-          src = pkgs.fetchFromGitHub {
-            owner = "Marven11";
-            repo = "python-quickjs-ng";
-            tag = "v${version}";
+          src = pkgs.fetchgit {
+            url = "http://192.168.114.149:3000/Marven11/quickjs-ng.git";
+            rev = "v${version}";
             fetchSubmodules = true;
             hash = "sha256-PdPQRnU+v+wdzhSL3JBuuEW8ihEMnKZJYzPQs5cHyS8=";
           };
@@ -104,6 +103,7 @@
           buildPythonPackage rec {
             pname = "linhai";
             doCheck = false;
+            pythonRemoveDeps = [ "python-quickjs-ng" ];
             pyproject = true;
 
             nativeBuildInputs = [ pkgs.installShellFiles ];
